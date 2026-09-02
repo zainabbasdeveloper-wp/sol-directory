@@ -1,0 +1,7 @@
+# Development/staging state — everything is disallowed until real
+# WordPress-driven content replaces the dummy Bankstown/Nursing
+# example reused across every /services/:serviceSlug/:suburb page.
+# Remove this blanket disallow (or scope it down) once real per-page
+# content is live and this goes to production.
+User-agent: *
+Disallow: /

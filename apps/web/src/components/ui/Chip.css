@@ -1,0 +1,96 @@
+.chip {
+  border-radius: var(--radius-round);
+  border: 1px solid var(--color-border-strong);
+  background: #fff;
+  color: var(--color-text);
+  font-size: 13.5px;
+  font-weight: 500;
+  padding: 8px 14px;
+  transition: border-color var(--motion-state-change), background var(--motion-state-change), color var(--motion-state-change);
+}
+
+.chip-selected {
+  border-color: var(--color-primary);
+  background: var(--color-primary-tint);
+  color: #0F4FA8;
+}
+
+.chip:hover:not(.chip-selected) {
+  border-color: var(--color-primary);
+}
+
+/* Pill — status tone label (ok / warn / bad / flat) */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: var(--radius-round);
+  border: 1px solid transparent;
+  width: fit-content;
+}
+
+.pill-ok { color: var(--color-ok-fg); background: var(--color-ok-bg); border-color: var(--color-ok-border); }
+.pill-warn { color: var(--color-warn-fg); background: var(--color-warn-bg); border-color: var(--color-warn-border); }
+.pill-bad { color: var(--color-bad-fg); background: var(--color-bad-bg); border-color: var(--color-bad-border); }
+.pill-flat { color: var(--color-text-muted); background: #fff; border-color: var(--color-border); }
+
+.pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.pill-ok .pill-dot { background: var(--color-ok-fg); }
+.pill-warn .pill-dot { background: var(--color-warn-dot); }
+.pill-bad .pill-dot { background: var(--color-bad-dot); }
+.pill-flat .pill-dot { background: var(--color-flat-dot); }
+
+/* Checkbox */
+.checkbox-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.checkbox-box {
+  width: var(--size-checkbox);
+  height: var(--size-checkbox);
+  border-radius: 5px;
+  border: 1.5px solid var(--color-border-strong);
+  background: #fff;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--motion-state-change), border-color var(--motion-state-change);
+  cursor: pointer;
+}
+
+.checkbox-box-checked {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.checkbox-tick {
+  width: 11px;
+  height: 11px;
+  transform: scale(0.5);
+  opacity: 0;
+  transition: transform 200ms cubic-bezier(.2,.8,.25,1), opacity 200ms;
+}
+
+.checkbox-box-checked .checkbox-tick {
+  transform: scale(1);
+  opacity: 1;
+}
+
+.checkbox-label {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--color-text-muted);
+}

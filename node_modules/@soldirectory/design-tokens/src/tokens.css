@@ -1,0 +1,119 @@
+/* Generated to match tokens.json in this package — see index.ts for the typed JS/TS export of the same values. */
+/* Ported verbatim from the design handoff's data/tokens.json.
+   Do not hand-edit values here without updating that source too —
+   see /docs/tokens.json in this repo for the original. */
+
+@import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&display=swap');
+/* ^ Self-host for production per the handoff's Assets note — swap
+     this @import for @fontsource/barlow before shipping. */
+
+:root {
+  /* Color */
+  --color-navy: #0B2D5C;
+  --color-primary: #1769E0;
+  --color-primary-bright: #2F80ED;
+  --color-primary-tint: #F2F7FF;
+  --color-page-bg: #F5F8FC;
+  --color-surface: #FFFFFF;
+  --color-text: #10233F;
+  --color-text-muted: #5A6B84; /* AA-critical — do not lighten, see CLAUDE.md */
+  --color-border: #E8EEF7;
+  --color-border-strong: #DDE4EF;
+  --color-border-card: #E4EAF3;
+  --color-row-divider: #EEF2F8;
+  --color-row-hover: #F7FAFE;
+  --color-track-bg: #EDF2F9;
+  --color-disabled-bg: #E4EAF3;
+
+  --color-ok-fg: #177C4B;
+  --color-ok-bg: #F1F9F4;
+  --color-ok-border: #B6DBC5;
+
+  --color-warn-fg: #8A5A16;
+  --color-warn-bg: #FDF8EE;
+  --color-warn-border: #E8D2A6;
+  --color-warn-dot: #C98A1B;
+
+  --color-bad-fg: #8C2F1E;
+  --color-bad-bg: #FDF3F1;
+  --color-bad-border: #E3B7B0;
+  --color-bad-dot: #C2472C;
+
+  --color-flat-dot: #CBD5E1;
+
+  /* Gradients */
+  --gradient-primary-cta: linear-gradient(135deg, #1769E0 0%, #2F80ED 100%);
+  --gradient-progress: linear-gradient(90deg, #1769E0 0%, #2F80ED 100%);
+  --gradient-navy-overlay: linear-gradient(165deg, rgba(11,45,92,0.86) 0%, rgba(11,45,92,0.97) 62%);
+
+  /* Radius */
+  --radius-input: 6px;
+  --radius-card: 8px;
+  --radius-role-card: 10px;
+  --radius-form-card: 12px;
+  --radius-login-shell: 4px;
+  --radius-pill: 4px;
+  --radius-round: 100px;
+
+  /* Shadow */
+  --shadow-card: 0 1px 2px rgba(11,45,92,0.04);
+  --shadow-form-card: 0 6px 22px rgba(11,45,92,0.06);
+  --shadow-hover-lift: 0 12px 30px rgba(11,45,92,0.12);
+  --shadow-login-shell: 0 30px 80px rgba(11,45,92,0.14), 0 2px 6px rgba(11,45,92,0.06);
+  --shadow-cta-rest: 0 10px 24px rgba(23,105,224,0.30);
+  --shadow-cta-hover: 0 14px 32px rgba(23,105,224,0.34);
+  --shadow-focus-ring: 0 0 0 3px rgba(23,105,224,0.10);
+
+  /* Type */
+  --font-family: 'Barlow', system-ui, sans-serif;
+
+  /* Sizes */
+  --size-input-height: 48px;
+  --size-cta-height: 52px;
+  --size-decision-cta-height: 50px;
+  --size-role-card-min-height: 186px;
+  --size-progress-bar-height: 6px;
+  --size-avatar: 48px;
+  --size-checkbox: 20px;
+  --size-radio-indicator: 20px;
+  --size-min-tap-target: 44px;
+
+  /* Layout */
+  --layout-app-max-width: 1400px;
+  --layout-signup-max-width: 1040px;
+  --layout-login-max-width: 1280px;
+  --layout-plan-max-width: 1240px;
+  --layout-form-column-max-width: 460px;
+  --layout-prose-max-width: 78ch;
+
+  /* Motion */
+  --motion-hover-lift: transform 260ms cubic-bezier(.2,.8,.25,1);
+  --motion-state-change: 220ms ease;
+}
+
+/* Breakpoints (900 / 1040 / 760 / 1200 / 640) are applied as raw
+   media queries per-component rather than as CSS custom properties,
+   since custom properties can't be used inside @media conditions. */
+
+@keyframes screenIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes numIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes barIn {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

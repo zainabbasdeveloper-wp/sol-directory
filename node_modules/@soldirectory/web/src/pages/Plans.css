@@ -1,0 +1,142 @@
+.page-title {
+  font-size: clamp(26px, 2.6vw, 33px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.plans-page {
+  max-width: var(--layout-plan-max-width);
+  margin: 0 auto;
+}
+
+.plans-header {
+  margin-bottom: 24px;
+}
+
+.plans-notice {
+  padding: 14px 18px;
+  border-radius: 8px;
+  font-size: 14px;
+  margin-bottom: 24px;
+  border: 1px solid;
+}
+.plans-notice-ok {
+  background: var(--color-ok-bg);
+  border-color: var(--color-ok-border);
+  color: var(--color-ok-fg);
+}
+.plans-notice-warn {
+  background: var(--color-warn-bg);
+  border-color: var(--color-warn-border);
+  color: var(--color-warn-fg);
+}
+
+.plans-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+@media (min-width: 980px) {
+  .plans-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.plan-card {
+  background: #fff;
+  border-radius: var(--radius-card);
+  padding: 26px 22px;
+  border: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+}
+
+.plan-card-current {
+  border-color: var(--color-primary);
+  box-shadow: 0 14px 34px rgba(23,105,224,0.16);
+}
+
+.plan-card-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.plan-name {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.plan-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: var(--radius-round);
+}
+.plan-badge-current {
+  background: var(--color-primary);
+  color: #fff;
+}
+.plan-badge-popular {
+  background: var(--color-primary-tint);
+  color: #0F4FA8;
+}
+
+.plan-price {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin: 10px 0 4px;
+}
+.plan-price-suffix {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.plan-tagline {
+  font-size: 14.5px;
+  color: var(--color-text-muted);
+  margin: 0 0 20px;
+}
+
+.plan-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+.plan-features li {
+  font-size: 14px;
+  display: flex;
+  gap: 8px;
+}
+.plan-tick {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.plan-cta {
+  width: 100%;
+}
+.plan-cta-current {
+  background: #EDF1F7 !important;
+  color: var(--color-text-muted) !important;
+  box-shadow: none !important;
+  cursor: default;
+}
+
+.plans-footnote {
+  margin-top: 28px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+  max-width: 78ch;
+}
