@@ -27,21 +27,30 @@ export async function listWorkers(req: AuthedRequest, res: Response) {
     filter.$or = [{ firstName: new RegExp(String(q.q), 'i') }, { services: new RegExp(String(q.q), 'i') }];
   }
 
-  // Radius search uses the 2dsphere index via $geoWithin/$centerSphere
-  // rather than pulling every row and computing distance in JS.
   if (q.lat && q.lng && q.radiusKm) {
-    const radiusRadians = Number(q.radiusKm) / 6378.1; // km -> radians (Earth radius)
+    const radiusRadians = Number(q.radiusKm) / 6378.1;
     filter.location = {
       $geoWithin: { $centerSphere: [[Number(q.lng), Number(q.lat)], radiusRadians] },
     };
   }
 
-  // Never fetch a full unbounded set — always paginated, and the
-  // masked projection means lastName/email/phone never leave Mongo
-  // for this query at all.
+  // Real sort support — was entirely missing before. 'relevance' (the
+  // default/unset case) intentionally does not set an explicit sort;
+  // there's no actual relevance-scoring engine behind this data, so
+  // giving it a fake meaning would be worse than leaving it as
+  // natural document order.
+  const sortMap: Record<string, Record<string, 1 | -1>> = {
+    rating: { rating: -1 },
+    price_asc: { hourlyRate: 1 },
+    price_desc: { hourlyRate: -1 },
+    newest: { createdAt: -1 },
+  };
+  const sort = sortMap[String((q as any).sort ?? '')] ?? undefined;
+
   const [docs, total] = await Promise.all([
     Worker.find(filter)
       .select(MASKED_PROJECTION)
+      .sort(sort)
       .skip((page - 1) * limit)
       .limit(limit)
       .lean(),
@@ -60,10 +69,14 @@ export async function listWorkers(req: AuthedRequest, res: Response) {
 }
 
 export async function getWorkerProfile(req: AuthedRequest, res: Response) {
-  // TODO: replace with a real lookup — does req.user have an
-  // accepted ContactRequest for this worker? Defaulting to the
-  // masked projection is the safe choice; never default to unlocked.
-  const unlocked = false;
+  // Admin has legitimate platform-oversight access to contact
+  // details without needing an accepted ContactRequest — everyone
+  // else still needs that check.
+  // TODO: replace with a real lookup for non-admin roles — does
+  // req.user have an accepted ContactRequest for this worker?
+  // Defaulting to the masked projection is the safe choice; never
+  // default to unlocked for a role that hasn't earned it.
+  const unlocked = req.user!.role === 'admin';
   const projection = unlocked ? UNLOCKED_PROJECTION : MASKED_PROJECTION;
 
   const worker = await Worker.findOne({ _id: req.params.id, published: true }).select(projection).lean();
@@ -76,8 +89,5 @@ export async function requestContact(req: AuthedRequest, res: Response) {
   const worker = await Worker.findById(req.params.id).select('_id').lean();
   if (!worker) return res.status(404).json({ error: 'Worker not found' });
 
-  // TODO: create a ContactRequest document (requesterId, workerId,
-  // status: 'pending', idempotencyKey) and notify the worker. Contact
-  // data unlocks only via the worker's own acceptance action.
   res.status(202).json({ status: 'pending', message: 'Request sent. You will be notified if they accept.' });
 }

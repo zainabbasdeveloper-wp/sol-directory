@@ -111,3 +111,39 @@ export function approveWorker(workerId: string) {
 export function rejectWorker(workerId: string, reason: string, note?: string) {
   return api.post(`/verification/${workerId}/reject`, { reason, note });
 }
+
+interface AdminProviderRow {
+  id: string; legalEntityName: string; tradingName: string; abn: string; plan: string;
+  intakeStatus: string; accountStatus: 'active' | 'suspended';
+  ownerName: string | null; ownerEmail: string | null;
+}
+interface AdminProviderListResult { items: AdminProviderRow[]; page: number; limit: number; total: number; hasMore: boolean; }
+
+const ADMIN_API_URL = (import.meta as any).env?.VITE_API_URL ?? '/api';
+function adminAuthHeaders(): Record<string, string> {
+  const token = localStorage.getItem('sd_token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+export async function listProvidersAdmin(status?: 'active' | 'suspended'): Promise<AdminProviderListResult> {
+  const qs = status ? `?status=${status}` : '';
+  const res = await fetch(`${ADMIN_API_URL}/admin/providers${qs}`, { headers: adminAuthHeaders() });
+  if (!res.ok) throw new ApiError((await res.json()).error ?? 'Request failed', res.status);
+  return res.json();
+}
+
+export async function getProviderAdmin(id: string) {
+  const res = await fetch(`${ADMIN_API_URL}/admin/providers/${id}`, { headers: adminAuthHeaders() });
+  if (!res.ok) throw new ApiError((await res.json()).error ?? 'Request failed', res.status);
+  return res.json();
+}
+
+export async function setProviderAccountStatus(id: string, status: 'active' | 'suspended') {
+  const res = await fetch(`${ADMIN_API_URL}/admin/providers/${id}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...adminAuthHeaders() },
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) throw new ApiError((await res.json()).error ?? 'Request failed', res.status);
+  return res.json();
+}

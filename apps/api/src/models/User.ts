@@ -9,6 +9,12 @@ export interface UserDoc extends Document {
   role: Role;
   providerId?: Types.ObjectId;
   workerId?: Types.ObjectId;
+  // Coordinators and participants have no separate profile model
+  // (unlike Provider/Worker) — accountStatus lives directly on User
+  // for them. Provider/Worker keep their own accountStatus fields on
+  // their respective models; this one is specifically for roles that
+  // have nothing else to attach it to.
+  accountStatus: 'active' | 'suspended';
 }
 
 const userSchema = new Schema<UserDoc>(
@@ -20,6 +26,7 @@ const userSchema = new Schema<UserDoc>(
     role: { type: String, enum: ['worker', 'provider', 'coordinator', 'participant', 'admin'], required: true },
     providerId: { type: Schema.Types.ObjectId, ref: 'Provider' },
     workerId: { type: Schema.Types.ObjectId, ref: 'Worker' },
+    accountStatus: { type: String, enum: ['active', 'suspended'], default: 'active' },
   },
   { timestamps: true }
 );

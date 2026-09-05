@@ -1,0 +1,32 @@
+.auth-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  height: 68px;
+  background: #ffffff;
+  border-bottom: 1px solid var(--color-border, #E8EEF7);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 clamp(20px, 5vw, 56px);
+}
+.auth-header-logo {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-text, #10233F);
+}
+.auth-header-back {
+  font-size: 14px;
+  font-weight: 500;
+  color: color-mix(in srgb, var(--color-text, #10233F) 65%, transparent);
+  transition: color 180ms ease;
+}
+.auth-header-back:hover { color: var(--color-accent, #1769E0); }
+
+/* Pushes the login/signup card down below the fixed header above,
+   regardless of whatever centering layout Login.css/Signup.css use
+   internally — this rule is additive and doesn't touch those files. */
+.login-shell, .signup-page { margin-top: 68px; }

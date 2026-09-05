@@ -66,6 +66,7 @@
 }
 
 .app-header-account {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -90,6 +91,67 @@
   justify-content: center;
   font-weight: 700;
   font-size: 13px;
+  border: none;
+  cursor: pointer;
+  transition: box-shadow 180ms ease;
+}
+.app-account-initials:hover {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
+}
+
+/* Dropdown — opens below the avatar on click, closes on outside
+   click, Escape, or selecting an item. Logout is one item inside it
+   rather than the avatar's only possible action. */
+.app-account-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  min-width: 180px;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  box-shadow: 0 16px 40px rgba(11,45,92,0.18);
+  padding: 6px;
+  z-index: 40;
+  animation: appAccountDropdownIn 160ms cubic-bezier(.2,.8,.25,1) both;
+}
+@keyframes appAccountDropdownIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.app-account-dropdown-header {
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 6px;
+}
+.app-account-dropdown-name {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+.app-account-dropdown-role {
+  margin: 2px 0 0;
+  font-size: 12px;
+  text-transform: capitalize;
+  color: var(--color-text-muted);
+}
+.app-account-dropdown-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  padding: 9px 12px;
+  font: inherit;
+  font-size: 14px;
+  color: #B4232F;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+.app-account-dropdown-item:hover {
+  background: color-mix(in srgb, #B4232F 8%, transparent);
 }
 
 .app-main {

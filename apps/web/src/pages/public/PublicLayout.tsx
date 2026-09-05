@@ -23,7 +23,7 @@ export function PublicHeader() {
             hello@soldirectory.com.au
           </span>
           <span className="utility-right">
-            <Link to="/login">Provider login</Link>
+            <Link to="/login">Login</Link>
             <Link to="/directory">For support coordinators</Link>
           </span>
         </div>

@@ -17,15 +17,14 @@ export interface ProviderDoc extends Document {
   travelRadiusKm: number;
   weeklyCapacityHours: number;
   intakeStatus: 'Open to referrals' | 'Limited capacity' | 'Waitlist only' | 'Closed';
+  // Admin-controlled account state — distinct from intakeStatus
+  // above, which the provider sets themselves to describe their own
+  // referral capacity. accountStatus is a platform-level lock.
+  accountStatus: 'active' | 'suspended';
   rosterSize: number;
   afterHoursCover: string;
   incidentPolicyEscalation: string;
   onboarding: OnboardingStepSub[];
-
-  // Stripe — plan/quota below are written ONLY by
-  // services/stripe.service.ts's webhook handler. There is
-  // deliberately no controller route that lets an authenticated
-  // provider set their own `plan`.
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   plan: 'starter' | 'growth' | 'scale';
@@ -53,11 +52,11 @@ const providerSchema = new Schema<ProviderDoc>(
     travelRadiusKm: Number,
     weeklyCapacityHours: Number,
     intakeStatus: { type: String, enum: ['Open to referrals', 'Limited capacity', 'Waitlist only', 'Closed'], default: 'Open to referrals' },
+    accountStatus: { type: String, enum: ['active', 'suspended'], default: 'active' },
     rosterSize: Number,
     afterHoursCover: String,
     incidentPolicyEscalation: String,
     onboarding: [onboardingStepSchema],
-
     stripeCustomerId: { type: String, index: true },
     stripeSubscriptionId: String,
     plan: { type: String, enum: ['starter', 'growth', 'scale'], default: 'starter' },

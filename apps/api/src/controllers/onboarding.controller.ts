@@ -3,13 +3,33 @@ import type { AuthedRequest } from '../middleware/auth.middleware.js';
 import Provider from '../models/Provider.js';
 import DocumentAsset from '../models/DocumentAsset.js';
 import { getStorageService } from '../services/s3.service.js';
+import { logActivity } from '../models/AdminActivity.js';
 
 const STEP_KEYS = ['org', 'insurance', 'areas', 'team', 'policy', 'billing'];
 
 export async function getOnboarding(req: AuthedRequest, res: Response) {
   const provider = await Provider.findOne({ userId: req.user!.id });
   if (!provider) return res.status(403).json({ error: 'No provider profile for this account' });
-  res.json(provider.onboarding);
+  // Previously only returned the step-completion array — the
+  // frontend had nothing to pre-fill actual field values with, so a
+  // page refresh mid-onboarding looked like data loss even though
+  // it was saved. Now returns the real top-level fields too.
+  res.json({
+    steps: provider.onboarding,
+    provider: {
+      legalEntityName: provider.legalEntityName,
+      abn: provider.abn,
+      tradingName: provider.tradingName,
+      registrationGroups: provider.registrationGroups,
+      serviceSuburbs: provider.serviceSuburbs,
+      travelRadiusKm: provider.travelRadiusKm,
+      weeklyCapacityHours: provider.weeklyCapacityHours,
+      rosterSize: provider.rosterSize,
+      afterHoursCover: provider.afterHoursCover,
+      incidentPolicyEscalation: provider.incidentPolicyEscalation,
+      plan: provider.plan,
+    },
+  });
 }
 
 export async function saveStep(req: AuthedRequest, res: Response) {
@@ -35,6 +55,31 @@ export async function saveStep(req: AuthedRequest, res: Response) {
     }
   }
 
+  // Write real values onto the provider's actual top-level fields —
+  // previously this only ever happened for nothing (data sat inside
+  // onboarding[].data and nowhere else), so provider.abn and friends
+  // stayed empty forever even after "completing" these steps.
+  if (stepKey === 'org') {
+    if (data.abn) provider.abn = String(data.abn);
+    if (data.legalEntityName) provider.legalEntityName = String(data.legalEntityName);
+    if (data.tradingName) provider.tradingName = String(data.tradingName);
+  }
+  if (stepKey === 'insurance' && Array.isArray(data.registrationGroups)) {
+    provider.registrationGroups = data.registrationGroups as string[];
+  }
+  if (stepKey === 'areas') {
+    if (Array.isArray(data.serviceSuburbs)) provider.serviceSuburbs = data.serviceSuburbs as string[];
+    if (data.travelRadiusKm !== undefined) provider.travelRadiusKm = Number(data.travelRadiusKm);
+    if (data.weeklyCapacityHours !== undefined) provider.weeklyCapacityHours = Number(data.weeklyCapacityHours);
+  }
+  if (stepKey === 'team') {
+    if (data.rosterSize !== undefined) provider.rosterSize = Number(data.rosterSize);
+    if (data.afterHoursCover) provider.afterHoursCover = String(data.afterHoursCover);
+  }
+  if (stepKey === 'policy' && data.incidentPolicyEscalation) {
+    provider.incidentPolicyEscalation = String(data.incidentPolicyEscalation);
+  }
+
   const existing = provider.onboarding.find((s) => s.key === stepKey);
   if (existing) {
     existing.complete = true;
@@ -44,14 +89,16 @@ export async function saveStep(req: AuthedRequest, res: Response) {
   }
   await provider.save();
 
+  const name = provider.tradingName || provider.legalEntityName || 'A provider';
+  const allDone = STEP_KEYS.every((k) => provider.onboarding.find((s) => s.key === k)?.complete);
+  await logActivity(
+    allDone ? 'onboarding_completed' : 'onboarding_step_completed',
+    allDone ? `${name} completed onboarding` : `${name} completed the "${stepKey}" onboarding step`
+  );
+
   res.json({ status: 'saved' });
 }
 
-/**
- * Documents never touch this server's memory or MongoDB as file
- * bytes — the client uploads directly to object storage using this
- * signed URL, and we only persist the resulting metadata.
- */
 export async function getUploadUrl(req: AuthedRequest, res: Response) {
   const { kind, contentType, filename } = req.body as { kind: string; contentType: string; filename: string };
   const provider = await Provider.findOne({ userId: req.user!.id });

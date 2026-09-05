@@ -18,12 +18,12 @@ interface FeedbackSub {
 export interface WorkerDoc extends Document {
   userId: Types.ObjectId;
   firstName: string;
-  lastName: string; // MASKED FIELD — see projections below
+  lastName: string;
   role: string;
   employer: string;
   yearsExperience: string;
   suburb: string;
-  location: { type: 'Point'; coordinates: [number, number] }; // [lng, lat]
+  location: { type: 'Point'; coordinates: [number, number] };
   gender: string;
   hasCar: boolean;
   hourlyRate: number;
@@ -38,15 +38,21 @@ export interface WorkerDoc extends Document {
   availabilityNote: string;
   bio: string;
   feedback: FeedbackSub[];
-  email: string; // MASKED FIELD
-  phone: string; // MASKED FIELD
+  email: string;
+  phone: string;
   verificationStatus: 'awaiting_review' | 'expiring_soon' | 'approved' | 'rejected';
   published: boolean;
+  // Admin-controlled account state — distinct from verificationStatus
+  // (which tracks the ONE-TIME approval workflow) and published
+  // (which the worker/system toggles for directory visibility).
+  // accountStatus is a platform-level lock, same pattern as
+  // Provider.accountStatus.
+  accountStatus: 'active' | 'suspended';
 }
 
 const clearanceSchema = new Schema<ClearanceSub>(
   {
-    name: { type: String, required: true }, // "NDIS Worker Check" — do not rename, statutory term
+    name: { type: String, required: true },
     issuingBody: String,
     referenceNumber: String,
     expiry: Date,
@@ -95,33 +101,21 @@ const workerSchema = new Schema<WorkerDoc>(
       default: 'awaiting_review',
     },
     published: { type: Boolean, default: false },
+    accountStatus: { type: String, enum: ['active', 'suspended'], default: 'active' },
   },
   { timestamps: true }
 );
 
-// Geospatial index for radius search (`$near` / `$geoWithin`).
 workerSchema.index({ location: '2dsphere' });
-
-// Compound index covering the most common equality-filter
-// combination in the directory search (service + suburb + published)
-// so those queries hit an index instead of a collection scan.
 workerSchema.index({ services: 1, suburb: 1, published: 1 });
-workerSchema.index({ published: 1, rating: -1 }); // supports "highest rated" sort
+workerSchema.index({ published: 1, rating: -1 });
 
-/**
- * PRIVACY (server-side, enforced at the query layer): pass this to
- * `.select()` for any directory/search response. lastName, email and
- * phone are excluded from the query itself — Mongo never sends them
- * over the wire to this process, so there's no risk of an
- * after-the-fact serialization bug leaking them.
- */
 export const MASKED_PROJECTION =
   'firstName role employer yearsExperience suburb gender hasCar hourlyRate rating reviewCount services languages conditionExperience availability availableDays availabilityNote bio feedback';
 
-/** Use only after confirming an accepted contact request for this requester. */
 export const UNLOCKED_PROJECTION = `${MASKED_PROJECTION} lastName email phone`;
 
-export function toMaskedShape(w: Pick<WorkerDoc, '_id' | keyof Omit<WorkerDoc, '_id'>> | any): WorkerMasked {
+export function toMaskedShape(w: any): WorkerMasked {
   return {
     id: String(w._id),
     firstName: w.firstName,
