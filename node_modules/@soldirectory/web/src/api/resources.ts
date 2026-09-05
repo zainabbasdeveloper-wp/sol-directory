@@ -1,4 +1,4 @@
-import { api, setToken } from './client';
+import { ApiError, api, setToken } from './client';
 import type {
   WorkerMasked,
   WorkerProfile,
