@@ -6,7 +6,9 @@ import { ensureDefaultPlans } from './models/PlanConfig.js';
 
 import authRoutes from './routes/auth.routes.js';
 import workersRoutes from './routes/workers.routes.js';
+import providersRoutes from './routes/providers.routes.js';
 import leadsRoutes from './routes/leads.routes.js';
+import shortlistRoutes from './routes/shortlist.routes.js';
 import plansRoutes from './routes/plans.routes.js';
 import onboardingRoutes from './routes/onboarding.routes.js';
 import verificationRoutes from './routes/verification.routes.js';
@@ -24,7 +26,9 @@ app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/workers', workersRoutes);
+app.use('/api/providers', providersRoutes);
 app.use('/api/leads', leadsRoutes);
+app.use('/api/shortlists', shortlistRoutes);
 app.use('/api/plans', plansRoutes);
 app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/verification', verificationRoutes);
