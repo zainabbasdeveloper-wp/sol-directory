@@ -66,6 +66,7 @@ export function isUnlocked(w: WorkerProfile): w is WorkerUnlocked {
 export interface LeadMasked {
   id: string;
   need: string;
+  conditions: string[];
   suburb: string;
   distanceKm: number;
   hoursPerWeek: string;
