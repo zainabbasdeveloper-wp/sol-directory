@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ApiError } from '../../api/client';
+import { listActiveServices, type ActiveService } from '../../api/serviceCatalogue';
 import './WorkerDirectory.css';
 
 interface WorkerMasked {
@@ -44,7 +45,8 @@ async function searchWorkers(params: URLSearchParams): Promise<SearchResult> {
 // Options are static reference lists for the filter UI — matches the
 // same pattern used elsewhere in this app (Home.tsx's SERVICES etc.),
 // not fabricated from nothing.
-const SUPPORT_TYPES = ['Personal care', 'Domestic assistance', 'Community access', 'Transport', 'Nursing', 'Therapy assistant', 'Overnight support', 'Behaviour support', 'Social support'];
+// Support type options now come from the real service catalogue
+// (fetched on mount below) rather than this hardcoded list.
 const SUBURBS = ['Bankstown', 'Parramatta', 'Liverpool', 'Blacktown', 'Auburn', 'Lidcombe', 'Canterbury', 'Marrickville'];
 const LANGUAGES = ['Arabic', 'Vietnamese', 'Mandarin', 'Cantonese', 'Greek', 'Auslan', 'Hindi', 'Spanish'];
 const CONDITIONS = ['Autism', 'Dementia', 'Cerebral palsy', 'Spinal cord injury', 'Psychosocial', 'Diabetes', 'Acquired brain injury', 'Motor neurone disease'];
@@ -95,6 +97,11 @@ export default function WorkerDirectory() {
   const [minRating, setMinRating] = useState(Number(searchParams.get('minRating')) || 0);
   const [sort, setSort] = useState(searchParams.get('sort') ?? '');
   const [page, setPage] = useState(Number(searchParams.get('page')) || 1);
+  const [serviceOptions, setServiceOptions] = useState<ActiveService[]>([]);
+
+  useEffect(() => {
+    listActiveServices('worker').then((res) => setServiceOptions(res.items)).catch(() => {});
+  }, []);
 
   const [items, setItems] = useState<WorkerMasked[]>([]);
   const [total, setTotal] = useState(0);
@@ -159,7 +166,7 @@ export default function WorkerDirectory() {
         <label className="wd-filter-label" htmlFor="wd-service">Support type</label>
         <select id="wd-service" className="wd-select" value={service} onChange={(e) => { setPage(1); setService(e.target.value); }}>
           <option value="">All supports</option>
-          {SUPPORT_TYPES.map((s) => <option key={s} value={s}>{s}</option>)}
+          {serviceOptions.map((s) => <option key={s.id} value={s.name}>{s.name}</option>)}
         </select>
       </div>
 

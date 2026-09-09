@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { saveOnboardingStep, getUploadUrl } from '../api/resources';
 import { ApiError } from '../api/client';
 import { useToast } from '../components/ui/Toast';
+import { listActiveServices, type ActiveService } from '../api/serviceCatalogue';
 import './Onboarding.css';
 
 const STEPS = [
@@ -35,12 +36,18 @@ async function fetchOnboarding(): Promise<{ steps: { key: string; complete: bool
   return res.json();
 }
 
-const REGISTRATION_GROUP_OPTIONS = ['Personal care', 'Domestic assistance', 'Community access', 'Transport', 'Nursing', 'Therapy assistant', 'Overnight support', 'Behaviour support'];
+// Registration group options now come from the real service
+// catalogue (fetched below) rather than this hardcoded list.
 const SUBURB_OPTIONS = ['Bankstown', 'Parramatta', 'Liverpool', 'Blacktown', 'Auburn', 'Lidcombe', 'Canterbury', 'Marrickville'];
 
 export default function Onboarding() {
   const navigate = useNavigate();
   const [pageLoading, setPageLoading] = useState(true);
+  const [registrationGroupOptions, setRegistrationGroupOptions] = useState<ActiveService[]>([]);
+
+  useEffect(() => {
+    listActiveServices('provider').then((res) => setRegistrationGroupOptions(res.items)).catch(() => {});
+  }, []);
   const [pageError, setPageError] = useState('');
   const [stepIndex, setStepIndex] = useState(0);
   const [done, setDone] = useState<boolean[]>(new Array(STEPS.length).fill(false));
@@ -276,9 +283,9 @@ export default function Onboarding() {
                 <>
                   <p className="ob-step-intro">Which registration groups does your organisation hold?</p>
                   <div className="ob-chip-group">
-                    {REGISTRATION_GROUP_OPTIONS.map((g) => (
-                      <button key={g} type="button" className={`ob-chip ${registrationGroups.includes(g) ? 'ob-chip-selected' : ''}`} onClick={() => toggleInArray(registrationGroups, g, setRegistrationGroups)}>
-                        {g}
+                    {registrationGroupOptions.map((g) => (
+                      <button key={g.id} type="button" className={`ob-chip ${registrationGroups.includes(g.name) ? 'ob-chip-selected' : ''}`} onClick={() => toggleInArray(registrationGroups, g.name, setRegistrationGroups)}>
+                        {g.name}
                       </button>
                     ))}
                   </div>

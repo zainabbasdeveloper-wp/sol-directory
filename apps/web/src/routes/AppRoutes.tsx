@@ -21,6 +21,7 @@ import AdminWorkers from '../pages/admin/AdminWorkers';
 import AdminWorkerDetail from '../pages/admin/AdminWorkerDetail';
 import AdminUsers from '../pages/admin/AdminUsers';
 import AdminMemberPlans from '../pages/admin/AdminMemberPlans';
+import AdminServices from '../pages/admin/AdminServices';
 import ProviderDirectory from '../pages/providers/ProviderDirectory';
 import SavedProviders from '../pages/providers/SavedProviders';
 import AdminUserDetail from '../pages/admin/AdminUserDetail';
@@ -138,6 +139,7 @@ export default function AppRoutes() {
         <Route path="/saved-providers" element={<RequireRole roles={['coordinator', 'participant']}><SavedProviders /></RequireRole>} />
         <Route path="/admin/users/:id" element={<RequireRole roles={['admin']}><AdminUserDetail /></RequireRole>} />
         <Route path="/admin/plans" element={<RequireRole roles={['admin']}><AdminMemberPlans /></RequireRole>} />
+        <Route path="/admin/services" element={<RequireRole roles={['admin']}><AdminServices /></RequireRole>} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

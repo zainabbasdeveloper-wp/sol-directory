@@ -30,6 +30,7 @@ const TABS: { to: string; label: string; roles?: Role[] }[] = [
   { to: '/admin/workers', label: 'Manage workers', roles: ['admin'] },
   { to: '/admin/users', label: 'Coordinators & Participants', roles: ['admin'] },
   { to: '/admin/plans', label: 'Member Plans', roles: ['admin'] },
+  { to: '/admin/services', label: 'Services', roles: ['admin'] },
   { to: '/onboarding', label: 'Onboarding', roles: ['provider'] },
   { to: '/plans', label: 'Plans', roles: ['provider'] },
 ];
@@ -155,21 +156,16 @@ export default function Header() {
         </Link>
 
         <nav className="app-tabs" aria-label="Main">
-        
-          {visibleTabs.map((tab) => (
-            <NavLink key={tab.to} to={tab.to} className={({ isActive }) => `app-tab ${isActive ? 'app-tab-active' : ''}`}>
-              {tab.label}
-            </NavLink>
-
-          ))}
-
           {canSeeWorkersTab && (
             <NavLink to="/workers" className={({ isActive }) => `app-tab ${isActive ? 'app-tab-active' : ''}`}>
               Workers
             </NavLink>
           )}
-
-          
+          {visibleTabs.map((tab) => (
+            <NavLink key={tab.to} to={tab.to} className={({ isActive }) => `app-tab ${isActive ? 'app-tab-active' : ''}`}>
+              {tab.label}
+            </NavLink>
+          ))}
         </nav>
 
         <div className="app-header-account" ref={menuRef}>

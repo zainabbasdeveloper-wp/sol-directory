@@ -1,0 +1,24 @@
+.mp-add-btn {
+  height: 40px; padding: 0 18px; border-radius: 8px; border: 0;
+  background: linear-gradient(135deg, #1769E0, #2F80ED); color: #fff;
+  font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer;
+}
+.mp-add-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.svc-form { background: #fff; border: 1px solid var(--color-border, #E8EEF7); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+.svc-form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 16px; }
+.svc-field { display: flex; flex-direction: column; gap: 6px; }
+.svc-field-full { grid-column: 1 / -1; }
+.svc-field label { font-size: 12.5px; font-weight: 600; }
+.svc-field input, .svc-field textarea {
+  padding: 10px 12px; border: 1px solid var(--color-border-strong, #DDE4EF); border-radius: 8px; font: inherit; font-size: 13.5px;
+}
+.svc-chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.svc-chip {
+  padding: 6px 12px; border-radius: 100px; border: 1px solid var(--color-border-strong, #DDE4EF);
+  background: #fff; font: inherit; font-size: 12.5px; cursor: pointer;
+}
+.svc-chip-selected { background: var(--color-primary-tint, #F2F7FF); border-color: var(--color-primary, #1769E0); color: #0F4FA8; font-weight: 600; }
+
+.svc-category-block { margin-bottom: 24px; }
+.svc-category-title { margin: 0 0 10px; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted, #5A6B84); }

@@ -8,6 +8,7 @@ import Lead from '../models/Lead.js';
 import Shortlist from '../models/Shortlist.js';
 import ProviderView from '../models/ProviderView.js';
 import AdminActivity, { logActivity } from '../models/AdminActivity.js';
+import Service from '../models/Service.js';
 
 // A dedicated, clearly-separate seed script for populating realistic
 // development/demo data across every model this admin dashboard
@@ -53,6 +54,31 @@ function randSuburbInState(state: string): string { return rand(STATES[state]); 
 async function seedAdminDemo() {
   await mongoose.connect(process.env.MONGODB_URI as string);
   console.log('Connected. Seeding admin demo data...');
+
+  // Real service catalogue records — this is the canonical source
+  // WorkerDirectory.tsx and Onboarding.tsx now fetch from, replacing
+  // the hardcoded arrays that used to live independently in each.
+  // Additive: skips any name that already exists, so re-running this
+  // script is safe.
+  console.log('Seeding service catalogue...');
+  const CATALOGUE_SEED: { name: string; category: string; roles: ('provider' | 'worker')[] }[] = [
+    { name: 'Personal care', category: 'Daily living', roles: ['provider', 'worker'] },
+    { name: 'Domestic assistance', category: 'Daily living', roles: ['provider', 'worker'] },
+    { name: 'Community access', category: 'Community', roles: ['provider', 'worker'] },
+    { name: 'Transport', category: 'Community', roles: ['provider', 'worker'] },
+    { name: 'Nursing', category: 'Clinical', roles: ['provider', 'worker'] },
+    { name: 'Therapy assistant', category: 'Clinical', roles: ['provider', 'worker'] },
+    { name: 'Overnight support', category: 'Daily living', roles: ['provider', 'worker'] },
+    { name: 'Behaviour support', category: 'Clinical', roles: ['provider', 'worker'] },
+    { name: 'Meal preparation', category: 'Daily living', roles: ['provider', 'worker'] },
+    { name: 'Social support', category: 'Community', roles: ['provider', 'worker'] },
+  ];
+  for (const s of CATALOGUE_SEED) {
+    const exists = await Service.findOne({ name: s.name });
+    if (!exists) {
+      await Service.create({ name: s.name, category: s.category, applicableRoles: s.roles, applicableFunding: ['NDIS'], active: true });
+    }
+  }
 
   const passwordHash = await bcrypt.hash('password123', 10);
   const createdUsers: { user: any; role: string }[] = [];
