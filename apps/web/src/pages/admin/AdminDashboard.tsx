@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   getDashboardOverview, getRecentProviders, getRecentWorkers, getRecentActivity, getUserGrowth,
-  type DashboardOverview, type RecentProvider, type RecentWorker, type ActivityItem, type GrowthPoint,
+  getProviderByState, getWorkerBreakdowns, getProviderActivityTable, searchAdmin,
+  type DashboardOverview, type RecentProvider, type RecentWorker, type ActivityItem, type GrowthPoint, type SearchResults,
 } from '../../api/adminDashboardResources';
 import { ApiError } from '../../api/client';
 import Counter from '../../components/Counter';
+import RoleDonutChart from '../../components/charts/RoleDonutChart';
+import UserGrowthChart from '../../components/charts/UserGrowthChart';
 import './AdminDashboard.css';
 
 const PERIODS = [
@@ -38,6 +41,21 @@ function StatCard({ label, value, tone = 'default' }: { label: string; value: nu
   );
 }
 
+function SearchGroup({ title, items }: { title: string; items: { id: string; label: string; sublabel: string; linkTo: string }[] }) {
+  const navigate = useNavigate();
+  return (
+    <div className="ad-search-group">
+      <p className="ad-search-group-title">{title.toUpperCase()}</p>
+      {items.map((r) => (
+        <button key={r.id} className="ad-search-result" onMouseDown={() => navigate(`/admin/${r.linkTo}/${r.id}`)}>
+          <span>{r.label}</span>
+          <span className="ad-search-result-sub">{r.sublabel}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
   const [period, setPeriod] = useState('30d');
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
@@ -45,8 +63,15 @@ export default function AdminDashboard() {
   const [workers, setWorkers] = useState<RecentWorker[]>([]);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [growth, setGrowth] = useState<GrowthPoint[]>([]);
+  const [stateBreakdown, setStateBreakdown] = useState<Record<string, number>>({});
+  const [workerBreakdowns, setWorkerBreakdowns] = useState<{ byService: { label: string; count: number }[]; bySuburb: { label: string; count: number }[] }>({ byService: [], bySuburb: [] });
+  const [providerActivity, setProviderActivity] = useState<{ id: string; name: string; views: number; shortlists: number; callbackRequests: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResults | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   function loadAll() {
     setLoading(true);
@@ -57,15 +82,25 @@ export default function AdminDashboard() {
       getRecentWorkers(),
       getRecentActivity(),
       getUserGrowth(period === 'today' || period === 'all' ? '30d' : period),
+      getProviderByState(),
+      getWorkerBreakdowns(),
+      getProviderActivityTable(),
     ])
-      .then(([ov, rp, rw, ra, ug]) => {
+      .then(([ov, rp, rw, ra, ug, sb, wb, pa]) => {
         setOverview(ov); setProviders(rp.items); setWorkers(rw.items); setActivity(ra.items); setGrowth(ug.series);
+        setStateBreakdown(sb.counts); setWorkerBreakdowns(wb); setProviderActivity(pa.items);
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : 'Unable to load dashboard statistics.'))
       .finally(() => setLoading(false));
   }
 
   useEffect(loadAll, [period]);
+
+  useEffect(() => {
+    if (searchQuery.trim().length < 2) { setSearchResults(null); return; }
+    const t = setTimeout(() => { searchAdmin(searchQuery).then(setSearchResults).catch(() => {}); }, 300);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
 
   if (loading && !overview) {
     return (
@@ -88,7 +123,6 @@ export default function AdminDashboard() {
   }
 
   if (!overview) return null;
-  const maxGrowth = Math.max(1, ...growth.map((g) => g.count));
   const maxFunnel = Math.max(1, ...overview.onboardingFunnel.map((f) => f.completedCount));
 
   return (
@@ -98,9 +132,34 @@ export default function AdminDashboard() {
           <h1 className="ad-heading">{greeting()}, Admin</h1>
           <p className="ad-subheading">Here's what's happening across SolDirectory.</p>
         </div>
-        <select className="ad-period-select" value={period} onChange={(e) => setPeriod(e.target.value)}>
-          {PERIODS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
-        </select>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', position: 'relative' }}>
+          <div className="ad-search-wrap">
+            <input
+              className="ad-search-input"
+              placeholder="Search users, providers, workers…"
+              value={searchQuery}
+              onChange={(e) => { setSearchQuery(e.target.value); setSearchOpen(true); }}
+              onFocus={() => setSearchOpen(true)}
+              onBlur={() => setTimeout(() => setSearchOpen(false), 150)}
+            />
+            {searchOpen && searchResults && (
+              <div className="ad-search-dropdown">
+                {searchResults.users.length === 0 && searchResults.providers.length === 0 && searchResults.workers.length === 0 ? (
+                  <p className="ad-search-empty">No matches.</p>
+                ) : (
+                  <>
+                    {searchResults.users.length > 0 && <SearchGroup title="Users" items={searchResults.users} />}
+                    {searchResults.providers.length > 0 && <SearchGroup title="Providers" items={searchResults.providers} />}
+                    {searchResults.workers.length > 0 && <SearchGroup title="Workers" items={searchResults.workers} />}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+          <select className="ad-period-select" value={period} onChange={(e) => setPeriod(e.target.value)}>
+            {PERIODS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+          </select>
+        </div>
       </div>
 
       {/* Top stats */}
@@ -120,26 +179,13 @@ export default function AdminDashboard() {
         {/* Role distribution */}
         <section className="ad-panel">
           <h2 className="ad-panel-title">User role distribution</h2>
-          <div className="ad-bar-list">
-            {Object.entries(overview.roleDistribution).map(([role, count]) => (
-              <div key={role}>
-                <div className="ad-bar-row"><span style={{ textTransform: 'capitalize' }}>{role}</span><span className="ad-bar-count">{count}</span></div>
-                <div className="ad-bar-track"><div className="ad-bar-fill" style={{ width: `${(count / Math.max(1, overview.totalUsers)) * 100}%` }} /></div>
-              </div>
-            ))}
-          </div>
+          <RoleDonutChart data={overview.roleDistribution} />
         </section>
 
         {/* User growth */}
         <section className="ad-panel">
           <h2 className="ad-panel-title">User growth</h2>
-          <div className="ad-growth-chart">
-            {growth.map((g) => (
-              <div key={g.date} className="ad-growth-bar-col" title={`${g.date}: ${g.count}`}>
-                <div className="ad-growth-bar" style={{ height: `${(g.count / maxGrowth) * 100}%` }} />
-              </div>
-            ))}
-          </div>
+          <UserGrowthChart series={growth} />
           <p className="ad-growth-caption">Daily registrations, {growth.length} days shown</p>
         </section>
       </div>
@@ -189,6 +235,8 @@ export default function AdminDashboard() {
             <div><span className="ad-mini-value">{overview.leads.matched}</span><span className="ad-mini-label">Matched (open)</span></div>
             <div><span className="ad-mini-value">{overview.leads.unlocked}</span><span className="ad-mini-label">Unlocked</span></div>
             <div><span className="ad-mini-value">{overview.leads.closed}</span><span className="ad-mini-label">Closed</span></div>
+            <div><span className="ad-mini-value">{overview.leads.viewed}</span><span className="ad-mini-label">Viewed by a provider</span></div>
+            <div><span className="ad-mini-value">{overview.leads.notViewed}</span><span className="ad-mini-label">Not yet viewed</span></div>
           </div>
         </section>
         <section className="ad-panel">
@@ -210,6 +258,54 @@ export default function AdminDashboard() {
             </div>
           ))}
         </div>
+      </section>
+
+      {/* Providers by state */}
+      <div className="ad-two-col">
+        <section className="ad-panel">
+          <h2 className="ad-panel-title">Providers by state</h2>
+          <div className="ad-bar-list">
+            {Object.entries(stateBreakdown).filter(([, c]) => c > 0).sort(([, a], [, b]) => b - a).map(([state, count]) => (
+              <div key={state}>
+                <div className="ad-bar-row"><span>{state}</span><span className="ad-bar-count">{count}</span></div>
+                <div className="ad-bar-track"><div className="ad-bar-fill" style={{ width: `${(count / Math.max(1, ...Object.values(stateBreakdown))) * 100}%` }} /></div>
+              </div>
+            ))}
+            {Object.values(stateBreakdown).every((c) => c === 0) && <p className="ad-empty-note">No provider location data yet.</p>}
+          </div>
+        </section>
+
+        <section className="ad-panel">
+          <h2 className="ad-panel-title">Workers by support type</h2>
+          <div className="ad-bar-list">
+            {workerBreakdowns.byService.slice(0, 8).map((r) => (
+              <div key={r.label}>
+                <div className="ad-bar-row"><span>{r.label}</span><span className="ad-bar-count">{r.count}</span></div>
+                <div className="ad-bar-track"><div className="ad-bar-fill" style={{ width: `${(r.count / Math.max(1, workerBreakdowns.byService[0]?.count ?? 1)) * 100}%` }} /></div>
+              </div>
+            ))}
+            {workerBreakdowns.byService.length === 0 && <p className="ad-empty-note">No worker service data yet.</p>}
+          </div>
+        </section>
+      </div>
+
+      {/* Provider profile activity — real view/shortlist counts */}
+      <section className="ad-panel">
+        <h2 className="ad-panel-title">Most active provider profiles</h2>
+        {providerActivity.length === 0 ? (
+          <p className="ad-empty-note">No provider profile activity recorded yet.</p>
+        ) : (
+          <div className="ad-table">
+            <div className="ad-table-row ad-table-head" style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr' }}>
+              <span>Provider</span><span>Profile views</span><span>Shortlists</span><span>Callbacks</span>
+            </div>
+            {providerActivity.map((p) => (
+              <div key={p.id} className="ad-table-row" style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr' }}>
+                <span>{p.name}</span><span>{p.views}</span><span>{p.shortlists}</span><span>{p.callbackRequests}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Needs attention */}

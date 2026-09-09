@@ -6,6 +6,9 @@ interface AuthUser {
   id: string;
   name: string;
   role: Role;
+  // Only meaningful for role === 'provider'. Undefined for every
+  // other role. Drives the pro-plan gate on the worker directory.
+  plan?: string;
 }
 
 interface AuthContextValue {
@@ -18,19 +21,12 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-// NOTE: assumes api/client.ts stores the token in localStorage under
-// 'sd_token', matching the original build. If that file has changed
-// since, this key may need updating.
 const TOKEN_KEY = 'sd_token';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Rehydrate on mount: if a token exists, validate it against the
-  // server and restore the user — this is the piece that was
-  // entirely missing before, causing every page refresh to silently
-  // log the user out client-side even with a valid token in storage.
   useEffect(() => {
     const token = localStorage.getItem(TOKEN_KEY);
     if (!token) {

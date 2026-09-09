@@ -4,6 +4,7 @@ import Lead, { MASKED_PROJECTION, toMaskedShape, toUnlockedShape } from '../mode
 import Provider from '../models/Provider.js';
 import UnlockLedger from '../models/UnlockLedger.js';
 import PlanConfig from '../models/PlanConfig.js';
+import LeadView from '../models/LeadView.js';
 
 async function getProviderForUser(userId: string) {
   const provider = await Provider.findOne({ userId });
@@ -31,12 +32,38 @@ export async function listLeads(req: AuthedRequest, res: Response) {
     : [];
   const unlockedById = new Map(unlockedFull.map((l) => [String(l._id), l]));
 
+  // Viewed status is per-(lead, provider) — merged in after shaping,
+  // since it's not an inherent property of the lead itself.
+  const viewedIds = new Set(
+    (await LeadView.find({ providerId: provider._id }).select('leadId').lean()).map((v) => String(v.leadId))
+  );
+
   res.json(
     leads.map((l) => {
       const full = unlockedById.get(String(l._id));
-      return full ? toUnlockedShape(full) : toMaskedShape(l);
+      const shaped = full ? toUnlockedShape(full) : toMaskedShape(l);
+      return { ...shaped, viewed: viewedIds.has(String(l._id)) };
     })
   );
+}
+
+// Records a meaningful view — the frontend calls this when a
+// provider actually opens a lead's details, not on every list
+// render. The unique index on (leadId, providerId) means this is
+// naturally idempotent: opening the same lead five times updates
+// lastViewedAt, never creates five rows.
+export async function markLeadViewed(req: AuthedRequest, res: Response) {
+  const provider = await getProviderForUser(req.user!.id);
+  const lead = await Lead.findById(req.params.id).select('_id').lean();
+  if (!lead) return res.status(404).json({ error: 'Lead not found' });
+
+  await LeadView.findOneAndUpdate(
+    { leadId: lead._id, providerId: provider._id },
+    { $set: { lastViewedAt: new Date() }, $setOnInsert: { firstViewedAt: new Date() } },
+    { upsert: true }
+  );
+
+  res.json({ viewed: true });
 }
 
 export async function unlockLead(req: AuthedRequest, res: Response) {

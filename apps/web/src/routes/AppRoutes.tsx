@@ -20,6 +20,7 @@ import AdminProviderDetail from '../pages/admin/AdminProviderDetail';
 import AdminWorkers from '../pages/admin/AdminWorkers';
 import AdminWorkerDetail from '../pages/admin/AdminWorkerDetail';
 import AdminUsers from '../pages/admin/AdminUsers';
+import AdminMemberPlans from '../pages/admin/AdminMemberPlans';
 import ProviderDirectory from '../pages/providers/ProviderDirectory';
 import SavedProviders from '../pages/providers/SavedProviders';
 import AdminUserDetail from '../pages/admin/AdminUserDetail';
@@ -58,6 +59,33 @@ function RequireRole({ roles, children }: { roles: Role[]; children: ReactElemen
   return children;
 }
 
+// Mirrors the backend's requireAdminOrProProvider exactly — admin
+// always gets in, a provider only on the 'pro' plan, everyone else
+// (including coordinator/participant, who used to have access
+// before this rule changed) is turned away. This is a UX
+// convenience only; the real enforcement is the matching backend
+// middleware on the /api/workers routes.
+function RequireAdminOrProProvider({ children }: { children: ReactElement }) {
+  const { user, loading } = useAuth();
+  if (loading) return <div style={{ padding: 60, textAlign: 'center' }}>Loading…</div>;
+  if (!user) return <Navigate to="/login" replace />;
+  const allowed = user.role === 'admin' || (user.role === 'provider' && user.plan === 'pro');
+  if (!allowed) {
+    return (
+      <div style={{ padding: 60, textAlign: 'center' }}>
+        <h2>Not available for your account type</h2>
+        <p>
+          {user.role === 'provider'
+            ? "The worker directory is available on the Pro plan. "
+            : "This section isn't part of your role. "}
+          <a href="/dashboard">Back to dashboard</a>
+        </p>
+      </div>
+    );
+  }
+  return children;
+}
+
 export default function AppRoutes() {
   return (
     <Routes>
@@ -84,17 +112,17 @@ export default function AppRoutes() {
         <Route
           path="/workers"
           element={
-            <RequireRole roles={['provider', 'coordinator', 'participant', 'admin']}>
+            <RequireAdminOrProProvider>
               <WorkerDirectory />
-            </RequireRole>
+            </RequireAdminOrProProvider>
           }
         />
         <Route
           path="/workers/:id"
           element={
-            <RequireRole roles={['provider', 'coordinator', 'participant', 'admin']}>
+            <RequireAdminOrProProvider>
               <WorkerProfile />
-            </RequireRole>
+            </RequireAdminOrProProvider>
           }
         />
         <Route path="/leads" element={<RequireRole roles={['provider']}><Leads /></RequireRole>} />
@@ -109,6 +137,7 @@ export default function AppRoutes() {
         <Route path="/find-providers" element={<RequireRole roles={['coordinator', 'participant', 'admin']}><ProviderDirectory /></RequireRole>} />
         <Route path="/saved-providers" element={<RequireRole roles={['coordinator', 'participant']}><SavedProviders /></RequireRole>} />
         <Route path="/admin/users/:id" element={<RequireRole roles={['admin']}><AdminUserDetail /></RequireRole>} />
+        <Route path="/admin/plans" element={<RequireRole roles={['admin']}><AdminMemberPlans /></RequireRole>} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

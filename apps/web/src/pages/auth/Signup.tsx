@@ -78,11 +78,16 @@ export default function Signup() {
         <Link to="/" className="auth-header-back">← Back to public website</Link>
       </div>
 
+      <div className="signup-brand-block">
+        <p className="signup-brand-name">SolDirectory</p>
+        <p className="signup-brand-eyebrow">Create an account</p>
+      </div>
+
       <h1 className="signup-heading">What are you signing up as?</h1>
       <p className="signup-paragraph">
         Accounts are free. What you register as decides what you can see:
-        NDIS workers build a listing, providers manage a business profile,
-        and coordinators, participants and families search the directory.
+        NDIS Workers build a listing, providers manage a business profile,
+        and Allied Health professionals and participants search for providers.
       </p>
 
       <div className="signup-role-grid" role="radiogroup" aria-label="Account type">

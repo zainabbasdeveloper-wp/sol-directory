@@ -12,8 +12,8 @@ import '../../styles/auth-shared.css';
 const ROLES: { key: Role; label: string }[] = [
   { key: 'worker', label: 'NDIS worker' },
   { key: 'provider', label: 'Provider' },
-  { key: 'coordinator', label: 'Support coordinator' },
-  { key: 'participant', label: 'Participant or family' },
+  { key: 'coordinator', label: 'Allied Health' },
+  { key: 'participant', label: 'Participant' },
   { key: 'admin', label: 'Sol admin' },
 ];
 
@@ -36,11 +36,11 @@ const ROLE_CONTENT: Record<Role, { eyebrow: string; heading: string; subhead: st
     asideParagraph: 'Manage services, coverage areas, staff, onboarding and incoming leads.',
   },
   coordinator: {
-    eyebrow: 'Coordinator portal',
+    eyebrow: 'Allied Health portal',
     heading: 'Log in to find support',
-    subhead: 'Search workers and providers, shortlist options and manage referrals.',
+    subhead: 'Search providers, shortlist options and manage referrals.',
     asideHeading: 'Find support faster for the people you work with.',
-    asideParagraph: 'Search verified providers and workers by location, availability and service.',
+    asideParagraph: 'Search verified providers by location, availability and service.',
   },
   participant: {
     eyebrow: 'Support directory',
@@ -58,15 +58,17 @@ const ROLE_CONTENT: Record<Role, { eyebrow: string; heading: string; subhead: st
   },
 };
 
-// Existing routes only — there is no per-role dashboard route yet,
-// so this maps each role to the closest existing page. Worth
-// revisiting once dedicated role routes exist.
+// Existing routes only. worker can't access /workers (excluded
+// since the first RBAC pass), and coordinator/participant lost
+// access to it too once the pro-plan gate was added — all three
+// previously pointed there, which would have bounced them to an
+// error page immediately after login.
 const ROLE_DESTINATION: Record<Role, string> = {
   admin: '/verification',
   provider: '/dashboard',
-  worker: '/workers',
-  coordinator: '/workers',
-  participant: '/workers',
+  worker: '/dashboard',
+  coordinator: '/find-providers',
+  participant: '/find-providers',
 };
 
 const EMAIL_RE = /.+@.+\..+/;

@@ -13,9 +13,9 @@ export interface AccountType {
   postSignupRoute: string;
   // Clearance-verification consent only makes sense for people whose
   // own clearances get checked — workers directly, providers because
-  // their staff's clearances are what's being verified. Coordinators
-  // and participants aren't being screened, so showing them this line
-  // would be legally meaningless for their account type.
+  // their staff's clearances are what's being verified. Allied
+  // Health and participants aren't being screened, so showing them
+  // this line would be legally meaningless for their account type.
   showClearanceConsent: boolean;
 }
 
@@ -23,15 +23,24 @@ export interface AccountType {
 // login, and post-auth routing. Extracted verbatim where the wording
 // is copy; postSignupRoute/showClearanceConsent are the only fields
 // that drive real application logic.
+//
+// Internal role keys ('worker', 'coordinator', 'participant') stay
+// unchanged for backward compatibility with existing accounts and
+// the database schema — only the user-facing title/labels changed
+// (NDIS Worker terminology confirmed already correct; 'Support
+// coordinator' -> 'Allied Health'; 'Participant or family' ->
+// 'Participant').
 export const ACCOUNT_TYPES: AccountType[] = [
   {
     key: 'worker',
-    title: 'NDIS worker',
+    title: 'NDIS Worker',
     desc: 'Support workers, nurses and allied health assistants who want to be found and contacted for shifts.',
     meta: 'Builds a searchable worker listing',
     signupHeading: 'Create your worker account',
     signupCta: 'Create worker account →',
-    postSignupRoute: '/workers',
+    // Workers can't access /workers themselves (that's the directory
+    // OTHER roles use to find them) — /dashboard is their real home.
+    postSignupRoute: '/dashboard',
     showClearanceConsent: true,
   },
   {
@@ -46,22 +55,25 @@ export const ACCOUNT_TYPES: AccountType[] = [
   },
   {
     key: 'coordinator',
-    title: 'Support coordinator',
-    desc: 'Coordinators and plan managers placing participants with workers and providers.',
+    title: 'Allied Health',
+    desc: 'Allied health professionals placing participants with the right providers.',
     meta: 'Search, shortlist and refer',
-    signupHeading: 'Create your coordinator account',
-    signupCta: 'Create coordinator account →',
-    postSignupRoute: '/workers',
+    signupHeading: 'Create your Allied Health account',
+    signupCta: 'Create Allied Health account →',
+    // /workers now requires admin or a pro-plan provider — Allied
+    // Health lost access to it. Their real home is the provider
+    // directory.
+    postSignupRoute: '/find-providers',
     showClearanceConsent: false,
   },
   {
     key: 'participant',
-    title: 'Participant or family',
-    desc: 'Participants, families and carers hiring support directly for themselves or someone they care for.',
+    title: 'Participant',
+    desc: 'Participants hiring support directly for themselves or someone they care for.',
     meta: 'Search and request contact',
     signupHeading: 'Create your account',
     signupCta: 'Create account →',
-    postSignupRoute: '/workers',
+    postSignupRoute: '/find-providers',
     showClearanceConsent: false,
   },
 ];

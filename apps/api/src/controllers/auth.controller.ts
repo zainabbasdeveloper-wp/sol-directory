@@ -73,11 +73,13 @@ export async function login(req: Request, res: Response) {
   const ok = await bcrypt.compare(password || '', user.passwordHash);
   if (!ok) return res.status(401).json({ error: 'Invalid email or password' });
 
+  let providerPlan: string | undefined;
   if (user.role === 'provider' && user.providerId) {
-    const provider = await Provider.findById(user.providerId).select('accountStatus').lean();
+    const provider = await Provider.findById(user.providerId).select('accountStatus plan').lean();
     if (provider?.accountStatus === 'suspended') {
       return res.status(403).json({ error: 'Your account has been suspended.' });
     }
+    providerPlan = provider?.plan;
   }
   if (user.role === 'worker' && user.workerId) {
     const worker = await Worker.findById(user.workerId).select('accountStatus').lean();
@@ -89,7 +91,7 @@ export async function login(req: Request, res: Response) {
     return res.status(403).json({ error: 'Your account has been suspended.' });
   }
 
-  res.json({ token: signToken(user), user: { id: user._id, name: user.name, role: user.role } });
+  res.json({ token: signToken(user), user: { id: user._id, name: user.name, role: user.role, plan: providerPlan } });
 }
 
 // Validates a stored JWT and returns the current user — the missing
@@ -104,7 +106,14 @@ export async function me(req: Request, res: Response) {
     const payload = jwt.verify(token, process.env.JWT_SECRET as string) as { id: string };
     const user = await User.findById(payload.id);
     if (!user) return res.status(401).json({ error: 'User no longer exists' });
-    res.json({ user: { id: user._id, name: user.name, role: user.role } });
+
+    let providerPlan: string | undefined;
+    if (user.role === 'provider' && user.providerId) {
+      const provider = await Provider.findById(user.providerId).select('plan').lean();
+      providerPlan = provider?.plan;
+    }
+
+    res.json({ user: { id: user._id, name: user.name, role: user.role, plan: providerPlan } });
   } catch {
     res.status(401).json({ error: 'Invalid or expired session' });
   }

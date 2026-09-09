@@ -1,6 +1,9 @@
 import type { Response } from 'express';
 import type { AuthedRequest } from '../middleware/auth.middleware.js';
 import Provider from '../models/Provider.js';
+import ProviderView from '../models/ProviderView.js';
+import ContactRequest from '../models/ContactRequest.js';
+import { logActivity } from '../models/AdminActivity.js';
 
 const MAX_LIMIT = 50;
 
@@ -61,6 +64,10 @@ export async function getProviderProfile(req: AuthedRequest, res: Response) {
     .lean();
   if (!provider) return res.status(404).json({ error: 'Provider not found' });
 
+  // Fire-and-forget — a failed view log must never break the actual
+  // profile response.
+  ProviderView.create({ providerId: provider._id, viewerId: req.user!.id }).catch(() => {});
+
   res.json({
     id: String(provider._id),
     legalEntityName: provider.legalEntityName,
@@ -79,11 +86,13 @@ export async function getProviderProfile(req: AuthedRequest, res: Response) {
 // state. Was previously a fake button (onClick={onClose}) that did
 // nothing at all.
 export async function requestProviderContact(req: AuthedRequest, res: Response) {
-  const provider = await Provider.findOne({ _id: req.params.id, accountStatus: 'active' }).select('_id').lean();
+  const provider = await Provider.findOne({ _id: req.params.id, accountStatus: 'active' })
+    .select('_id tradingName legalEntityName')
+    .lean();
   if (!provider) return res.status(404).json({ error: 'Provider not found' });
 
-  // TODO: create a ContactRequest document (requesterId, providerId,
-  // status: 'pending') and notify the provider — same follow-up as
-  // the equivalent TODO already sitting in workers.controller.ts.
+  await ContactRequest.create({ requesterId: req.user!.id, targetType: 'Provider', targetId: provider._id });
+  await logActivity('callback_requested', `${req.user!.email} requested a callback from ${provider.tradingName || provider.legalEntityName || 'a provider'}`);
+
   res.status(202).json({ status: 'pending', message: 'Request sent. The provider will be notified.' });
 }

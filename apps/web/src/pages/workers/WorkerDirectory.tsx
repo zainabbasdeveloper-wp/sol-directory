@@ -92,7 +92,6 @@ export default function WorkerDirectory() {
   const [language, setLanguage] = useState(searchParams.get('language') ?? '');
   const [gender, setGender] = useState(searchParams.get('gender') ?? '');
   const [condition, setCondition] = useState(searchParams.get('condition') ?? '');
-  const [maxRate, setMaxRate] = useState(Number(searchParams.get('maxRate')) || 150);
   const [minRating, setMinRating] = useState(Number(searchParams.get('minRating')) || 0);
   const [sort, setSort] = useState(searchParams.get('sort') ?? '');
   const [page, setPage] = useState(Number(searchParams.get('page')) || 1);
@@ -105,7 +104,7 @@ export default function WorkerDirectory() {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const skipNextUrlSync = useRef(false);
 
-  const hasActiveFilters = !!(query || service || suburb || language || gender || condition || maxRate !== 150 || minRating > 0 || sort);
+  const hasActiveFilters = !!(query || service || suburb || language || gender || condition || minRating > 0 || sort);
 
   const runSearch = useCallback(() => {
     setLoading(true);
@@ -117,7 +116,6 @@ export default function WorkerDirectory() {
     if (language) params.set('language', language);
     if (gender) params.set('gender', gender);
     if (condition) params.set('condition', condition);
-    if (maxRate !== 150) params.set('maxRate', String(maxRate));
     if (minRating > 0) params.set('minRating', String(minRating));
     if (sort) params.set('sort', sort);
     params.set('page', String(page));
@@ -132,7 +130,7 @@ export default function WorkerDirectory() {
       .catch((err) => setError(err instanceof ApiError ? err.message : 'Unable to load workers.'))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [service, suburb, language, gender, condition, maxRate, minRating, sort, page]);
+  }, [service, suburb, language, gender, condition, minRating, sort, page]);
 
   // Debounce only the free-text query; every other filter re-searches immediately.
   useEffect(() => {
@@ -144,11 +142,11 @@ export default function WorkerDirectory() {
   useEffect(() => {
     runSearch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [service, suburb, language, gender, condition, maxRate, minRating, sort, page]);
+  }, [service, suburb, language, gender, condition, minRating, sort, page]);
 
   function resetFilters() {
     setQuery(''); setService(''); setSuburb(''); setLanguage(''); setGender('');
-    setCondition(''); setMaxRate(150); setMinRating(0); setSort(''); setPage(1);
+    setCondition(''); setMinRating(0); setSort(''); setPage(1);
   }
 
   const totalPages = Math.max(1, Math.ceil(total / limit));
@@ -196,18 +194,6 @@ export default function WorkerDirectory() {
           <option value="">Any experience</option>
           {CONDITIONS.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
-      </div>
-
-      <div className="wd-filter-block">
-        <div className="wd-slider-label-row">
-          <label className="wd-filter-label" htmlFor="wd-rate">Maximum hourly rate</label>
-          <span className="wd-slider-value">${maxRate}/hr</span>
-        </div>
-        <input
-          id="wd-rate" type="range" min={20} max={150} value={maxRate} className="wd-slider"
-          onChange={(e) => { setPage(1); setMaxRate(Number(e.target.value)); }}
-          style={{ '--wd-fill': `${((maxRate - 20) / 130) * 100}%` } as React.CSSProperties}
-        />
       </div>
 
       <div className="wd-filter-block">

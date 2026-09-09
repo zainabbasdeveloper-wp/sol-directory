@@ -8,6 +8,22 @@
   background: #fff; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer;
 }
 
+.ad-search-wrap { position: relative; width: 280px; }
+.ad-search-input {
+  width: 100%; height: 42px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--color-border-strong, #DDE4EF);
+  font: inherit; font-size: 13.5px; background: #fff;
+}
+.ad-search-input:focus { outline: none; border-color: var(--color-primary, #1769E0); box-shadow: 0 0 0 3px rgba(23,105,224,0.10); }
+.ad-search-dropdown {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: #fff; border: 1px solid var(--color-border, #E8EEF7);
+  border-radius: 10px; box-shadow: 0 16px 40px rgba(11,45,92,0.18); padding: 8px; z-index: 50; max-height: 340px; overflow-y: auto;
+}
+.ad-search-empty { margin: 0; padding: 12px; font-size: 13px; color: var(--color-text-muted, #5A6B84); }
+.ad-search-group-title { margin: 6px 10px 4px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; color: var(--color-text-muted, #5A6B84); }
+.ad-search-result { display: flex; flex-direction: column; width: 100%; text-align: left; background: none; border: 0; padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 13.5px; }
+.ad-search-result:hover { background: var(--color-primary-tint, #F2F7FF); }
+.ad-search-result-sub { font-size: 11.5px; color: var(--color-text-muted, #5A6B84); }
+
 .ad-stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; }
 .ad-stat-card {
   background: #fff; border: 1px solid var(--color-border, #E8EEF7); border-radius: 12px; padding: 18px 16px;

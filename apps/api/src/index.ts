@@ -12,6 +12,8 @@ import onboardingRoutes from './routes/onboarding.routes.js';
 import verificationRoutes from './routes/verification.routes.js';
 import webhooksRoutes from './routes/webhooks.routes.js';
 import wpRoutes from './routes/wp.routes.js';
+import adminRoutes from './routes/admin.routes.js';
+import adminDashboardRoutes from './routes/admin.dashboard.routes.js';
 
 const app = express();
 
@@ -28,6 +30,8 @@ app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/verification', verificationRoutes);
 app.use('/api/webhooks', webhooksRoutes);
 app.use('/api/wp', wpRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/admin/dashboard', adminDashboardRoutes);
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);

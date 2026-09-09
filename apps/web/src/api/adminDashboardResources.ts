@@ -18,7 +18,7 @@ export interface DashboardOverview {
   roleDistribution: Record<string, number>;
   providers: { total: number; active: number; suspended: number; acceptingClients: number; atCapacity: number; incompleteOnboarding: number };
   workers: { total: number; approved: number; awaitingReview: number; rejected: number; published: number };
-  leads: { total: number; matched: number; unlocked: number; closed: number };
+  leads: { total: number; matched: number; unlocked: number; closed: number; viewed: number; notViewed: number };
   shortlists: { total: number };
   onboardingFunnel: { step: string; completedCount: number }[];
   pendingVerifications: number;
@@ -48,4 +48,32 @@ export function getRecentActivity(): Promise<{ items: ActivityItem[] }> {
 }
 export function getUserGrowth(period: string): Promise<{ period: string; series: GrowthPoint[] }> {
   return get(`/admin/dashboard/user-growth?period=${period}`);
+}
+
+export function getProviderByState(): Promise<{ counts: Record<string, number> }> {
+  return get('/admin/dashboard/providers-by-state');
+}
+export function getWorkerBreakdowns(): Promise<{ byService: { label: string; count: number }[]; bySuburb: { label: string; count: number }[] }> {
+  return get('/admin/dashboard/worker-breakdowns');
+}
+export function getProviderActivityTable(): Promise<{ items: { id: string; name: string; views: number; shortlists: number; callbackRequests: number }[] }> {
+  return get('/admin/dashboard/provider-activity');
+}
+export interface SearchResults { users: { id: string; label: string; sublabel: string; linkTo: string }[]; providers: { id: string; label: string; sublabel: string; linkTo: string }[]; workers: { id: string; label: string; sublabel: string; linkTo: string }[]; }
+export function searchAdmin(q: string): Promise<SearchResults> {
+  return get(`/admin/dashboard/search?q=${encodeURIComponent(q)}`);
+}
+
+export interface NotificationItem { id: string; type: string; summary: string; createdAt: string; unread: boolean; }
+export function getNotifications(): Promise<{ unreadCount: number; items: NotificationItem[] }> {
+  return get('/admin/dashboard/notifications');
+}
+export async function markNotificationsRead(): Promise<{ success: boolean }> {
+  const token = localStorage.getItem('sd_token');
+  const res = await fetch(`${API_URL}/admin/dashboard/notifications/mark-read`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new ApiError((await res.json()).error ?? 'Request failed', res.status);
+  return res.json();
 }

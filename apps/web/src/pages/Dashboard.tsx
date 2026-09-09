@@ -1,10 +1,24 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { listLeads, getPlans } from '../api/resources';
+import { ApiError } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import AdminDashboard from './admin/AdminDashboard';
 import type { Lead, PlanConfig } from '@soldirectory/shared-types';
 import './Dashboard.css';
+
+// Self-contained — same pattern as adminResources.ts and
+// providerResources.ts — avoids assuming an unconfirmed addition to
+// the real api/resources.ts file.
+const API_URL = (import.meta as any).env?.VITE_API_URL ?? '/api';
+function authHeaders(): Record<string, string> {
+  const token = localStorage.getItem('sd_token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+async function markLeadViewed(id: string): Promise<void> {
+  const res = await fetch(`${API_URL}/leads/${id}/view`, { method: 'POST', headers: authHeaders() });
+  if (!res.ok) throw new ApiError((await res.json()).error ?? 'Request failed', res.status);
+}
 
 // Per-role landing content. Only the provider case calls real,
 // existing endpoints (leads/plans). The other roles show honest
@@ -49,8 +63,10 @@ function NonProviderDashboard({ role }: { role: string }) {
   );
 }
 
+type LeadWithViewed = Lead & { viewed?: boolean };
+
 function ProviderDashboard() {
-  const [leads, setLeads] = useState<Lead[]>([]);
+  const [leads, setLeads] = useState<LeadWithViewed[]>([]);
   const [plans, setPlans] = useState<PlanConfig[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -59,6 +75,14 @@ function ProviderDashboard() {
       .then(([l, p]) => { setLeads(l); setPlans(p); })
       .finally(() => setLoading(false));
   }, []);
+
+  function handleViewLead(id: string) {
+    // Optimistic — the badge should feel instant, and a failed
+    // background call here isn't worth blocking on since it's just
+    // marking something as read.
+    setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, viewed: true } : l)));
+    markLeadViewed(id).catch(() => {});
+  }
 
   if (loading) return <div className="dashboard-page">Loading…</div>;
 
@@ -94,8 +118,21 @@ function ProviderDashboard() {
         <div className="latest-leads-list">
           {leads.slice(0, 4).map((lead) => (
             <div key={lead.id} className="latest-lead-row">
-              <p className="latest-lead-need">{lead.need}</p>
-              <p className="latest-lead-meta">{lead.suburb} · {lead.hoursPerWeek} · {lead.funding}</p>
+              <p className="latest-lead-need">
+                {lead.need}
+                {lead.viewed && <span style={{ marginLeft: 10, fontSize: 12, fontWeight: 700, color: '#177C4B' }}>Viewed ✓</span>}
+              </p>
+              <p className="latest-lead-meta">
+                {lead.suburb} · {lead.hoursPerWeek} · {lead.funding}
+                {!lead.viewed && (
+                  <button
+                    onClick={() => handleViewLead(lead.id)}
+                    style={{ marginLeft: 10, background: 'none', border: 0, color: '#1769E0', fontSize: 12, fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}
+                  >
+                    Mark viewed
+                  </button>
+                )}
+              </p>
             </div>
           ))}
         </div>

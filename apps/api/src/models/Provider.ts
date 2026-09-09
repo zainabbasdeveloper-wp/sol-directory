@@ -6,6 +6,13 @@ interface OnboardingStepSub {
   data?: Record<string, unknown>;
 }
 
+interface PlanHistoryEntry {
+  plan: string;
+  planStatus: string;
+  changedAt: Date;
+  changedBy: 'admin' | 'system';
+}
+
 export interface ProviderDoc extends Document {
   userId: Types.ObjectId;
   legalEntityName: string;
@@ -27,13 +34,31 @@ export interface ProviderDoc extends Document {
   onboarding: OnboardingStepSub[];
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
-  plan: 'starter' | 'growth' | 'scale';
+  plan: 'starter' | 'growth' | 'pro';
+  // Distinct from accountStatus (a platform-level account lock) —
+  // this is specifically the subscription/plan lifecycle state, per
+  // the admin Member Plans requirement. A provider's account can be
+  // active while their plan has expired, or vice versa.
+  planStatus: 'active' | 'trial' | 'expired' | 'cancelled' | 'suspended';
+  planStartedAt: Date;
+  planExpiresAt?: Date;
+  planHistory: PlanHistoryEntry[];
   leadUnlocksUsedThisPeriod: number;
   periodResetsAt?: Date;
 }
 
 const onboardingStepSchema = new Schema<OnboardingStepSub>(
   { key: { type: String, required: true }, complete: { type: Boolean, default: false }, data: Schema.Types.Mixed },
+  { _id: false }
+);
+
+const planHistorySchema = new Schema<PlanHistoryEntry>(
+  {
+    plan: { type: String, required: true },
+    planStatus: { type: String, required: true },
+    changedAt: { type: Date, default: Date.now },
+    changedBy: { type: String, enum: ['admin', 'system'], default: 'admin' },
+  },
   { _id: false }
 );
 
@@ -59,7 +84,11 @@ const providerSchema = new Schema<ProviderDoc>(
     onboarding: [onboardingStepSchema],
     stripeCustomerId: { type: String, index: true },
     stripeSubscriptionId: String,
-    plan: { type: String, enum: ['starter', 'growth', 'scale'], default: 'starter' },
+    plan: { type: String, enum: ['starter', 'growth', 'pro'], default: 'starter' },
+    planStatus: { type: String, enum: ['active', 'trial', 'expired', 'cancelled', 'suspended'], default: 'trial' },
+    planStartedAt: { type: Date, default: Date.now },
+    planExpiresAt: Date,
+    planHistory: [planHistorySchema],
     leadUnlocksUsedThisPeriod: { type: Number, default: 0 },
     periodResetsAt: Date,
   },

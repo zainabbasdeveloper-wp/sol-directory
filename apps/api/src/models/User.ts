@@ -15,6 +15,11 @@ export interface UserDoc extends Document {
   // their respective models; this one is specifically for roles that
   // have nothing else to attach it to.
   accountStatus: 'active' | 'suspended';
+  // Only meaningful for admin — used to compute the notification
+  // dropdown's unread count as "activity since this timestamp"
+  // rather than maintaining a separate read/unread flag per
+  // notification, which would duplicate AdminActivity for no reason.
+  lastNotificationsViewedAt?: Date;
 }
 
 const userSchema = new Schema<UserDoc>(
@@ -27,6 +32,7 @@ const userSchema = new Schema<UserDoc>(
     providerId: { type: Schema.Types.ObjectId, ref: 'Provider' },
     workerId: { type: Schema.Types.ObjectId, ref: 'Worker' },
     accountStatus: { type: String, enum: ['active', 'suspended'], default: 'active' },
+    lastNotificationsViewedAt: Date,
   },
   { timestamps: true }
 );

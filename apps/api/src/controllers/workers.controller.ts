@@ -1,6 +1,8 @@
 import type { Response } from 'express';
 import type { AuthedRequest } from '../middleware/auth.middleware.js';
 import Worker, { MASKED_PROJECTION, UNLOCKED_PROJECTION, toMaskedShape, toUnlockedShape } from '../models/Worker.js';
+import ContactRequest from '../models/ContactRequest.js';
+import { logActivity } from '../models/AdminActivity.js';
 import type { PaginatedResult, WorkerMasked, WorkerSearchQuery } from '@soldirectory/shared-types';
 
 const MAX_LIMIT = 50;
@@ -16,12 +18,6 @@ export async function listWorkers(req: AuthedRequest, res: Response) {
   if (q.language) filter.languages = q.language;
   if (q.gender) filter.gender = q.gender;
   if (q.condition) filter.conditionExperience = q.condition;
-  if (q.minRate || q.maxRate) {
-    filter.hourlyRate = {
-      ...(q.minRate ? { $gte: Number(q.minRate) } : {}),
-      ...(q.maxRate ? { $lte: Number(q.maxRate) } : {}),
-    };
-  }
   if (q.minRating) filter.rating = { $gte: Number(q.minRating) };
   if (q.q) {
     filter.$or = [{ firstName: new RegExp(String(q.q), 'i') }, { services: new RegExp(String(q.q), 'i') }];
@@ -86,8 +82,11 @@ export async function getWorkerProfile(req: AuthedRequest, res: Response) {
 }
 
 export async function requestContact(req: AuthedRequest, res: Response) {
-  const worker = await Worker.findById(req.params.id).select('_id').lean();
+  const worker = await Worker.findById(req.params.id).select('_id firstName lastName').lean();
   if (!worker) return res.status(404).json({ error: 'Worker not found' });
+
+  await ContactRequest.create({ requesterId: req.user!.id, targetType: 'Worker', targetId: worker._id });
+  await logActivity('callback_requested', `${req.user!.email} requested contact with ${worker.firstName} ${worker.lastName}`);
 
   res.status(202).json({ status: 'pending', message: 'Request sent. You will be notified if they accept.' });
 }

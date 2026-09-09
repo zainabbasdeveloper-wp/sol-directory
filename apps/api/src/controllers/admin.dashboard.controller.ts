@@ -6,6 +6,9 @@ import Worker from '../models/Worker.js';
 import Lead from '../models/Lead.js';
 import Shortlist from '../models/Shortlist.js';
 import AdminActivity from '../models/AdminActivity.js';
+import ProviderView from '../models/ProviderView.js';
+import ContactRequest from '../models/ContactRequest.js';
+import LeadView from '../models/LeadView.js';
 
 const ONBOARDING_STEP_KEYS = ['org', 'insurance', 'areas', 'team', 'policy', 'billing'];
 
@@ -47,6 +50,7 @@ export async function getDashboardOverview(req: AuthedRequest, res: Response) {
     leadMatched,
     leadUnlocked,
     leadClosed,
+    leadsWithViewsResult,
     shortlistTotal,
     newUsersInPeriod,
   ] = await Promise.all([
@@ -66,6 +70,7 @@ export async function getDashboardOverview(req: AuthedRequest, res: Response) {
     Lead.countDocuments({ ...createdFilter, status: 'matched' }),
     Lead.countDocuments({ ...createdFilter, status: 'unlocked' }),
     Lead.countDocuments({ ...createdFilter, status: 'closed' }),
+    LeadView.distinct('leadId'),
     Shortlist.countDocuments(createdFilter),
     User.countDocuments(since ? { createdAt: { $gte: since } } : { createdAt: { $gte: new Date(Date.now() - 30 * 86400000) } }),
   ]);
@@ -108,6 +113,8 @@ export async function getDashboardOverview(req: AuthedRequest, res: Response) {
       matched: leadMatched,
       unlocked: leadUnlocked,
       closed: leadClosed,
+      viewed: leadsWithViewsResult.length,
+      notViewed: Math.max(0, leadTotal - leadsWithViewsResult.length),
     },
     shortlists: { total: shortlistTotal },
     onboardingFunnel,
@@ -192,4 +199,129 @@ export async function getUserGrowth(req: AuthedRequest, res: Response) {
   }
 
   res.json({ period, series });
+}
+
+// Real per-suburb → state lookup — no state field exists directly on
+// Provider (only serviceSuburbs), so "providers by state" has to be
+// computed from this map rather than a stored field.
+const STATE_BY_SUBURB: Record<string, string> = {
+  Sydney: 'NSW', Newcastle: 'NSW', Wollongong: 'NSW', Parramatta: 'NSW', Bankstown: 'NSW',
+  Melbourne: 'VIC', Geelong: 'VIC', Ballarat: 'VIC', Dandenong: 'VIC',
+  Brisbane: 'QLD', 'Gold Coast': 'QLD', Townsville: 'QLD', Cairns: 'QLD',
+  Perth: 'WA', Fremantle: 'WA', Rockingham: 'WA',
+  Adelaide: 'SA', 'Mount Gambier': 'SA',
+  Hobart: 'TAS', Launceston: 'TAS',
+  Canberra: 'ACT',
+  Darwin: 'NT', 'Alice Springs': 'NT',
+};
+
+export async function getProviderByState(req: AuthedRequest, res: Response) {
+  const providers = await Provider.find({ accountStatus: 'active' }).select('serviceSuburbs').lean();
+  const counts: Record<string, number> = { NSW: 0, VIC: 0, QLD: 0, WA: 0, SA: 0, TAS: 0, ACT: 0, NT: 0 };
+  for (const p of providers) {
+    const states = new Set((p.serviceSuburbs ?? []).map((s: string) => STATE_BY_SUBURB[s]).filter(Boolean));
+    for (const s of states) counts[s as string] = (counts[s as string] ?? 0) + 1;
+  }
+  res.json({ counts });
+}
+
+export async function getWorkerBreakdowns(req: AuthedRequest, res: Response) {
+  const [byService, bySuburb] = await Promise.all([
+    Worker.aggregate([{ $unwind: '$services' }, { $group: { _id: '$services', count: { $sum: 1 } } }, { $sort: { count: -1 } }]),
+    Worker.aggregate([{ $match: { suburb: { $ne: null } } }, { $group: { _id: '$suburb', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 10 }]),
+  ]);
+  res.json({
+    byService: byService.map((r: any) => ({ label: r._id, count: r.count })),
+    bySuburb: bySuburb.map((r: any) => ({ label: r._id, count: r.count })),
+  });
+}
+
+// Most-viewed / most-shortlisted providers, plus callback-request
+// count — all from real event data (ProviderView, Shortlist), not
+// invented numbers. Callback requests aren't persisted anywhere yet
+// (requestProviderContact is still a 202-only stub per its own
+// comment), so that column is honestly 0 for every row until that
+// TODO is addressed — not fabricated.
+export async function getProviderActivityTable(req: AuthedRequest, res: Response) {
+  const limit = Math.min(20, Number(req.query.limit) || 10);
+
+  const [viewCounts, shortlistCounts, callbackCounts] = await Promise.all([
+    ProviderView.aggregate([{ $group: { _id: '$providerId', views: { $sum: 1 } } }]),
+    Shortlist.aggregate([{ $group: { _id: '$providerId', shortlists: { $sum: 1 } } }]),
+    ContactRequest.aggregate([{ $match: { targetType: 'Provider' } }, { $group: { _id: '$targetId', callbacks: { $sum: 1 } } }]),
+  ]);
+
+  const viewMap = new Map(viewCounts.map((r: any) => [String(r._id), r.views]));
+  const shortlistMap = new Map(shortlistCounts.map((r: any) => [String(r._id), r.shortlists]));
+  const callbackMap = new Map(callbackCounts.map((r: any) => [String(r._id), r.callbacks]));
+
+  const providerIds = new Set([...viewMap.keys(), ...shortlistMap.keys(), ...callbackMap.keys()]);
+  const providers = await Provider.find({ _id: { $in: [...providerIds] } }).select('legalEntityName tradingName').lean();
+
+  const rows = providers.map((p: any) => ({
+    id: String(p._id),
+    name: p.tradingName || p.legalEntityName || 'Unnamed provider',
+    views: viewMap.get(String(p._id)) ?? 0,
+    shortlists: shortlistMap.get(String(p._id)) ?? 0,
+    callbackRequests: callbackMap.get(String(p._id)) ?? 0,
+  }));
+
+  rows.sort((a, b) => (b.views + b.shortlists + b.callbackRequests) - (a.views + a.shortlists + a.callbackRequests));
+  res.json({ items: rows.slice(0, limit) });
+}
+
+export async function searchAdmin(req: AuthedRequest, res: Response) {
+  const q = String(req.query.q ?? '').trim();
+  if (q.length < 2) return res.json({ users: [], providers: [], workers: [] });
+
+  const re = new RegExp(q, 'i');
+  const [users, providers, workers] = await Promise.all([
+    User.find({ $or: [{ name: re }, { email: re }] }).select('name email role providerId workerId').limit(8).lean(),
+    Provider.find({ $or: [{ legalEntityName: re }, { tradingName: re }] }).select('legalEntityName tradingName').limit(8).lean(),
+    Worker.find({ $or: [{ firstName: re }, { lastName: re }] }).select('firstName lastName suburb').limit(8).lean(),
+  ]);
+
+  // Each role navigates to a different detail page keyed by a
+  // different document id — a worker-role user's admin detail page
+  // lives at /admin/workers/:workerId, not /admin/users/:userId. Admin
+  // accounts have no detail page anywhere, so they get no link at all
+  // rather than a broken one.
+  const navigableUsers = users
+    .map((u: any) => {
+      if (u.role === 'provider' && u.providerId) return { id: String(u.providerId), label: u.name, sublabel: `${u.email} · provider`, linkTo: 'providers' };
+      if (u.role === 'worker' && u.workerId) return { id: String(u.workerId), label: u.name, sublabel: `${u.email} · worker`, linkTo: 'workers' };
+      if (u.role === 'coordinator' || u.role === 'participant') return { id: String(u._id), label: u.name, sublabel: `${u.email} · ${u.role}`, linkTo: 'users' };
+      return null; // admin, or a provider/worker missing their linked profile doc
+    })
+    .filter(Boolean);
+
+  res.json({
+    users: navigableUsers,
+    providers: providers.map((p: any) => ({ id: String(p._id), label: p.tradingName || p.legalEntityName, sublabel: 'Provider', linkTo: 'providers' })),
+    workers: workers.map((w: any) => ({ id: String(w._id), label: `${w.firstName} ${w.lastName}`, sublabel: w.suburb ?? 'Worker', linkTo: 'workers' })),
+  });
+}
+
+// Notifications are deliberately NOT a separate model — they're the
+// same AdminActivity feed the dashboard's "Recent activity" section
+// already reads, with "unread" computed as "created after this
+// admin's lastNotificationsViewedAt timestamp" rather than a
+// per-notification read flag. Building a second parallel system here
+// would duplicate data that already exists for no real benefit.
+export async function getNotifications(req: AuthedRequest, res: Response) {
+  const user = await User.findById(req.user!.id).select('lastNotificationsViewedAt').lean();
+  const since = user?.lastNotificationsViewedAt ?? new Date(0);
+
+  const items = await AdminActivity.find().sort({ createdAt: -1 }).limit(20).lean();
+  const unreadCount = await AdminActivity.countDocuments({ createdAt: { $gt: since } });
+
+  res.json({
+    unreadCount,
+    items: items.map((a: any) => ({ id: String(a._id), type: a.type, summary: a.summary, createdAt: a.createdAt, unread: a.createdAt > since })),
+  });
+}
+
+export async function markNotificationsRead(req: AuthedRequest, res: Response) {
+  await User.findByIdAndUpdate(req.user!.id, { lastNotificationsViewedAt: new Date() });
+  res.json({ success: true });
 }

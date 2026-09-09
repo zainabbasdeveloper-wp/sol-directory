@@ -7,7 +7,9 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
-    "seed": "tsx src/seed/seed.ts"
+    "seed": "tsx src/seed/seed.ts" ,
+    "db:seed:admin": "tsx src/seed/seedAdminDemo.ts"
+
   },
   "dependencies": {
     "@soldirectory/shared-types": "*",
