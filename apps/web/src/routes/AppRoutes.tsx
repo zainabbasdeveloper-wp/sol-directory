@@ -12,6 +12,7 @@ import Dashboard from '../pages/Dashboard';
 import WorkerDirectory from '../pages/workers/WorkerDirectory';
 import WorkerProfile from '../pages/workers/WorkerProfile';
 import Leads from '../pages/Leads';
+import LeadDetailPage from '../pages/LeadDetailPage';
 import Plans from '../pages/Plans';
 import Onboarding from '../pages/Onboarding';
 import Verification from '../pages/Verification';
@@ -128,6 +129,7 @@ export default function AppRoutes() {
           }
         />
         <Route path="/leads" element={<RequireRole roles={['provider']}><Leads /></RequireRole>} />
+        <Route path="/leads/:id" element={<RequireRole roles={['provider']}><LeadDetailPage /></RequireRole>} />
         <Route path="/plans" element={<RequireRole roles={['provider']}><Plans /></RequireRole>} />
         <Route path="/onboarding" element={<RequireRole roles={['provider']}><Onboarding /></RequireRole>} />
         <Route path="/verification" element={<RequireRole roles={['admin']}><Verification /></RequireRole>} />

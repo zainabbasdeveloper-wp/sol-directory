@@ -145,6 +145,7 @@ function ProviderDashboard() {
                     Mark viewed
                   </button>
                 )}
+                <Link to={`/leads/${lead.id}`} style={{ marginLeft: 10, fontSize: 12, fontWeight: 600, color: '#1769E0' }}>View details →</Link>
               </p>
             </div>
           ))}

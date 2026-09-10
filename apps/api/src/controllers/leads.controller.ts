@@ -4,6 +4,7 @@ import Lead, { MASKED_PROJECTION, toMaskedShape, toUnlockedShape } from '../mode
 import Provider from '../models/Provider.js';
 import UnlockLedger from '../models/UnlockLedger.js';
 import PlanConfig from '../models/PlanConfig.js';
+import { geocodeAddress } from '../services/geocoding.service.js';
 import LeadView from '../models/LeadView.js';
 
 async function getProviderForUser(userId: string) {
@@ -103,6 +104,35 @@ export async function unlockLead(req: AuthedRequest, res: Response) {
 
   provider.leadUnlocksUsedThisPeriod += 1;
   await provider.save();
+
+  // Geocode once, lazily, on first real unlock — there's no lead
+  // creation endpoint in this codebase to do this at submission
+  // time, and it's wasted work to geocode leads no provider ever
+  // unlocks. Failure here never blocks the unlock response itself.
+  if (!lead.location?.coordinates?.length && lead.suburb) {
+    const geo = await geocodeAddress(`${lead.suburb}, Australia`);
+    if (geo) {
+      lead.location = { type: 'Point', coordinates: [geo.lng, geo.lat] };
+      await lead.save();
+    }
+  }
+
+  res.json(toUnlockedShape(lead));
+}
+
+// Full detail for a lead this provider has actually unlocked —
+// powers the lead detail page. Ownership check is the same
+// UnlockLedger lookup unlockLead already uses; never trust a role
+// check alone to gate contact-level detail.
+export async function getLeadDetail(req: AuthedRequest, res: Response) {
+  const provider = await getProviderForUser(req.user!.id);
+  const lead = await Lead.findById(req.params.id).lean();
+  if (!lead) return res.status(404).json({ error: 'Lead not found' });
+
+  const unlocked = await UnlockLedger.exists({ providerId: provider._id, leadId: lead._id });
+  if (!unlocked) {
+    return res.status(403).json({ error: 'Unlock this lead to view its full details.' });
+  }
 
   res.json(toUnlockedShape(lead));
 }

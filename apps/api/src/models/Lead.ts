@@ -10,6 +10,11 @@ export interface LeadDoc extends Document {
   // populating this for condition-aware matching to have real data
   // to work with.
   conditions: string[];
+  // Real coordinates for the detail page map — geocoded lazily the
+  // first time a provider unlocks this lead (see unlockLead), since
+  // there's no lead-creation endpoint in this codebase to geocode
+  // at submission time.
+  location?: { type: 'Point'; coordinates: [number, number] };
   suburb: string;
   distanceKm: number;
   hoursPerWeek: string;
@@ -26,6 +31,10 @@ const leadSchema = new Schema<LeadDoc>(
   {
     need: { type: String, required: true },
     conditions: [String],
+    location: {
+      type: { type: String, enum: ['Point'], default: 'Point' },
+      coordinates: { type: [Number], default: undefined },
+    },
     suburb: String,
     distanceKm: Number,
     hoursPerWeek: String,
@@ -57,7 +66,14 @@ export function toMaskedShape(l: any): LeadMasked {
 }
 
 export function toUnlockedShape(l: any): LeadUnlocked {
-  return { ...toMaskedShape(l), contactName: l.contactName, contactPhone: l.contactPhone, budget: l.budget, note: l.note };
+  return {
+    ...toMaskedShape(l),
+    contactName: l.contactName,
+    contactPhone: l.contactPhone,
+    budget: l.budget,
+    note: l.note,
+    location: l.location?.coordinates ? { lat: l.location.coordinates[1], lng: l.location.coordinates[0] } : null,
+  };
 }
 
 export default mongoose.model<LeadDoc>('Lead', leadSchema);
