@@ -4,6 +4,14 @@ import jwt from 'jsonwebtoken';
 import User, { type UserDoc } from '../models/User.js';
 import Provider from '../models/Provider.js';
 import Worker from '../models/Worker.js';
+import Referral from '../models/Referral.js';
+import { EmailService } from '../services/email.service.js';
+
+function generateReferralCode(): string {
+  // Short, URL-safe, human-shareable — not cryptographically
+  // sensitive since it only identifies a referrer, not a secret.
+  return Math.random().toString(36).slice(2, 8).toUpperCase();
+}
 
 function signToken(user: UserDoc): string {
   return jwt.sign({ id: user._id, role: user.role, email: user.email }, process.env.JWT_SECRET as string, {
@@ -19,7 +27,7 @@ function signToken(user: UserDoc): string {
 const PUBLIC_SIGNUP_ROLES = ['worker', 'provider', 'coordinator', 'participant'];
 
 export async function signup(req: Request, res: Response) {
-  const { name, email, mobile, password, role } = req.body;
+  const { name, email, mobile, password, role, referralCode } = req.body;
 
   if (!name || !/.+@.+\..+/.test(email || '') || !mobile || !password || password.length < 8) {
     return res.status(400).json({ error: 'Missing or invalid required fields' });
@@ -40,9 +48,36 @@ export async function signup(req: Request, res: Response) {
   // to already exist for this user — without creating one here,
   // onboarding 403s immediately for every provider signup.
   if (role === 'provider') {
-    const provider = await Provider.create({ userId: user._id, intakeEmail: email });
+    const provider = await Provider.create({
+      userId: user._id,
+      intakeEmail: email,
+      referralCode: generateReferralCode(),
+    });
     user.providerId = provider._id as any;
     await user.save();
+
+    // Credit whoever referred this new provider, if a valid code was
+    // supplied. Referrals are provider-to-provider by design — "refer
+    // a friend" lives on the provider dashboard specifically, so the
+    // referred signup is expected to also be a provider.
+    if (referralCode) {
+      const referrer = await Provider.findOne({ referralCode }).select('_id').lean();
+      if (referrer) {
+        await Referral.create({ referrerProviderId: referrer._id, referredUserId: user._id, referredEmail: email });
+      }
+    }
+
+    // Fire-and-forget: notifying admin must never delay or fail the
+    // actual signup response. ADMIN_NOTIFICATION_EMAIL is a plain env
+    // var since no existing "who gets admin alerts" config was found
+    // in this codebase.
+    if (process.env.ADMIN_NOTIFICATION_EMAIL) {
+      EmailService.sendAdminNotification(
+        process.env.ADMIN_NOTIFICATION_EMAIL,
+        'New provider registered',
+        `${name} (${email}) registered a new provider account.`
+      ).catch(() => {});
+    }
   }
   // Same gap existed for workers: without a Worker shell created
   // here, a newly-signed-up worker has no profile record at all —

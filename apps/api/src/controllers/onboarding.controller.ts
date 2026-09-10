@@ -4,6 +4,7 @@ import Provider from '../models/Provider.js';
 import DocumentAsset from '../models/DocumentAsset.js';
 import { getStorageService } from '../services/s3.service.js';
 import { logActivity } from '../models/AdminActivity.js';
+import { geocodeAddress } from '../services/geocoding.service.js';
 
 const STEP_KEYS = ['org', 'insurance', 'areas', 'team', 'policy', 'billing'];
 
@@ -71,6 +72,15 @@ export async function saveStep(req: AuthedRequest, res: Response) {
     if (Array.isArray(data.serviceSuburbs)) provider.serviceSuburbs = data.serviceSuburbs as string[];
     if (data.travelRadiusKm !== undefined) provider.travelRadiusKm = Number(data.travelRadiusKm);
     if (data.weeklyCapacityHours !== undefined) provider.weeklyCapacityHours = Number(data.weeklyCapacityHours);
+
+    // Geocode the first listed suburb for real map/radius-search
+    // coordinates. Failure here must never block saving the step —
+    // geocodeAddress already returns null rather than throwing.
+    const firstSuburb = provider.serviceSuburbs?.[0];
+    if (firstSuburb) {
+      const geo = await geocodeAddress(`${firstSuburb}, Australia`);
+      if (geo) provider.location = { type: 'Point', coordinates: [geo.lng, geo.lat] };
+    }
   }
   if (stepKey === 'team') {
     if (data.rosterSize !== undefined) provider.rosterSize = Number(data.rosterSize);

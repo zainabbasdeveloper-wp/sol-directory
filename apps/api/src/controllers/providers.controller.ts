@@ -4,6 +4,7 @@ import Provider from '../models/Provider.js';
 import ProviderView from '../models/ProviderView.js';
 import ContactRequest from '../models/ContactRequest.js';
 import { logActivity } from '../models/AdminActivity.js';
+import { EmailService } from '../services/email.service.js';
 
 const MAX_LIMIT = 50;
 
@@ -11,7 +12,7 @@ const MAX_LIMIT = 50;
 // billing/subscription internals (stripe ids, lead quota usage),
 // onboarding progress, and account-status (an admin concern, not a
 // search-result concern).
-const PUBLIC_PROJECTION = 'legalEntityName tradingName abn registrationGroups serviceSuburbs travelRadiusKm weeklyCapacityHours intakeStatus';
+const PUBLIC_PROJECTION = 'legalEntityName tradingName abn registrationGroups serviceSuburbs travelRadiusKm weeklyCapacityHours intakeStatus location';
 
 export async function listProviders(req: AuthedRequest, res: Response) {
   const page = Math.max(1, Number(req.query.page) || 1);
@@ -28,6 +29,15 @@ export async function listProviders(req: AuthedRequest, res: Response) {
       { legalEntityName: new RegExp(String(req.query.q), 'i') },
       { tradingName: new RegExp(String(req.query.q), 'i') },
     ];
+  }
+  // Radius search — same $geoWithin/$centerSphere pattern already
+  // used in workers.controller.ts, now possible for providers since
+  // they have real coordinates.
+  if (req.query.lat && req.query.lng && req.query.radiusKm) {
+    const radiusRadians = Number(req.query.radiusKm) / 6378.1;
+    filter.location = {
+      $geoWithin: { $centerSphere: [[Number(req.query.lng), Number(req.query.lat)], radiusRadians] },
+    };
   }
 
   const [docs, total] = await Promise.all([
@@ -50,6 +60,7 @@ export async function listProviders(req: AuthedRequest, res: Response) {
       travelRadiusKm: p.travelRadiusKm,
       weeklyCapacityHours: p.weeklyCapacityHours,
       intakeStatus: p.intakeStatus,
+      location: p.location?.coordinates ? { lat: p.location.coordinates[1], lng: p.location.coordinates[0] } : null,
     })),
     page,
     limit,
@@ -87,12 +98,22 @@ export async function getProviderProfile(req: AuthedRequest, res: Response) {
 // nothing at all.
 export async function requestProviderContact(req: AuthedRequest, res: Response) {
   const provider = await Provider.findOne({ _id: req.params.id, accountStatus: 'active' })
-    .select('_id tradingName legalEntityName')
+    .select('_id tradingName legalEntityName userId')
+    .populate('userId', 'name email')
     .lean();
   if (!provider) return res.status(404).json({ error: 'Provider not found' });
 
   await ContactRequest.create({ requesterId: req.user!.id, targetType: 'Provider', targetId: provider._id });
   await logActivity('callback_requested', `${req.user!.email} requested a callback from ${provider.tradingName || provider.legalEntityName || 'a provider'}`);
+
+  // Actually send the notification the response message below
+  // promises — this used to just say "will be notified" with
+  // nothing behind it. Fire-and-forget: a failed email must never
+  // fail this request.
+  const ownerEmail = (provider as any).userId?.email;
+  if (ownerEmail) {
+    EmailService.sendContactRequestNotification(ownerEmail, req.user!.email).catch(() => {});
+  }
 
   res.status(202).json({ status: 'pending', message: 'Request sent. The provider will be notified.' });
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { listLeads, getPlans } from '../api/resources';
+import { getMyReferrals, type ReferralInfo } from '../api/providerResources';
 import { ApiError } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import AdminDashboard from './admin/AdminDashboard';
@@ -69,12 +70,24 @@ function ProviderDashboard() {
   const [leads, setLeads] = useState<LeadWithViewed[]>([]);
   const [plans, setPlans] = useState<PlanConfig[]>([]);
   const [loading, setLoading] = useState(true);
+  const [referral, setReferral] = useState<ReferralInfo | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     Promise.all([listLeads(), getPlans()])
       .then(([l, p]) => { setLeads(l); setPlans(p); })
       .finally(() => setLoading(false));
+    getMyReferrals().then(setReferral).catch(() => {});
   }, []);
+
+  function copyReferralLink() {
+    if (!referral) return;
+    const link = `${window.location.origin}/signup?role=provider&ref=${referral.referralCode}`;
+    navigator.clipboard.writeText(link).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
 
   function handleViewLead(id: string) {
     // Optimistic — the badge should feel instant, and a failed
@@ -137,6 +150,38 @@ function ProviderDashboard() {
           ))}
         </div>
       </div>
+
+      {referral && (
+        <div className="dashboard-card">
+          <div className="dashboard-card-header-row">
+            <h2 className="dashboard-card-title">Refer a friend</h2>
+          </div>
+          <p style={{ fontSize: 13.5, color: 'var(--color-text-muted, #5A6B84)', margin: '0 0 14px' }}>
+            Know another provider who'd be a good fit for SolDirectory? Share your link.
+          </p>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+            <code style={{ background: 'var(--color-primary-tint, #F2F7FF)', padding: '8px 12px', borderRadius: 8, fontSize: 13 }}>
+              {window.location.origin}/signup?role=provider&ref={referral.referralCode}
+            </code>
+            <button
+              onClick={copyReferralLink}
+              style={{ border: 0, borderRadius: 8, padding: '8px 16px', background: '#1769E0', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+            >
+              {copied ? 'Copied ✓' : 'Copy link'}
+            </button>
+          </div>
+          <p style={{ fontSize: 13, marginTop: 14, marginBottom: referral.referrals.length ? 8 : 0 }}>
+            <strong>{referral.totalReferrals}</strong> provider{referral.totalReferrals === 1 ? '' : 's'} referred so far.
+          </p>
+          {referral.referrals.length > 0 && (
+            <ul style={{ margin: 0, padding: 0, listStyle: 'none', fontSize: 13, color: 'var(--color-text-muted, #5A6B84)' }}>
+              {referral.referrals.map((r, i) => (
+                <li key={i} style={{ padding: '4px 0' }}>{r.email} · {new Date(r.createdAt).toLocaleDateString()}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ApiError } from '../../api/client';
 import { listActiveServices, type ActiveService } from '../../api/serviceCatalogue';
+import { listActiveConditions, type ActiveCondition } from '../../api/conditionCatalogue';
 import './WorkerDirectory.css';
 
 interface WorkerMasked {
@@ -49,7 +50,8 @@ async function searchWorkers(params: URLSearchParams): Promise<SearchResult> {
 // (fetched on mount below) rather than this hardcoded list.
 const SUBURBS = ['Bankstown', 'Parramatta', 'Liverpool', 'Blacktown', 'Auburn', 'Lidcombe', 'Canterbury', 'Marrickville'];
 const LANGUAGES = ['Arabic', 'Vietnamese', 'Mandarin', 'Cantonese', 'Greek', 'Auslan', 'Hindi', 'Spanish'];
-const CONDITIONS = ['Autism', 'Dementia', 'Cerebral palsy', 'Spinal cord injury', 'Psychosocial', 'Diabetes', 'Acquired brain injury', 'Motor neurone disease'];
+// Condition options now come from the real condition catalogue
+// (fetched below) rather than this hardcoded list.
 const SORT_OPTIONS = [
   { value: '', label: 'Relevance' },
   { value: 'rating', label: 'Rating' },
@@ -98,9 +100,11 @@ export default function WorkerDirectory() {
   const [sort, setSort] = useState(searchParams.get('sort') ?? '');
   const [page, setPage] = useState(Number(searchParams.get('page')) || 1);
   const [serviceOptions, setServiceOptions] = useState<ActiveService[]>([]);
+  const [conditionOptions, setConditionOptions] = useState<ActiveCondition[]>([]);
 
   useEffect(() => {
     listActiveServices('worker').then((res) => setServiceOptions(res.items)).catch(() => {});
+    listActiveConditions().then((res) => setConditionOptions(res.items)).catch(() => {});
   }, []);
 
   const [items, setItems] = useState<WorkerMasked[]>([]);
@@ -199,7 +203,7 @@ export default function WorkerDirectory() {
         <label className="wd-filter-label" htmlFor="wd-condition">Condition experience</label>
         <select id="wd-condition" className="wd-select" value={condition} onChange={(e) => { setPage(1); setCondition(e.target.value); }}>
           <option value="">Any experience</option>
-          {CONDITIONS.map((c) => <option key={c} value={c}>{c}</option>)}
+          {conditionOptions.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
         </select>
       </div>
 

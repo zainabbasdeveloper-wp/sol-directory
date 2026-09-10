@@ -9,6 +9,7 @@ import Shortlist from '../models/Shortlist.js';
 import ProviderView from '../models/ProviderView.js';
 import AdminActivity, { logActivity } from '../models/AdminActivity.js';
 import Service from '../models/Service.js';
+import Condition from '../models/Condition.js';
 
 // A dedicated, clearly-separate seed script for populating realistic
 // development/demo data across every model this admin dashboard
@@ -38,7 +39,7 @@ const ALL_SUBURBS = Object.values(STATES).flat();
 
 const SUPPORT_TYPES = ['Personal care', 'Domestic assistance', 'Community access', 'Transport', 'Nursing', 'Therapy assistant', 'Behaviour support', 'Meal preparation'];
 const LANGUAGES = ['English', 'Arabic', 'Vietnamese', 'Mandarin', 'Cantonese', 'Greek', 'Hindi', 'Spanish'];
-const CONDITIONS = ['Autism', 'Dementia', 'Cerebral palsy', 'Spinal cord injury', 'Psychosocial', 'Diabetes'];
+const CONDITIONS = ['Autism', 'Dementia', 'Cerebral palsy', 'Spinal cord injury', 'Psychosocial disability', 'Low vision', 'Hearing impairment', 'Acquired brain injury'];
 const ONBOARDING_STEP_KEYS = ['org', 'insurance', 'areas', 'team', 'policy', 'billing'];
 const FIRST_NAMES = ['Grace', 'Liam', 'Amira', 'Noah', 'Priya', 'Jack', 'Mei', 'Oliver', 'Fatima', 'Ethan', 'Sophie', 'Lucas', 'Ava', 'Mohammed', 'Chloe', 'Daniel', 'Zara', 'James', 'Isabella', 'Ryan'];
 const LAST_NAMES = ['Williams', 'Nguyen', 'Smith', 'Patel', 'Brown', 'Taylor', 'Ahmed', 'Chen', 'Wilson', 'Kelly', 'Singh', 'Anderson', 'Martin', 'Thompson', 'White'];
@@ -78,6 +79,33 @@ async function seedAdminDemo() {
     if (!exists) {
       await Service.create({ name: s.name, category: s.category, applicableRoles: s.roles, applicableFunding: ['NDIS'], active: true });
     }
+  }
+
+  // Real condition catalogue — using the exact category/name examples
+  // your own spec gave (Sensory: Low vision, Visual impairment,
+  // Hearing impairment, etc.), not invented ones.
+  console.log('Seeding condition catalogue...');
+  const CONDITION_SEED: { name: string; category: string }[] = [
+    { name: 'Low vision', category: 'Sensory' },
+    { name: 'Visual impairment', category: 'Sensory' },
+    { name: 'Blindness', category: 'Sensory' },
+    { name: 'Hearing impairment', category: 'Sensory' },
+    { name: 'Autism', category: 'Developmental' },
+    { name: 'Intellectual disability', category: 'Developmental' },
+    { name: 'Cerebral palsy', category: 'Physical' },
+    { name: 'Physical disability', category: 'Physical' },
+    { name: 'Mobility impairment', category: 'Physical' },
+    { name: 'Spinal cord injury', category: 'Physical' },
+    { name: 'Acquired brain injury', category: 'Neurological' },
+    { name: 'Stroke', category: 'Neurological' },
+    { name: 'Dementia', category: 'Neurological' },
+    { name: "Parkinson's", category: 'Neurological' },
+    { name: 'Multiple sclerosis', category: 'Neurological' },
+    { name: 'Psychosocial disability', category: 'Psychosocial' },
+  ];
+  for (const c of CONDITION_SEED) {
+    const exists = await Condition.findOne({ name: c.name });
+    if (!exists) await Condition.create({ name: c.name, category: c.category, active: true });
   }
 
   const passwordHash = await bcrypt.hash('password123', 10);
@@ -120,6 +148,14 @@ async function seedAdminDemo() {
       tradingName: company,
       abn: String(randInt(10000000000, 99999999999)),
       registrationGroups: randSubset(SUPPORT_TYPES, randInt(1, 4)),
+      // Must use the SAME value domain as Lead.funding
+      // ('Plan-managed'/'Self-managed'/'NDIA-managed') for
+      // scoreMatch's funding comparison to ever produce a match —
+      // these represent NDIS plan-management style, not funding
+      // scheme (NDIS vs Aged Care), which is a different dimension
+      // Lead doesn't currently model at all.
+      acceptedFunding: randSubset(['Plan-managed', 'Self-managed', 'NDIA-managed'], randInt(1, 3)),
+      conditionExperience: randSubset(CONDITIONS, randInt(0, 4)),
       intakeEmail: user.email,
       serviceSuburbs: randSubset(STATES[state], Math.min(3, STATES[state].length)),
       travelRadiusKm: rand([10, 20, 30, 50]),
@@ -243,6 +279,7 @@ async function seedAdminDemo() {
     const state = randState();
     await Lead.create({
       need: rand(['Personal care', 'Domestic assistance', 'Community access', 'Nursing', 'Transport']),
+      conditions: randSubset(CONDITIONS, randInt(0, 2)),
       suburb: randSuburbInState(state),
       distanceKm: randInt(1, 25),
       hoursPerWeek: `${randInt(2, 20)} hrs/week`,

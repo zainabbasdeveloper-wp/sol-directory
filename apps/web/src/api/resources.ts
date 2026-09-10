@@ -28,6 +28,7 @@ export async function signup(input: {
   mobile: string;
   password: string;
   role: Role;
+  referralCode?: string;
 }): Promise<AuthResponse> {
   const res = await api.post<AuthResponse>('/auth/signup', input);
   setToken(res.token);

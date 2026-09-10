@@ -57,7 +57,8 @@ export default function Signup() {
     try {
       // The role sent to the backend is `accountType` — application
       // state — not anything re-read from the URL at submit time.
-      const authedUser = await signup({ ...form, role: accountType });
+      const referralCode = searchParams.get('ref') || undefined;
+      const authedUser = await signup({ ...form, role: accountType, referralCode });
       // Route by the role the backend actually returned, matching
       // getAccountType's real per-role destination. In practice this
       // will equal `accountType` since the backend now validates and

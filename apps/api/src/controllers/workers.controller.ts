@@ -3,6 +3,7 @@ import type { AuthedRequest } from '../middleware/auth.middleware.js';
 import Worker, { MASKED_PROJECTION, UNLOCKED_PROJECTION, toMaskedShape, toUnlockedShape } from '../models/Worker.js';
 import ContactRequest from '../models/ContactRequest.js';
 import { logActivity } from '../models/AdminActivity.js';
+import { EmailService } from '../services/email.service.js';
 import type { PaginatedResult, WorkerMasked, WorkerSearchQuery } from '@soldirectory/shared-types';
 
 const MAX_LIMIT = 50;
@@ -82,11 +83,16 @@ export async function getWorkerProfile(req: AuthedRequest, res: Response) {
 }
 
 export async function requestContact(req: AuthedRequest, res: Response) {
-  const worker = await Worker.findById(req.params.id).select('_id firstName lastName').lean();
+  const worker = await Worker.findById(req.params.id).select('_id firstName lastName userId').populate('userId', 'email').lean();
   if (!worker) return res.status(404).json({ error: 'Worker not found' });
 
   await ContactRequest.create({ requesterId: req.user!.id, targetType: 'Worker', targetId: worker._id });
   await logActivity('callback_requested', `${req.user!.email} requested contact with ${worker.firstName} ${worker.lastName}`);
+
+  const ownerEmail = (worker as any).userId?.email;
+  if (ownerEmail) {
+    EmailService.sendContactRequestNotification(ownerEmail, req.user!.email).catch(() => {});
+  }
 
   res.status(202).json({ status: 'pending', message: 'Request sent. You will be notified if they accept.' });
 }

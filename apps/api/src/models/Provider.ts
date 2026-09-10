@@ -19,8 +19,22 @@ export interface ProviderDoc extends Document {
   abn: string;
   tradingName: string;
   registrationGroups: string[];
+  // Needed for matching (funding compatibility, condition
+  // compatibility). IMPORTANT: values here must be drawn from the
+  // same domain as Lead.funding ('Plan-managed' | 'Self-managed' |
+  // 'NDIA-managed') — that's NDIS plan-management style, not funding
+  // scheme (NDIS/Aged Care/Private), which Lead doesn't model.
+  // Populating this with scheme-type values would silently make
+  // scoreMatch's funding comparison always score 0.
+  acceptedFunding: string[];
+  conditionExperience: string[];
   intakeEmail: string;
   serviceSuburbs: string[];
+  // Real geo-coordinates — mirrors Worker's location field exactly.
+  // serviceSuburbs above are just name strings; this is what makes
+  // actual radius search and map display possible, populated via
+  // Google Maps geocoding (see services/geocoding.service.ts).
+  location?: { type: 'Point'; coordinates: [number, number] };
   travelRadiusKm: number;
   weeklyCapacityHours: number;
   intakeStatus: 'Open to referrals' | 'Limited capacity' | 'Waitlist only' | 'Closed';
@@ -43,6 +57,9 @@ export interface ProviderDoc extends Document {
   planStartedAt: Date;
   planExpiresAt?: Date;
   planHistory: PlanHistoryEntry[];
+  // Unique per-provider code for the "refer a friend" feature —
+  // shared as a link, checked at signup.
+  referralCode: string;
   leadUnlocksUsedThisPeriod: number;
   periodResetsAt?: Date;
 }
@@ -72,8 +89,14 @@ const providerSchema = new Schema<ProviderDoc>(
     },
     tradingName: String,
     registrationGroups: [String],
+    acceptedFunding: [String],
+    conditionExperience: [String],
     intakeEmail: String,
     serviceSuburbs: [String],
+    location: {
+      type: { type: String, enum: ['Point'], default: 'Point' },
+      coordinates: { type: [Number], default: [0, 0] },
+    },
     travelRadiusKm: Number,
     weeklyCapacityHours: Number,
     intakeStatus: { type: String, enum: ['Open to referrals', 'Limited capacity', 'Waitlist only', 'Closed'], default: 'Open to referrals' },
@@ -89,10 +112,13 @@ const providerSchema = new Schema<ProviderDoc>(
     planStartedAt: { type: Date, default: Date.now },
     planExpiresAt: Date,
     planHistory: [planHistorySchema],
+    referralCode: { type: String, unique: true, sparse: true, index: true },
     leadUnlocksUsedThisPeriod: { type: Number, default: 0 },
     periodResetsAt: Date,
   },
   { timestamps: true }
 );
+
+providerSchema.index({ location: '2dsphere' });
 
 export default mongoose.model<ProviderDoc>('Provider', providerSchema);

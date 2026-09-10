@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { listProviders, listMyShortlist, type ProviderRow } from '../../api/providerResources';
 import { ApiError } from '../../api/client';
 import ProviderDetailModal from '../../components/ProviderDetailModal';
+import ProviderMap from '../../components/ProviderMap';
 import './ProviderDirectory.css';
 
 export default function ProviderDirectory() {
@@ -43,6 +44,14 @@ export default function ProviderDirectory() {
       <input className="pd-search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name" />
 
       {error && <p className="pd-error">{error}</p>}
+      {!loading && items.length > 0 && (
+        <div style={{ marginBottom: 24 }}>
+          <ProviderMap
+            providers={items.map((p) => ({ id: p.id, name: p.tradingName || p.legalEntityName, location: p.location }))}
+            onMarkerClick={(id) => setOpenId(id)}
+          />
+        </div>
+      )}
       {loading ? (
         <p>Loading…</p>
       ) : (

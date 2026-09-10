@@ -30,6 +30,7 @@ export interface ProviderRow {
   id: string; legalEntityName: string; tradingName: string; abn: string;
   registrationGroups: string[]; serviceSuburbs: string[]; travelRadiusKm: number;
   weeklyCapacityHours: number; intakeStatus: string;
+  location: { lat: number; lng: number } | null;
 }
 interface ProviderListResult { items: ProviderRow[]; page: number; limit: number; total: number; hasMore: boolean; }
 
@@ -67,4 +68,10 @@ export function removeFromShortlist(providerId: string): Promise<{ success: bool
 }
 export function listMyShortlist(): Promise<{ items: ShortlistItem[] }> {
   return get('/shortlists/providers');
+}
+
+// --- Refer a friend (provider dashboard only) ---
+export interface ReferralInfo { referralCode: string; totalReferrals: number; referrals: { email: string; createdAt: string }[]; }
+export function getMyReferrals(): Promise<ReferralInfo> {
+  return get('/referrals/me');
 }
