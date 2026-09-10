@@ -1,0 +1,10 @@
+# WP core is a Composer dependency, never committed — same principle
+# as node_modules elsewhere in this monorepo.
+/wordpress/
+/vendor/
+
+# Real secrets and uploaded media never get committed either.
+.env
+/wp-content/uploads/
+
+composer.lock

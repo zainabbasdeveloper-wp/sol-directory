@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface MapProvider {
   id: string;
@@ -11,11 +11,6 @@ interface Props {
   onMarkerClick?: (providerId: string) => void;
 }
 
-// Loads the Google Maps JS API script once (shared across mounts —
-// re-adding the script tag on every navigation would be wasteful and
-// can throw "google is already defined" errors). Uses the real,
-// public, domain-restricted browser key — a DIFFERENT key from the
-// backend's secret Geocoding API key, by design.
 let mapsScriptPromise: Promise<void> | null = null;
 function loadGoogleMapsScript(): Promise<void> {
   if ((window as any).google?.maps) return Promise.resolve();
@@ -42,6 +37,15 @@ export default function ProviderMap({ providers, onMarkerClick }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
+  // REAL BUG FIXED: mapInstance was a ref, and mutating a ref does
+  // NOT cause the marker-drawing effect below to re-run. If the Maps
+  // script took even a few ms to load (it always does — it's a
+  // network request) and `providers` was already available on first
+  // render, the marker effect ran once, saw mapInstance.current was
+  // still null, and returned early — permanently, since nothing ever
+  // triggered it again. This state variable is what actually makes
+  // "the map became ready" a real dependency the effect reacts to.
+  const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -51,29 +55,25 @@ export default function ProviderMap({ providers, onMarkerClick }: Props) {
         if (cancelled || !mapRef.current) return;
         const google = (window as any).google;
 
-        // Default center is roughly the middle of Australia — a
-        // sensible fallback with no real anchor to a specific provider.
         mapInstance.current = new google.maps.Map(mapRef.current, {
           center: { lat: -25.2744, lng: 133.7751 },
           zoom: 4,
           disableDefaultUI: false,
         });
+        setMapReady(true);
       })
       .catch(() => {
-        // Already logged inside loadGoogleMapsScript — the map area
-        // just stays empty rather than crashing the page.
+        // Already logged inside loadGoogleMapsScript.
       });
 
     return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
-    if (!mapInstance.current) return;
+    if (!mapReady || !mapInstance.current) return;
     const google = (window as any).google;
     if (!google) return;
 
-    // Clear previous markers before drawing the new set — avoids
-    // accumulating stale pins across filter changes.
     markersRef.current.forEach((m) => m.setMap(null));
     markersRef.current = [];
 
@@ -92,7 +92,7 @@ export default function ProviderMap({ providers, onMarkerClick }: Props) {
       bounds.extend(p.location as any);
     }
     mapInstance.current.fitBounds(bounds);
-  }, [providers, onMarkerClick]);
+  }, [mapReady, providers, onMarkerClick]);
 
   return <div ref={mapRef} style={{ width: '100%', height: 320, borderRadius: 12, border: '1px solid var(--color-border, #E8EEF7)' }} />;
 }

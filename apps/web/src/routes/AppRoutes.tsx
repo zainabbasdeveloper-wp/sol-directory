@@ -29,6 +29,10 @@ import SavedProviders from '../pages/providers/SavedProviders';
 import AdminUserDetail from '../pages/admin/AdminUserDetail';
 import { useAuth } from '../context/AuthContext';
 import ServiceLocationPage from '../pages/public/ServiceLocationPage';
+import WordPressServicePage from '../pages/wordpress/WordPressServicePage';
+import WordPressLocationPage from '../pages/wordpress/WordPressLocationPage';
+import WordPressGuidePage from '../pages/wordpress/WordPressGuidePage';
+import WordPressCatchAllPage from '../pages/wordpress/WordPressCatchAllPage';
 import type { Role } from '@soldirectory/shared-types';
 
 function RequireAuth({ children }: { children: ReactElement }) {
@@ -99,6 +103,12 @@ export default function AppRoutes() {
       <Route path="/locations" element={<Locations />} />
       <Route path="/providers" element={<ForProviders />} />
       <Route path="/services/:serviceSlug/:suburb" element={<ServiceLocationPage />} />
+      {/* New WordPress-backed dynamic content routes — single-segment,
+          so they never collide with the two-segment route above or
+          the exact marketing pages. */}
+      <Route path="/services/:slug" element={<WordPressServicePage />} />
+      <Route path="/locations/:slug" element={<WordPressLocationPage />} />
+      <Route path="/guides/:slug" element={<WordPressGuidePage />} />
 
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
@@ -146,7 +156,7 @@ export default function AppRoutes() {
         <Route path="/admin/conditions" element={<RequireRole roles={['admin']}><AdminConditions /></RequireRole>} />
       </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<WordPressCatchAllPage />} />
     </Routes>
   );
 }
