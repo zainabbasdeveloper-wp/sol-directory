@@ -80,6 +80,7 @@ export interface LeadUnlocked extends LeadMasked {
   contactPhone: string;
   budget: string;
   note: string;
+  location: { lat: number; lng: number } | null;
 }
 
 export type Lead = LeadMasked | LeadUnlocked;
