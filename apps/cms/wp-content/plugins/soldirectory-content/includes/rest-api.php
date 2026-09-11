@@ -18,12 +18,12 @@ add_action('rest_api_init', function () {
     remove_filter('rest_pre_serve_request', 'rest_send_cors_headers');
 
     add_filter('rest_pre_serve_request', function ($value) {
-        $configured_origins = $_ENV['FRONTEND_ORIGIN'] ?? getenv('FRONTEND_ORIGIN') ?: '';
+        $configured_origins = $_ENV['FRONTEND_ORIGIN'] ?? getenv('FRONTEND_ORIGIN') ?: 'http://46.250.242.208';
         $allowed_origins = array_filter(array_map(
             static fn ($origin) => rtrim(trim($origin), '/'),
             explode(',', $configured_origins)
         ));
-        $origin = get_http_origin();
+        $origin = $_SERVER['HTTP_ORIGIN'] ?? get_http_origin();
 
         if ($origin && in_array(rtrim($origin, '/'), $allowed_origins, true)) {
             header('Access-Control-Allow-Origin: ' . esc_url_raw($origin));
