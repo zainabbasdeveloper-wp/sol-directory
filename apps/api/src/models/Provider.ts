@@ -15,7 +15,13 @@ interface PlanHistoryEntry {
 
 export interface ProviderDoc extends Document {
   userId: Types.ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
   legalEntityName: string;
+  // Public URL identifier (/providers/{slug}) — never the raw Mongo
+  // _id in a public-facing URL. Generated from tradingName at
+  // creation time, see providers.controller.ts's slugify().
+  slug: string;
   abn: string;
   tradingName: string;
   registrationGroups: string[];
@@ -83,6 +89,7 @@ const providerSchema = new Schema<ProviderDoc>(
   {
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     legalEntityName: String,
+    slug: { type: String, unique: true, sparse: true, index: true },
     abn: {
       type: String,
       validate: { validator: (v: string) => /^\d{11}$/.test(v.replace(/\D/g, '')), message: 'ABN must be 11 digits' },

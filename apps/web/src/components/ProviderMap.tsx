@@ -33,10 +33,30 @@ function loadGoogleMapsScript(): Promise<void> {
   return mapsScriptPromise;
 }
 
+// Loaded the same way as the base Maps script — a CDN <script> tag,
+// not an npm package — so clustering adds zero JS bundle weight,
+// consistent with how the base map itself is loaded.
+let clustererScriptPromise: Promise<void> | null = null;
+function loadClustererScript(): Promise<void> {
+  if ((window as any).markerClusterer) return Promise.resolve();
+  if (clustererScriptPromise) return clustererScriptPromise;
+
+  clustererScriptPromise = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/@googlemaps/markerclusterer@2.5.3/dist/index.min.js';
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('Failed to load marker clustering script'));
+    document.head.appendChild(script);
+  });
+  return clustererScriptPromise;
+}
+
 export default function ProviderMap({ providers, onMarkerClick }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
+  const clustererRef = useRef<any>(null);
   // REAL BUG FIXED: mapInstance was a ref, and mutating a ref does
   // NOT cause the marker-drawing effect below to re-run. If the Maps
   // script took even a few ms to load (it always does — it's a
@@ -50,7 +70,7 @@ export default function ProviderMap({ providers, onMarkerClick }: Props) {
   useEffect(() => {
     let cancelled = false;
 
-    loadGoogleMapsScript()
+    Promise.all([loadGoogleMapsScript(), loadClustererScript().catch(() => {})])
       .then(() => {
         if (cancelled || !mapRef.current) return;
         const google = (window as any).google;
@@ -76,21 +96,39 @@ export default function ProviderMap({ providers, onMarkerClick }: Props) {
 
     markersRef.current.forEach((m) => m.setMap(null));
     markersRef.current = [];
+    if (clustererRef.current) {
+      clustererRef.current.clearMarkers();
+    }
 
     const withLocation = providers.filter((p) => p.location);
     if (withLocation.length === 0) return;
 
     const bounds = new google.maps.LatLngBounds();
+    const newMarkers: any[] = [];
     for (const p of withLocation) {
       const marker = new google.maps.Marker({
         position: p.location,
-        map: mapInstance.current,
         title: p.name,
+        // Only attach directly to the map when there's no clusterer
+        // to manage it — the clusterer takes over map assignment
+        // when it exists.
+        map: (window as any).markerClusterer ? undefined : mapInstance.current,
       });
       if (onMarkerClick) marker.addListener('click', () => onMarkerClick(p.id));
-      markersRef.current.push(marker);
+      newMarkers.push(marker);
       bounds.extend(p.location as any);
     }
+    markersRef.current = newMarkers;
+
+    const MarkerClusterer = (window as any).markerClusterer?.MarkerClusterer;
+    if (MarkerClusterer) {
+      if (!clustererRef.current) {
+        clustererRef.current = new MarkerClusterer({ map: mapInstance.current, markers: newMarkers });
+      } else {
+        clustererRef.current.addMarkers(newMarkers);
+      }
+    }
+
     mapInstance.current.fitBounds(bounds);
   }, [mapReady, providers, onMarkerClick]);
 

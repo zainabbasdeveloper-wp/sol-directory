@@ -12,7 +12,7 @@ const MAX_LIMIT = 50;
 // billing/subscription internals (stripe ids, lead quota usage),
 // onboarding progress, and account-status (an admin concern, not a
 // search-result concern).
-const PUBLIC_PROJECTION = 'legalEntityName tradingName abn registrationGroups serviceSuburbs travelRadiusKm weeklyCapacityHours intakeStatus location';
+const PUBLIC_PROJECTION = 'legalEntityName tradingName slug abn registrationGroups serviceSuburbs travelRadiusKm weeklyCapacityHours intakeStatus location';
 
 export async function listProviders(req: AuthedRequest, res: Response) {
   const page = Math.max(1, Number(req.query.page) || 1);
@@ -52,6 +52,7 @@ export async function listProviders(req: AuthedRequest, res: Response) {
   res.json({
     items: docs.map((p: any) => ({
       id: String(p._id),
+      slug: p.slug ?? null,
       legalEntityName: p.legalEntityName,
       tradingName: p.tradingName,
       abn: p.abn,
@@ -81,6 +82,7 @@ export async function getProviderProfile(req: AuthedRequest, res: Response) {
 
   res.json({
     id: String(provider._id),
+    slug: provider.slug ?? null,
     legalEntityName: provider.legalEntityName,
     tradingName: provider.tradingName,
     abn: provider.abn,
@@ -116,4 +118,64 @@ export async function requestProviderContact(req: AuthedRequest, res: Response) 
   }
 
   res.status(202).json({ status: 'pending', message: 'Request sent. The provider will be notified.' });
+}
+
+// Full field list, everything that actually exists on Provider —
+// per the spec's explicit "only display fields that actually exist,
+// do not invent provider information." No logo, languages, website,
+// opening hours, team/qualifications, or reviews here, because none
+// of those fields exist on this model. Adding fake ones to satisfy a
+// UI mockup would be exactly the fabrication the spec forbids.
+const FULL_PROFILE_PROJECTION =
+  'legalEntityName tradingName slug abn registrationGroups serviceSuburbs travelRadiusKm ' +
+  'weeklyCapacityHours intakeStatus accountStatus rosterSize afterHoursCover ' +
+  'acceptedFunding conditionExperience intakeEmail location plan planStatus createdAt';
+
+export async function getProviderBySlug(req: AuthedRequest, res: Response) {
+  const provider = await Provider.findOne({ slug: req.params.slug, accountStatus: 'active' })
+    .select(FULL_PROFILE_PROJECTION)
+    .lean();
+  if (!provider) return res.status(404).json({ error: 'Provider not found' });
+
+  ProviderView.create({ providerId: provider._id, viewerId: req.user?.id }).catch(() => {});
+
+  // Real related providers — same primary registration group, not
+  // the provider itself, active accounts only. Not fabricated.
+  const related = provider.registrationGroups?.length
+    ? await Provider.find({
+        _id: { $ne: provider._id },
+        accountStatus: 'active',
+        slug: { $exists: true },
+        registrationGroups: provider.registrationGroups[0],
+      })
+        .select('slug tradingName legalEntityName serviceSuburbs')
+        .limit(4)
+        .lean()
+    : [];
+
+  res.json({
+    id: String(provider._id),
+    slug: provider.slug,
+    name: provider.tradingName || provider.legalEntityName,
+    legalEntityName: provider.legalEntityName,
+    abn: provider.abn,
+    registrationGroups: provider.registrationGroups ?? [],
+    serviceSuburbs: provider.serviceSuburbs ?? [],
+    travelRadiusKm: provider.travelRadiusKm ?? null,
+    weeklyCapacityHours: provider.weeklyCapacityHours ?? null,
+    intakeStatus: provider.intakeStatus,
+    rosterSize: provider.rosterSize ?? null,
+    afterHoursCover: provider.afterHoursCover ?? null,
+    acceptedFunding: provider.acceptedFunding ?? [],
+    conditionExperience: provider.conditionExperience ?? [],
+    contactEmail: provider.intakeEmail ?? null,
+    location: provider.location?.coordinates ? { lat: provider.location.coordinates[1], lng: provider.location.coordinates[0] } : null,
+    plan: provider.plan,
+    memberSince: provider.createdAt,
+    relatedProviders: related.map((p: any) => ({
+      slug: p.slug,
+      name: p.tradingName || p.legalEntityName,
+      suburbs: p.serviceSuburbs ?? [],
+    })),
+  });
 }

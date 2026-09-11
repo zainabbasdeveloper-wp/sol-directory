@@ -41,3 +41,5 @@
 @media (prefers-reduced-motion: reduce) {
   .pdm-btn-primary:hover { transform: none !important; }
 }
+
+.pdm-full-profile-link { display: block; background: none; border: 0; padding: 0; margin: -4px 0 16px; font-size: 13px; font-weight: 600; color: var(--color-primary, #1769E0); cursor: pointer; }

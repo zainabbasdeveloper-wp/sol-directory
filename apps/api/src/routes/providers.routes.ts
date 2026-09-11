@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { listProviders, getProviderProfile, requestProviderContact } from '../controllers/providers.controller.js';
+import { listProviders, getProviderProfile, requestProviderContact, getProviderBySlug } from '../controllers/providers.controller.js';
 import { requireAuth, requireRole } from '../middleware/auth.middleware.js';
 
 const router = Router();
@@ -13,6 +13,7 @@ const router = Router();
 const canBrowseProviders = requireRole('coordinator', 'participant', 'admin');
 
 router.get('/', requireAuth, canBrowseProviders, listProviders);
+router.get('/slug/:slug', requireAuth, canBrowseProviders, getProviderBySlug);
 router.get('/:id', requireAuth, canBrowseProviders, getProviderProfile);
 router.post('/:id/contact-request', requireAuth, canBrowseProviders, requestProviderContact);
 

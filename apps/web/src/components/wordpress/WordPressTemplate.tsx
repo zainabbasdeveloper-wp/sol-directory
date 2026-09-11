@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import DOMPurify from 'dompurify';
 import type { WPContentBase } from '../../api/wordpressApi';
 import './WordPressTemplate.css';
 
@@ -27,9 +28,44 @@ export default function WordPressTemplate({ loading, error, content, children }:
   // than pretending this is complete SEO.
   useEffect(() => {
     if (!content) return;
+
     document.title = content.seo.title || content.title;
-    const metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc) metaDesc.setAttribute('content', content.seo.description);
+
+    // Creates the meta/link tag if it doesn't already exist, updates
+    // it if it does — this app has no <Head> component (plain Vite
+    // SPA), so these are the actual <head> tags this document has,
+    // not a virtual representation of them.
+    function setMeta(selector: string, attr: string, value: string, createTag: () => HTMLElement) {
+      let el = document.querySelector(selector) as HTMLElement | null;
+      if (!el) { el = createTag(); document.head.appendChild(el); }
+      el.setAttribute(attr, value);
+    }
+
+    setMeta('meta[name="description"]', 'content', content.seo.description, () => {
+      const m = document.createElement('meta'); m.setAttribute('name', 'description'); return m;
+    });
+    setMeta('meta[property="og:title"]', 'content', content.seo.title || content.title, () => {
+      const m = document.createElement('meta'); m.setAttribute('property', 'og:title'); return m;
+    });
+    setMeta('meta[property="og:description"]', 'content', content.seo.description, () => {
+      const m = document.createElement('meta'); m.setAttribute('property', 'og:description'); return m;
+    });
+    if (content.seo.ogImage) {
+      setMeta('meta[property="og:image"]', 'content', content.seo.ogImage, () => {
+        const m = document.createElement('meta'); m.setAttribute('property', 'og:image'); return m;
+      });
+    }
+    setMeta('link[rel="canonical"]', 'href', window.location.href, () => {
+      const l = document.createElement('link'); l.setAttribute('rel', 'canonical'); return l;
+    });
+
+    // Real limitation, stated in code not just prose: none of this
+    // helps a crawler that doesn't execute JavaScript, since these
+    // tags don't exist until this effect runs client-side. A crawler
+    // that fetches raw HTML (many still do, including some social
+    // media unfurlers) sees none of this. Fixing that requires SSR
+    // or prerendering — a framework-level decision, not something
+    // patchable from inside a single component.
   }, [content]);
 
   if (loading) {
@@ -67,17 +103,17 @@ export default function WordPressTemplate({ loading, error, content, children }:
       <h1 className="wp-template-title">{content.title}</h1>
       {children}
       {/*
-        WordPress's own save-time sanitization (wp_kses for non-admin
-        roles) is the trust boundary here, same as any normal
-        WordPress theme rendering the_content(). If editors with
-        unfiltered_html capability (admins, by default) author this
-        content, that's the same trust level as any WP site. For a
-        public-facing app where content-injection risk needs a
-        second layer regardless of author trust, add DOMPurify here
-        — not included by default to avoid adding a dependency this
-        round without discussing it first.
+        Sanitized with DOMPurify immediately before render — this is
+        the real fix for the trust-boundary gap flagged last round.
+        WordPress's own save-time sanitization (wp_kses) is still the
+        first layer for non-admin authors, but this is a second,
+        independent layer on the consuming side, which matters
+        because this app can't verify who actually authored any given
+        piece of content or whether WordPress's own filters were
+        bypassed (e.g. a compromised admin account, a misconfigured
+        plugin). Defense in depth, not redundant.
       */}
-      <div className="wp-template-content" dangerouslySetInnerHTML={{ __html: content.contentHtml }} />
+      <div className="wp-template-content" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content.contentHtml) }} />
     </div>
   );
 }

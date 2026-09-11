@@ -1,0 +1,26 @@
+.pp-page { max-width: 720px; margin: 0 auto; }
+.pp-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 28px; }
+.pp-name { font-size: 26px; font-weight: 700; margin: 0 0 8px; }
+.pp-status-pill { font-size: 12px; font-weight: 700; background: #E4F5EC; color: #177C4B; padding: 4px 10px; border-radius: 100px; }
+.pp-header-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.pp-btn-primary { border: 0; border-radius: 8px; padding: 11px 20px; background: linear-gradient(135deg, #1769E0, #2F80ED); color: #fff; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+.pp-btn-primary:disabled { opacity: 0.7; }
+.pp-btn-secondary { border: 1px solid var(--color-border-strong, #DDE4EF); border-radius: 8px; padding: 11px 20px; background: #fff; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+.pp-btn-secondary-active { background: var(--color-primary-tint, #F2F7FF); border-color: #1769E0; color: #0F4FA8; }
+
+.pp-section { padding: 20px 0; border-top: 1px solid var(--color-border, #E8EEF7); }
+.pp-section h2 { font-size: 16px; font-weight: 700; margin: 0 0 10px; }
+.pp-muted { color: var(--color-text-muted, #5A6B84); font-size: 13px; margin: 4px 0 0; }
+.pp-chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.pp-chip { font-size: 12.5px; padding: 5px 12px; border-radius: 100px; background: var(--color-primary-tint, #F2F7FF); color: #0F4FA8; }
+
+.pp-related-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+.pp-related-card { display: flex; flex-direction: column; gap: 4px; padding: 14px; border: 1px solid var(--color-border, #E8EEF7); border-radius: 10px; font-size: 13.5px; }
+
+.pp-login-overlay { position: fixed; inset: 0; background: rgba(11,45,92,0.4); display: flex; align-items: center; justify-content: center; z-index: 90; padding: 20px; }
+.pp-login-card { background: #fff; border-radius: 14px; padding: 28px; max-width: 380px; width: 100%; text-align: center; }
+.pp-login-card h3 { margin: 0 0 10px; }
+.pp-login-card p { margin: 0 0 20px; color: var(--color-text-muted, #5A6B84); font-size: 14px; }
+
+.pp-skel-title { height: 34px; width: 50%; background: var(--color-border, #E8EEF7); border-radius: 8px; margin-bottom: 20px; }
+.pp-skel-block { height: 200px; background: var(--color-border, #E8EEF7); border-radius: 12px; }

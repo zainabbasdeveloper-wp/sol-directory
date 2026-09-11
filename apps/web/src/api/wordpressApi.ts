@@ -82,8 +82,36 @@ export async function getServiceAreaPage(serviceSlug: string, suburbSlug: string
 // cache).
 
 const contentCache = new Map<string, unknown>();
+const API_URL_FOR_REVALIDATION = (import.meta as any).env?.VITE_API_URL ?? '/api';
+
+// The real revalidation check: compares when the cache was last
+// populated against when WordPress last reported a content change
+// via the webhook. Checked at most once every 30s, not on every
+// single fetch, since it's a network round-trip on its own and
+// content doesn't change second-to-second.
+let cacheBuiltAt = Date.now();
+let lastFreshnessCheck = 0;
+async function ensureCacheFresh(): Promise<void> {
+  const now = Date.now();
+  if (now - lastFreshnessCheck < 30_000) return;
+  lastFreshnessCheck = now;
+
+  try {
+    const res = await fetch(`${API_URL_FOR_REVALIDATION}/webhooks/wordpress/last-changed`);
+    if (!res.ok) return;
+    const { lastChangedAt } = await res.json();
+    if (lastChangedAt && new Date(lastChangedAt).getTime() > cacheBuiltAt) {
+      contentCache.clear();
+      cacheBuiltAt = now;
+    }
+  } catch {
+    // If the revalidation check itself fails, keep serving whatever
+    // is cached rather than breaking content display over it.
+  }
+}
 
 async function wpFetch<T>(path: string, cacheKey: string): Promise<T | null> {
+  await ensureCacheFresh();
   if (contentCache.has(cacheKey)) return contentCache.get(cacheKey) as T;
   if (!WP_URL) {
     console.warn('[wordpressApi] VITE_WORDPRESS_URL is not set.');

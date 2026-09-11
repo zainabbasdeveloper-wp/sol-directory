@@ -11,3 +11,8 @@
 .pd-card-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .pd-chip { font-size: 11.5px; padding: 4px 9px; border-radius: 100px; background: var(--color-primary-tint, #F2F7FF); color: #0F4FA8; }
 .pd-view-link { margin-top: auto; font-size: 13px; font-weight: 600; color: var(--color-primary, #1769E0); }
+
+.pd-filter-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.pd-select { height: 46px; padding: 0 14px; border: 1px solid var(--color-border-strong, #DDE4EF); border-radius: 10px; font: inherit; font-size: 14px; background: #fff; min-width: 160px; }
+.pd-result-count { font-size: 13.5px; font-weight: 600; margin: 0 0 14px; color: var(--color-text, #10233F); }
+.pd-empty-state { grid-column: 1 / -1; text-align: center; padding: 50px 20px; background: #fff; border: 1px dashed var(--color-border-strong, #DDE4EF); border-radius: 14px; }

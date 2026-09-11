@@ -102,6 +102,14 @@ export default function ProviderDetailModal({ providerId, onClose, onShortlistCh
           <>
             <p className="pdm-eyebrow">{provider.abn ? `ABN ${provider.abn}` : 'Provider'}</p>
             <h2 className="pdm-title">{provider.tradingName || provider.legalEntityName || 'Provider'}</h2>
+            {provider.slug && (
+              <button
+                className="pdm-full-profile-link"
+                onClick={() => navigate(`/providers/${provider.slug}`)}
+              >
+                View full profile →
+              </button>
+            )}
 
             {provider.serviceSuburbs.length > 0 && (
               <p className="pdm-area">{provider.serviceSuburbs.join(', ')}{provider.travelRadiusKm ? ` · ${provider.travelRadiusKm}km radius` : ''}</p>

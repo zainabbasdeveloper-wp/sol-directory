@@ -5,6 +5,7 @@ import DocumentAsset from '../models/DocumentAsset.js';
 import { getStorageService } from '../services/s3.service.js';
 import { logActivity } from '../models/AdminActivity.js';
 import { geocodeAddress } from '../services/geocoding.service.js';
+import { generateUniqueProviderSlug } from '../utils/slugify.js';
 
 const STEP_KEYS = ['org', 'insurance', 'areas', 'team', 'policy', 'billing'];
 
@@ -64,6 +65,14 @@ export async function saveStep(req: AuthedRequest, res: Response) {
     if (data.abn) provider.abn = String(data.abn);
     if (data.legalEntityName) provider.legalEntityName = String(data.legalEntityName);
     if (data.tradingName) provider.tradingName = String(data.tradingName);
+
+    // Generate the public slug once a real business name exists —
+    // never regenerate it on subsequent edits, since that would
+    // break any link/bookmark already pointing at the old slug.
+    if (!provider.slug) {
+      const name = provider.tradingName || provider.legalEntityName;
+      if (name) provider.slug = await generateUniqueProviderSlug(name);
+    }
   }
   if (stepKey === 'insurance' && Array.isArray(data.registrationGroups)) {
     provider.registrationGroups = data.registrationGroups as string[];

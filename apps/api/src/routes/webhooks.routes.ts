@@ -1,6 +1,7 @@
 import { Router } from 'express';
-import { stripeWebhook } from '../controllers/webhooks.controller.js';
+import { receiveWordPressWebhook, getLastChanged } from '../controllers/webhooks.controller.js';
 
 const router = Router();
-router.post('/stripe', stripeWebhook);
+router.post('/wordpress', receiveWordPressWebhook);
+router.get('/wordpress/last-changed', getLastChanged);
 export default router;

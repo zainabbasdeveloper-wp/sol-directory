@@ -27,7 +27,7 @@ async function del<T>(path: string): Promise<T> {
 }
 
 export interface ProviderRow {
-  id: string; legalEntityName: string; tradingName: string; abn: string;
+  id: string; slug: string | null; legalEntityName: string; tradingName: string; abn: string;
   registrationGroups: string[]; serviceSuburbs: string[]; travelRadiusKm: number;
   weeklyCapacityHours: number; intakeStatus: string;
   location: { lat: number; lng: number } | null;
@@ -47,6 +47,19 @@ export function listProviders(params: { q?: string; suburb?: string; service?: s
 
 export function getProviderProfile(id: string): Promise<ProviderRow> {
   return get(`/providers/${id}`);
+}
+
+export interface FullProviderProfile {
+  id: string; slug: string; name: string; legalEntityName: string; abn: string;
+  registrationGroups: string[]; serviceSuburbs: string[]; travelRadiusKm: number | null;
+  weeklyCapacityHours: number | null; intakeStatus: string; rosterSize: number | null;
+  afterHoursCover: string | null; acceptedFunding: string[]; conditionExperience: string[];
+  contactEmail: string | null; location: { lat: number; lng: number } | null;
+  plan: string; memberSince: string;
+  relatedProviders: { slug: string; name: string; suburbs: string[] }[];
+}
+export function getProviderBySlug(slug: string): Promise<FullProviderProfile> {
+  return get(`/providers/slug/${slug}`);
 }
 
 export function requestProviderContact(id: string): Promise<{ status: string; message: string }> {

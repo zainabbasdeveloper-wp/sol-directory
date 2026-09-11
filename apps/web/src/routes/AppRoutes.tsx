@@ -24,7 +24,9 @@ import AdminUsers from '../pages/admin/AdminUsers';
 import AdminMemberPlans from '../pages/admin/AdminMemberPlans';
 import AdminServices from '../pages/admin/AdminServices';
 import AdminConditions from '../pages/admin/AdminConditions';
+import AdminDiagnostics from '../pages/admin/AdminDiagnostics';
 import ProviderDirectory from '../pages/providers/ProviderDirectory';
+import ProviderProfilePage from '../pages/providers/ProviderProfilePage';
 import SavedProviders from '../pages/providers/SavedProviders';
 import AdminUserDetail from '../pages/admin/AdminUserDetail';
 import { useAuth } from '../context/AuthContext';
@@ -149,11 +151,13 @@ export default function AppRoutes() {
         <Route path="/admin/workers/:id" element={<RequireRole roles={['admin']}><AdminWorkerDetail /></RequireRole>} />
         <Route path="/admin/users" element={<RequireRole roles={['admin']}><AdminUsers /></RequireRole>} />
         <Route path="/find-providers" element={<RequireRole roles={['coordinator', 'participant', 'admin']}><ProviderDirectory /></RequireRole>} />
+        <Route path="/providers/:slug" element={<RequireRole roles={['coordinator', 'participant', 'admin']}><ProviderProfilePage /></RequireRole>} />
         <Route path="/saved-providers" element={<RequireRole roles={['coordinator', 'participant']}><SavedProviders /></RequireRole>} />
         <Route path="/admin/users/:id" element={<RequireRole roles={['admin']}><AdminUserDetail /></RequireRole>} />
         <Route path="/admin/plans" element={<RequireRole roles={['admin']}><AdminMemberPlans /></RequireRole>} />
         <Route path="/admin/services" element={<RequireRole roles={['admin']}><AdminServices /></RequireRole>} />
         <Route path="/admin/conditions" element={<RequireRole roles={['admin']}><AdminConditions /></RequireRole>} />
+        <Route path="/admin/diagnostics" element={<RequireRole roles={['admin']}><AdminDiagnostics /></RequireRole>} />
       </Route>
 
       <Route path="*" element={<WordPressCatchAllPage />} />
