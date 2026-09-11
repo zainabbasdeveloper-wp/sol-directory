@@ -15,7 +15,10 @@
 if (!defined('ABSPATH')) exit;
 
 function soldirectory_allowed_cors_origins(): array {
-    $configured_origins = $_ENV['FRONTEND_ORIGIN'] ?? getenv('FRONTEND_ORIGIN') ?: 'http://46.250.242.208';
+    $configured_origins = $_ENV['FRONTEND_ORIGIN'] ?? getenv('FRONTEND_ORIGIN') ?? '';
+    if (!is_string($configured_origins) || trim($configured_origins) === '') {
+        $configured_origins = 'http://46.250.242.208';
+    }
     return array_filter(array_map(
         static fn ($origin) => rtrim(trim($origin), '/'),
         explode(',', $configured_origins)
