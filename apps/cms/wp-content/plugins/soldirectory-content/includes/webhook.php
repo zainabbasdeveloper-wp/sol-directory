@@ -16,8 +16,8 @@ add_action('save_post', function ($post_id) {
     // changes a visitor would ever see.
     if (wp_is_post_autosave($post_id) || wp_is_post_revision($post_id)) return;
 
-    $webhook_url = getenv('WEBHOOK_URL');
-    $webhook_secret = getenv('WEBHOOK_SECRET');
+    $webhook_url = $_ENV['WEBHOOK_URL'] ?? getenv('WEBHOOK_URL');
+    $webhook_secret = $_ENV['WEBHOOK_SECRET'] ?? getenv('WEBHOOK_SECRET');
     if (!$webhook_url || !$webhook_secret) return; // not configured — silently skip, never break saving a post over this
 
     // Fire-and-forget, non-blocking — a slow or failing webhook must

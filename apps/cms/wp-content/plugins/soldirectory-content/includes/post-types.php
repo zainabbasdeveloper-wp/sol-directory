@@ -106,4 +106,35 @@ add_action('init', function () {
         'has_archive' => false,
         'publicly_queryable' => true,
     ]);
+
+    // --- Taxonomies — real categorization, editable in wp-admin
+    // exactly like core Categories/Tags, exposed via REST so the
+    // frontend can filter/group by them. ---
+
+    register_taxonomy('service_category', ['service', 'service_area_page'], [
+        'labels' => ['name' => 'Service Categories', 'singular_name' => 'Service Category'],
+        'public' => true,
+        'show_in_rest' => true,
+        'rest_base' => 'service-categories',
+        'hierarchical' => true, // behaves like Categories (parent/child), not Tags
+        'show_admin_column' => true,
+    ]);
+
+    register_taxonomy('location_region', ['location'], [
+        'labels' => ['name' => 'Regions', 'singular_name' => 'Region'],
+        'public' => true,
+        'show_in_rest' => true,
+        'rest_base' => 'regions',
+        'hierarchical' => true,
+        'show_admin_column' => true,
+    ]);
+
+    register_taxonomy('guide_topic', ['guide'], [
+        'labels' => ['name' => 'Guide Topics', 'singular_name' => 'Guide Topic'],
+        'public' => true,
+        'show_in_rest' => true,
+        'rest_base' => 'guide-topics',
+        'hierarchical' => false, // tag-like — a guide can freely have several topics
+        'show_admin_column' => true,
+    ]);
 });

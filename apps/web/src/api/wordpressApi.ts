@@ -152,7 +152,21 @@ export interface WPContentBase {
   contentHtml: string; // already-sanitized server-side by WordPress's own content filters — see note in WordPressContentPage.tsx before rendering
   excerpt: string;
   featuredImage: WPImage | null;
+  terms: WPTerm[];
   seo: { title: string; description: string; ogImage: string | null };
+}
+
+export interface WPTerm { id: number; name: string; slug: string; taxonomy: string }
+
+function extractTerms(raw: any): WPTerm[] {
+  // _embedded['wp:term'] is an array of arrays — one sub-array per
+  // taxonomy registered on this post type, in the same order the
+  // REST API lists them. Flattened here since most consumers just
+  // want "all the terms this item has," not grouped by taxonomy.
+  const groups = raw._embedded?.['wp:term'] ?? [];
+  return groups.flat().filter((t: any) => t && !t.code).map((t: any) => ({
+    id: t.id, name: t.name, slug: t.slug, taxonomy: t.taxonomy,
+  }));
 }
 
 function mapBaseContent(raw: any): WPContentBase {
@@ -163,6 +177,7 @@ function mapBaseContent(raw: any): WPContentBase {
     contentHtml: raw.content?.rendered ?? '',
     excerpt: (raw.excerpt?.rendered ?? '').replace(/<[^>]+>/g, '').trim(),
     featuredImage: extractFeaturedImage(raw),
+    terms: extractTerms(raw),
     // Falls back to title/excerpt when no SEO plugin data is present
     // — this project has no Yoast/RankMath configured yet, so these
     // fields are honest fallbacks, not real SEO plugin output.
@@ -172,6 +187,25 @@ function mapBaseContent(raw: any): WPContentBase {
       ogImage: raw.yoast_head_json?.og_image?.[0]?.url ?? extractFeaturedImage(raw)?.url ?? null,
     },
   };
+}
+
+// --- Real taxonomy term lists — for building filter UIs (e.g. a
+// dynamic mega menu) from actual wp-admin-managed categories, not a
+// hardcoded array. ---
+
+async function getTerms(restBase: string, cacheKey: string): Promise<{ items: WPTerm[] }> {
+  const raw = await wpFetch<any[]>(`/wp-json/wp/v2/${restBase}?per_page=100`, cacheKey);
+  return { items: (raw ?? []).map((t: any) => ({ id: t.id, name: t.name, slug: t.slug, taxonomy: t.taxonomy })) };
+}
+
+export function getServiceCategories(): Promise<{ items: WPTerm[] }> {
+  return getTerms('service-categories', 'terms:service-categories');
+}
+export function getRegions(): Promise<{ items: WPTerm[] }> {
+  return getTerms('regions', 'terms:regions');
+}
+export function getGuideTopics(): Promise<{ items: WPTerm[] }> {
+  return getTerms('guide-topics', 'terms:guide-topics');
 }
 
 export async function getWordPressPage(slug: string): Promise<WPContentBase | null> {
@@ -199,4 +233,14 @@ export async function getGuide(slug: string): Promise<WPGuide | null> {
   const results = await wpFetch<any[]>(`/wp-json/wp/v2/guides?slug=${encodeURIComponent(slug)}&_embed`, `guide:${slug}`);
   if (!results?.length) return null;
   return mapBaseContent(results[0]);
+}
+
+// --- Dynamic navigation menu — real custom REST route, since core
+// WordPress has no built-in menu API endpoint at all. ---
+
+export interface WPMenuItem { id: number; title: string; url: string; children: WPMenuItem[] }
+
+export async function getMenu(location: string): Promise<WPMenuItem[]> {
+  const result = await wpFetch<{ items: WPMenuItem[] }>(`/wp-json/soldirectory/v1/menu/${location}`, `menu:${location}`);
+  return result?.items ?? [];
 }

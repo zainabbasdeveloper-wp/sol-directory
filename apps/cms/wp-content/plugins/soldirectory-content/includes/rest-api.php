@@ -18,7 +18,7 @@ add_action('rest_api_init', function () {
     remove_filter('rest_pre_serve_request', 'rest_send_cors_headers');
 
     add_filter('rest_pre_serve_request', function ($value) {
-        $allowed_origin = getenv('FRONTEND_ORIGIN') ?: '';
+        $allowed_origin = $_ENV['FRONTEND_ORIGIN'] ?? getenv('FRONTEND_ORIGIN') ?: '';
         $origin = get_http_origin();
 
         if ($origin && $allowed_origin && $origin === $allowed_origin) {
