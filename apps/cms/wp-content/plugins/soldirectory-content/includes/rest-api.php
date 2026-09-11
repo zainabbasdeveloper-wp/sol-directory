@@ -18,12 +18,17 @@ add_action('rest_api_init', function () {
     remove_filter('rest_pre_serve_request', 'rest_send_cors_headers');
 
     add_filter('rest_pre_serve_request', function ($value) {
-        $allowed_origin = $_ENV['FRONTEND_ORIGIN'] ?? getenv('FRONTEND_ORIGIN') ?: '';
+        $configured_origins = $_ENV['FRONTEND_ORIGIN'] ?? getenv('FRONTEND_ORIGIN') ?: '';
+        $allowed_origins = array_filter(array_map(
+            static fn ($origin) => rtrim(trim($origin), '/'),
+            explode(',', $configured_origins)
+        ));
         $origin = get_http_origin();
 
-        if ($origin && $allowed_origin && $origin === $allowed_origin) {
+        if ($origin && in_array(rtrim($origin, '/'), $allowed_origins, true)) {
             header('Access-Control-Allow-Origin: ' . esc_url_raw($origin));
-            header('Access-Control-Allow-Methods: GET');
+            header('Access-Control-Allow-Methods: GET, HEAD, OPTIONS');
+            header('Access-Control-Allow-Headers: Authorization, Content-Type, X-WP-Nonce');
             header('Access-Control-Allow-Credentials: false');
             header('Vary: Origin');
         }
