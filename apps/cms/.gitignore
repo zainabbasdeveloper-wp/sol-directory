@@ -2,9 +2,18 @@
 # as node_modules elsewhere in this monorepo.
 /wordpress/
 /vendor/
+/router.php
 
 # Real secrets and uploaded media never get committed either.
 .env
 /wp-content/uploads/
+
+# WordPress-generated runtime files and caches.
+/wp-content/cache/
+/wp-content/upgrade/
+/wp-content/upgrade-temp-backup/
+/wp-content/languages/
+/wp-content/debug.log
+.maintenance
 
 composer.lock
