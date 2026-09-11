@@ -25,6 +25,14 @@ define('DB_HOST', $_ENV['DB_HOST'] ?? 'localhost');
 define('DB_CHARSET', 'utf8mb4');
 define('DB_COLLATE', '');
 
+// Keep WordPress's canonical URL aligned with the public URL configured in
+// .env, including the port when the CMS is served by PHP's test server.
+$wp_site_url = rtrim($_ENV['WP_SITE_URL'] ?? '', '/');
+if ($wp_site_url !== '') {
+    define('WP_HOME', $wp_site_url);
+    define('WP_SITEURL', $wp_site_url);
+}
+
 // Content directory decoupled from WP core, same "core is a
 // dependency, not something you hand-edit" principle as node_modules.
 define('WP_CONTENT_DIR', __DIR__ . '/wp-content');
