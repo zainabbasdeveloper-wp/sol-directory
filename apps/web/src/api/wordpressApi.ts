@@ -1,10 +1,9 @@
-// Real fetch client for the headless WordPress CMS at apps/cms.
-// This is a separate origin/base URL from the Node API — set
-// VITE_WORDPRESS_URL in apps/web's .env (e.g.
-// http://localhost:8080 for local dev, matching whatever apps/cms
-// is actually served from).
+// In production, Nginx proxies /wp-json/ from the frontend origin to
+// WordPress, so leaving VITE_WORDPRESS_URL empty keeps browser requests
+// same-origin and avoids CORS entirely. Set it only for a separately
+// hosted WordPress origin in development or another environment.
 
-const WP_URL = (import.meta as any).env?.VITE_WORDPRESS_URL;
+const WP_URL = ((import.meta as any).env?.VITE_WORDPRESS_URL ?? '').replace(/\/$/, '');
 
 export interface ServiceAreaPage {
   id: number;
@@ -55,11 +54,6 @@ function mapServiceAreaPage(raw: any): ServiceAreaPage {
  * data in that case, not crash.
  */
 export async function getServiceAreaPage(serviceSlug: string, suburbSlug: string): Promise<ServiceAreaPage | null> {
-  if (!WP_URL) {
-    console.warn('[wordpressApi] VITE_WORDPRESS_URL is not set — falling back to illustrative data.');
-    return null;
-  }
-
   try {
     const res = await fetch(`${WP_URL}/wp-json/wp/v2/service-area-pages?slug=${serviceSlug}-${suburbSlug}`);
     if (!res.ok) return null;
@@ -113,10 +107,6 @@ async function ensureCacheFresh(): Promise<void> {
 async function wpFetch<T>(path: string, cacheKey: string): Promise<T | null> {
   await ensureCacheFresh();
   if (contentCache.has(cacheKey)) return contentCache.get(cacheKey) as T;
-  if (!WP_URL) {
-    console.warn('[wordpressApi] VITE_WORDPRESS_URL is not set.');
-    return null;
-  }
   try {
     const res = await fetch(`${WP_URL}${path}`);
     if (!res.ok) return null;
