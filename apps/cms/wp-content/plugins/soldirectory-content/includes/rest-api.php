@@ -14,15 +14,19 @@
 
 if (!defined('ABSPATH')) exit;
 
+function soldirectory_allowed_cors_origins(): array {
+    $configured_origins = $_ENV['FRONTEND_ORIGIN'] ?? getenv('FRONTEND_ORIGIN') ?: 'http://46.250.242.208';
+    return array_filter(array_map(
+        static fn ($origin) => rtrim(trim($origin), '/'),
+        explode(',', $configured_origins)
+    ));
+}
+
 add_action('rest_api_init', function () {
     remove_filter('rest_pre_serve_request', 'rest_send_cors_headers');
 
     add_filter('rest_pre_serve_request', function ($value) {
-        $configured_origins = $_ENV['FRONTEND_ORIGIN'] ?? getenv('FRONTEND_ORIGIN') ?: 'http://46.250.242.208';
-        $allowed_origins = array_filter(array_map(
-            static fn ($origin) => rtrim(trim($origin), '/'),
-            explode(',', $configured_origins)
-        ));
+        $allowed_origins = soldirectory_allowed_cors_origins();
         $origin = $_SERVER['HTTP_ORIGIN'] ?? get_http_origin();
 
         if ($origin && in_array(rtrim($origin, '/'), $allowed_origins, true)) {
@@ -36,6 +40,17 @@ add_action('rest_api_init', function () {
         return $value;
     });
 }, 15);
+
+add_action('init', function () {
+    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+    if (!$origin || !in_array(rtrim($origin, '/'), soldirectory_allowed_cors_origins(), true)) return;
+
+    header('Access-Control-Allow-Origin: ' . esc_url_raw($origin));
+    header('Access-Control-Allow-Methods: GET, HEAD, OPTIONS');
+    header('Access-Control-Allow-Headers: Authorization, Content-Type, X-WP-Nonce');
+    header('Access-Control-Allow-Credentials: false');
+    header('Vary: Origin');
+}, 1);
 
 /**
  * This CMS is read-only from the frontend's perspective — the React
