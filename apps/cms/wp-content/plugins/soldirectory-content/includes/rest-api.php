@@ -4,24 +4,31 @@
  * /wp-json/* entirely — WordPress's default REST CORS handling is
  * "same-origin only," which breaks the moment the React app and
  * WordPress run on different origins (which they always will in a
- * real headless setup: e.g. React on soldirectory.com.au, WP on
- * cms.soldirectory.com.au).
+ * real headless setup — including different PORTS on the same host,
+ * which is exactly this deployment: React on :80, WordPress on :8080).
  *
- * FRONTEND_ORIGIN comes from .env — matching how every credential
- * and origin config elsewhere in this project is environment-driven,
- * never hardcoded.
+ * FRONTEND_ORIGIN comes from .env. Supports a comma-separated list
+ * if you ever need more than one allowed origin (e.g. a staging
+ * frontend alongside production).
+ *
+ * IMPORTANT: this is the ONLY place CORS headers get set for the
+ * REST API. Do not also add a raw header() call elsewhere (e.g. an
+ * init hook, functions.php) — sending Access-Control-Allow-Origin
+ * twice on the same response is invalid per the CORS spec and
+ * browsers reject it outright, which looks identical to CORS not
+ * being configured at all.
  */
 
 if (!defined('ABSPATH')) exit;
 
 function soldirectory_allowed_cors_origins(): array {
-    $configured_origins = $_ENV['FRONTEND_ORIGIN'] ?? getenv('FRONTEND_ORIGIN') ?? '';
-    if (!is_string($configured_origins) || trim($configured_origins) === '') {
-        $configured_origins = 'http://46.250.242.208';
-    }
+    // Fully parenthesized — mixing ?? and ?: unparenthesized is a
+    // FATAL PHP PARSE ERROR (not a warning), which silently breaks
+    // this entire file, including the read-only enforcement below.
+    $configured = ($_ENV['FRONTEND_ORIGIN'] ?? null) ?: (getenv('FRONTEND_ORIGIN') ?: 'http://46.250.242.208');
     return array_filter(array_map(
         static fn ($origin) => rtrim(trim($origin), '/'),
-        explode(',', $configured_origins)
+        explode(',', $configured)
     ));
 }
 
@@ -43,17 +50,6 @@ add_action('rest_api_init', function () {
         return $value;
     });
 }, 15);
-
-add_action('init', function () {
-    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-    if (!$origin || !in_array(rtrim($origin, '/'), soldirectory_allowed_cors_origins(), true)) return;
-
-    header('Access-Control-Allow-Origin: ' . esc_url_raw($origin));
-    header('Access-Control-Allow-Methods: GET, HEAD, OPTIONS');
-    header('Access-Control-Allow-Headers: Authorization, Content-Type, X-WP-Nonce');
-    header('Access-Control-Allow-Credentials: false');
-    header('Vary: Origin');
-}, 1);
 
 /**
  * This CMS is read-only from the frontend's perspective — the React
