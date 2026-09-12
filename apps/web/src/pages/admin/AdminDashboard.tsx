@@ -76,7 +76,7 @@ export default function AdminDashboard() {
   function loadAll() {
     setLoading(true);
     setError('');
-    Promise.all([
+    Promise.allSettled([
       getDashboardOverview(period),
       getRecentProviders(),
       getRecentWorkers(),
@@ -87,8 +87,20 @@ export default function AdminDashboard() {
       getProviderActivityTable(),
     ])
       .then(([ov, rp, rw, ra, ug, sb, wb, pa]) => {
-        setOverview(ov); setProviders(rp.items); setWorkers(rw.items); setActivity(ra.items); setGrowth(ug.series);
-        setStateBreakdown(sb.counts); setWorkerBreakdowns(wb); setProviderActivity(pa.items);
+        if (ov.status === 'rejected') throw ov.reason;
+        setOverview(ov.value);
+        if (rp.status === 'fulfilled') setProviders(rp.value.items);
+        if (rw.status === 'fulfilled') setWorkers(rw.value.items);
+        if (ra.status === 'fulfilled') setActivity(ra.value.items);
+        if (ug.status === 'fulfilled') setGrowth(ug.value.series);
+        if (sb.status === 'fulfilled') setStateBreakdown(sb.value.counts);
+        if (wb.status === 'fulfilled') setWorkerBreakdowns(wb.value);
+        if (pa.status === 'fulfilled') setProviderActivity(pa.value.items);
+
+        const failed = [rp, rw, ra, ug, sb, wb, pa].filter((result) => result.status === 'rejected');
+        if (failed.length > 0) {
+          console.error(`[AdminDashboard] ${failed.length} dashboard request(s) failed`, failed);
+        }
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : 'Unable to load dashboard statistics.'))
       .finally(() => setLoading(false));

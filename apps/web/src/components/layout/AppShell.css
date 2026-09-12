@@ -41,6 +41,23 @@
   display: none;
 }
 
+.app-tabs-next {
+  flex: 0 0 30px;
+  height: 36px;
+  margin-left: -34px;
+  border: 0;
+  border-radius: 50%;
+  background: #0b2d5c;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1;
+  box-shadow: -8px 0 14px #0b2d5c;
+}
+.app-tabs-next:hover { background: #1769e0; }
+
 .app-tab-slot {
   display: inline-flex;
   gap: clamp(10px, 1.6vw, 22px);

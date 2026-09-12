@@ -117,6 +117,8 @@ export default function Header() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [tabsOverflow, setTabsOverflow] = useState(false);
+  const tabsRef = useRef<HTMLElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const visibleTabs = TABS.filter((tab) => !tab.roles || (user && tab.roles.includes(user.role)));
@@ -125,6 +127,21 @@ export default function Header() {
   // longer see this tab at all, per the same rule change as the
   // route guard.
   const canSeeWorkersTab = !!user && (user.role === 'admin' || (user.role === 'provider' && user.plan === 'pro'));
+
+  useEffect(() => {
+    const tabs = tabsRef.current;
+    if (!tabs) return;
+
+    const updateOverflow = () => setTabsOverflow(tabs.scrollWidth > tabs.clientWidth + 1);
+    updateOverflow();
+    tabs.addEventListener('scroll', updateOverflow, { passive: true });
+    const observer = new ResizeObserver(updateOverflow);
+    observer.observe(tabs);
+    return () => {
+      tabs.removeEventListener('scroll', updateOverflow);
+      observer.disconnect();
+    };
+  }, [visibleTabs.length, canSeeWorkersTab]);
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -157,7 +174,7 @@ export default function Header() {
           SolDirectory
         </Link>
 
-        <nav className="app-tabs" aria-label="Main">
+        <nav className="app-tabs" aria-label="Main" ref={tabsRef}>
           {visibleTabs.map((tab) => (
             <Fragment key={tab.to}>
               <NavLink to={tab.to} className={({ isActive }) => `app-tab ${isActive ? 'app-tab-active' : ''}`}>
@@ -171,6 +188,18 @@ export default function Header() {
             </Fragment>
           ))}
         </nav>
+        {tabsOverflow && (
+          <button
+            className="app-tabs-next"
+            type="button"
+            aria-label="Show more menu items"
+            onClick={() => tabsRef.current?.scrollBy({ left: 180, behavior: 'smooth' })}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path d="m9 5 7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        )}
 
         <div className="app-header-account" ref={menuRef}>
           {user?.role === 'admin' && <NotificationBell />}
