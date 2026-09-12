@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { getNotifications, markNotificationsRead, type NotificationItem } from '../../api/adminDashboardResources';
@@ -158,15 +158,17 @@ export default function Header() {
         </Link>
 
         <nav className="app-tabs" aria-label="Main">
-          {canSeeWorkersTab && (
-            <NavLink to="/workers" className={({ isActive }) => `app-tab ${isActive ? 'app-tab-active' : ''}`}>
-              Workers
-            </NavLink>
-          )}
           {visibleTabs.map((tab) => (
-            <NavLink key={tab.to} to={tab.to} className={({ isActive }) => `app-tab ${isActive ? 'app-tab-active' : ''}`}>
-              {tab.label}
-            </NavLink>
+            <Fragment key={tab.to}>
+              <NavLink to={tab.to} className={({ isActive }) => `app-tab ${isActive ? 'app-tab-active' : ''}`}>
+                {tab.label}
+              </NavLink>
+              {tab.to === '/dashboard' && canSeeWorkersTab && (
+                <NavLink to="/workers" className={({ isActive }) => `app-tab ${isActive ? 'app-tab-active' : ''}`}>
+                  Workers
+                </NavLink>
+              )}
+            </Fragment>
           ))}
         </nav>
 

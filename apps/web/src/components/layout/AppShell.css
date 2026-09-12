@@ -17,7 +17,7 @@
   display: flex;
   align-items: center;
   gap: clamp(20px, 3vw, 48px);
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .app-brand {
@@ -31,8 +31,14 @@
 .app-tabs {
   display: flex;
   gap: clamp(10px, 1.6vw, 22px);
-  flex-wrap: wrap;
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.app-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .app-tab-slot {
@@ -45,6 +51,7 @@
   align-items: center;
   gap: 6px;
   height: 64px;
+  flex-shrink: 0;
   color: rgba(255,255,255,0.78);
   font-weight: 500;
   font-size: 14.5px;
