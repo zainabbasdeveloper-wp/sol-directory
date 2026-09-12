@@ -6,9 +6,18 @@ function authHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, { headers: authHeaders() });
-  if (!res.ok) throw new ApiError((await res.json()).error ?? 'Request failed', res.status);
-  return res.json();
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, { headers: authHeaders() });
+  } catch {
+    throw new ApiError(`Could not reach the API at ${API_URL}`, 0);
+  }
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new ApiError(data.error ?? `Request failed (${res.status})`, res.status);
+  }
+  return data as T;
 }
 
 export interface DashboardOverview {

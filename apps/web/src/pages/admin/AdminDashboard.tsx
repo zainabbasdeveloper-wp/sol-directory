@@ -102,7 +102,13 @@ export default function AdminDashboard() {
           console.error(`[AdminDashboard] ${failed.length} dashboard request(s) failed`, failed);
         }
       })
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Unable to load dashboard statistics.'))
+      .catch((err) => {
+        if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+          setError('Your admin session is no longer valid. Log out, sign in again, and reload this dashboard.');
+          return;
+        }
+        setError(err instanceof ApiError ? err.message : 'Unable to load dashboard statistics.');
+      })
       .finally(() => setLoading(false));
   }
 
