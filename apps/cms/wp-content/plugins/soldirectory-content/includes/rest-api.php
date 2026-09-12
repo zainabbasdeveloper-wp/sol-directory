@@ -1,30 +1,7 @@
 <?php
-/**
- * Without this, the browser blocks apps/web's fetch() calls to
- * /wp-json/* entirely — WordPress's default REST CORS handling is
- * "same-origin only," which breaks the moment the React app and
- * WordPress run on different origins (which they always will in a
- * real headless setup — including different PORTS on the same host,
- * which is exactly this deployment: React on :80, WordPress on :8080).
- *
- * FRONTEND_ORIGIN comes from .env. Supports a comma-separated list
- * if you ever need more than one allowed origin (e.g. a staging
- * frontend alongside production).
- *
- * IMPORTANT: this is the ONLY place CORS headers get set for the
- * REST API. Do not also add a raw header() call elsewhere (e.g. an
- * init hook, functions.php) — sending Access-Control-Allow-Origin
- * twice on the same response is invalid per the CORS spec and
- * browsers reject it outright, which looks identical to CORS not
- * being configured at all.
- */
-
 if (!defined('ABSPATH')) exit;
 
 function soldirectory_allowed_cors_origins(): array {
-    // Fully parenthesized — mixing ?? and ?: unparenthesized is a
-    // FATAL PHP PARSE ERROR (not a warning), which silently breaks
-    // this entire file, including the read-only enforcement below.
     $configured = ($_ENV['FRONTEND_ORIGIN'] ?? null) ?: (getenv('FRONTEND_ORIGIN') ?: 'http://46.250.242.208');
     return array_filter(array_map(
         static fn ($origin) => rtrim(trim($origin), '/'),
@@ -39,6 +16,16 @@ add_action('rest_api_init', function () {
         $allowed_origins = soldirectory_allowed_cors_origins();
         $origin = $_SERVER['HTTP_ORIGIN'] ?? get_http_origin();
 
+        // TEMPORARY DEBUG — remove once this is resolved. Logs the
+        // exact raw values being compared, since guessing further
+        // without seeing them isn't productive at this point.
+        error_log('[SOLDIRECTORY CORS DEBUG] raw HTTP_ORIGIN: ' . var_export($_SERVER['HTTP_ORIGIN'] ?? null, true));
+        error_log('[SOLDIRECTORY CORS DEBUG] get_http_origin(): ' . var_export(get_http_origin(), true));
+        error_log('[SOLDIRECTORY CORS DEBUG] resolved $origin: ' . var_export($origin, true));
+        error_log('[SOLDIRECTORY CORS DEBUG] raw FRONTEND_ORIGIN env: ' . var_export(getenv('FRONTEND_ORIGIN'), true));
+        error_log('[SOLDIRECTORY CORS DEBUG] allowed_origins array: ' . var_export($allowed_origins, true));
+        error_log('[SOLDIRECTORY CORS DEBUG] match result: ' . var_export($origin && in_array(rtrim($origin, '/'), $allowed_origins, true), true));
+
         if ($origin && in_array(rtrim($origin, '/'), $allowed_origins, true)) {
             header('Access-Control-Allow-Origin: ' . esc_url_raw($origin));
             header('Access-Control-Allow-Methods: GET, HEAD, OPTIONS');
@@ -51,13 +38,6 @@ add_action('rest_api_init', function () {
     });
 }, 15);
 
-/**
- * This CMS is read-only from the frontend's perspective — the React
- * app should never be able to create/edit/delete WordPress content
- * through the public API, only read it. Content editing happens
- * through wp-admin, by an actual editor, same as any normal CMS
- * workflow.
- */
 add_filter('rest_authentication_errors', function ($result) {
     if (!empty($result)) return $result;
 

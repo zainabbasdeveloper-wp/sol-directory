@@ -2,20 +2,22 @@
   position: sticky;
   top: 0;
   z-index: 30;
-  background: rgba(11,45,92,0.97);
+  background: #0b2d5cf7;
+  -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(255,255,255,0.14);
-  box-shadow: 0 1px 5px rgba(11,45,92,0.18);
+  border-bottom: 1px solid rgba(255, 255, 255, .14);
+  box-shadow: 0 1px 5px #0b2d5c2e;
 }
 
 .app-header-inner {
   max-width: var(--layout-app-max-width);
   margin: 0 auto;
-  padding: 0 clamp(18px, 3vw, 40px);
-  height: 64px;
+  padding: 10px clamp(18px, 3vw, 40px);
+  min-height: 64px;
   display: flex;
   align-items: center;
   gap: clamp(20px, 3vw, 48px);
+  flex-wrap: wrap;
 }
 
 .app-brand {
