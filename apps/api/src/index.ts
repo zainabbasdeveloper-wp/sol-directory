@@ -17,11 +17,14 @@ import onboardingRoutes from './routes/onboarding.routes.js';
 import verificationRoutes from './routes/verification.routes.js';
 import webhooksRoutes from './routes/webhooks.routes.js';
 import wpRoutes from './routes/wp.routes.js';
+import sitemapRoutes from './routes/sitemap.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import adminDashboardRoutes from './routes/admin.dashboard.routes.js';
 import adminPlansRoutes from './routes/admin.plans.routes.js';
 import adminServicesRoutes from './routes/admin.services.routes.js';
 import adminConditionsRoutes from './routes/admin.conditions.routes.js';
+import adminDiagnosticsRoutes from './routes/admin.diagnostics.routes.js';
+import adminLeadsRoutes from './routes/admin.leads.routes.js';
 
 const app = express();
 
@@ -48,6 +51,12 @@ app.use('/api/admin/dashboard', adminDashboardRoutes);
 app.use('/api/admin/plans', adminPlansRoutes);
 app.use('/api/admin/services', adminServicesRoutes);
 app.use('/api/admin/conditions', adminConditionsRoutes);
+// These three existed as real files but were never actually mounted
+// here — found by directly comparing the deployed routes/ directory
+// against this file, not assumed.
+app.use('/api/admin/diagnostics', adminDiagnosticsRoutes);
+app.use('/api/admin/leads', adminLeadsRoutes);
+app.use('/sitemap.xml', sitemapRoutes);
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);

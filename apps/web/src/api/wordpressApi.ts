@@ -1,9 +1,12 @@
-// In production, Nginx proxies /wp-json/ from the frontend origin to
-// WordPress, so leaving VITE_WORDPRESS_URL empty keeps browser requests
-// same-origin and avoids CORS entirely. Set it only for a separately
-// hosted WordPress origin in development or another environment.
-
-const WP_URL = ((import.meta as any).env?.VITE_WORDPRESS_URL ?? '').replace(/\/$/, '');
+// Routed through the Node API's WordPress REST proxy (/api/wp/rest/...)
+// instead of fetching WordPress directly — the browser only ever
+// talks to the Node API, which is already same-origin and already
+// proven working. A server-to-server request from Node to WordPress
+// has no concept of CORS at all, since CORS is exclusively a
+// browser-enforced restriction — this removes the cross-origin
+// request from existing in the first place, which is a more durable
+// fix than any WordPress-side CORS header configuration.
+const API_URL = ((import.meta as any).env?.VITE_API_URL ?? '/api').replace(/\/$/, '');
 
 export interface ServiceAreaPage {
   id: number;
@@ -55,7 +58,7 @@ function mapServiceAreaPage(raw: any): ServiceAreaPage {
  */
 export async function getServiceAreaPage(serviceSlug: string, suburbSlug: string): Promise<ServiceAreaPage | null> {
   try {
-    const res = await fetch(`${WP_URL}/wp-json/wp/v2/service-area-pages?slug=${serviceSlug}-${suburbSlug}`);
+    const res = await fetch(`${API_URL}/wp/rest/wp-json/wp/v2/service-area-pages?slug=${serviceSlug}-${suburbSlug}`);
     if (!res.ok) return null;
     const results = await res.json();
     if (!Array.isArray(results) || results.length === 0) return null;
@@ -76,7 +79,6 @@ export async function getServiceAreaPage(serviceSlug: string, suburbSlug: string
 // cache).
 
 const contentCache = new Map<string, unknown>();
-const API_URL_FOR_REVALIDATION = (import.meta as any).env?.VITE_API_URL ?? '/api';
 
 // The real revalidation check: compares when the cache was last
 // populated against when WordPress last reported a content change
@@ -91,7 +93,7 @@ async function ensureCacheFresh(): Promise<void> {
   lastFreshnessCheck = now;
 
   try {
-    const res = await fetch(`${API_URL_FOR_REVALIDATION}/webhooks/wordpress/last-changed`);
+    const res = await fetch(`${API_URL}/webhooks/wordpress/last-changed`);
     if (!res.ok) return;
     const { lastChangedAt } = await res.json();
     if (lastChangedAt && new Date(lastChangedAt).getTime() > cacheBuiltAt) {
@@ -108,7 +110,7 @@ async function wpFetch<T>(path: string, cacheKey: string): Promise<T | null> {
   await ensureCacheFresh();
   if (contentCache.has(cacheKey)) return contentCache.get(cacheKey) as T;
   try {
-    const res = await fetch(`${WP_URL}${path}`);
+    const res = await fetch(`${API_URL}/wp/rest${path}`);
     if (!res.ok) return null;
     const data = await res.json();
     contentCache.set(cacheKey, data);
