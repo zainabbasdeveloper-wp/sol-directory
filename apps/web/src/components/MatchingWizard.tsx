@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMatchModal } from '../context/MatchModalContext';
+import { listActiveServices, type ActiveService } from '../api/serviceCatalogue';
+import { ApiError } from '../api/client';
 import './MatchingWizard.css';
 
 interface MatchFormData {
   location: string;
+  service: string;
   careFor: string;
   timeframe: string;
   funding: string;
@@ -15,20 +18,20 @@ interface MatchFormData {
 }
 
 const EMPTY_FORM: MatchFormData = {
-  location: '', careFor: '', timeframe: '', funding: '', planManagement: '',
+  location: '', service: '', careFor: '', timeframe: '', funding: '', planManagement: '',
   email: '', phone: '', name: '', additionalDetails: '',
 };
 
-type StepId = 'location' | 'careFor' | 'timeframe' | 'funding' | 'planManagement' | 'email' | 'phone' | 'name' | 'additionalDetails';
+type StepId = 'location' | 'service' | 'careFor' | 'timeframe' | 'funding' | 'planManagement' | 'email' | 'phone' | 'name' | 'additionalDetails';
 type Phase = 'wizard' | 'review' | 'success';
 
 const STEP_LABELS: Record<StepId, string> = {
-  location: 'Location', careFor: 'Care for', timeframe: 'Timing', funding: 'Funding',
+  location: 'Location', service: 'Service', careFor: 'Care for', timeframe: 'Timing', funding: 'Funding',
   planManagement: 'Plan', email: 'Contact', phone: 'Phone', name: 'Name', additionalDetails: 'Details',
 };
 
 function getSteps(funding: string): StepId[] {
-  const base: StepId[] = ['location', 'careFor', 'timeframe', 'funding'];
+  const base: StepId[] = ['location', 'service', 'careFor', 'timeframe', 'funding'];
   if (funding === 'NDIS') base.push('planManagement');
   return [...base, 'email', 'phone', 'name', 'additionalDetails'];
 }
@@ -71,7 +74,13 @@ export default function MatchingWizard() {
   const [error, setError] = useState('');
   const [confirmClose, setConfirmClose] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [serviceOptions, setServiceOptions] = useState<ActiveService[]>([]);
   const headingRef = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    listActiveServices().then((res) => setServiceOptions(res.items)).catch(() => {});
+  }, []);
 
   const steps = getSteps(form.funding);
   const currentStepId = steps[stepIndex];
@@ -117,6 +126,7 @@ export default function MatchingWizard() {
   function validateStep(id: StepId): string {
     const v = form[id];
     if (id === 'location' && !v.trim()) return 'Enter a suburb or postcode so we know where to look.';
+    if (id === 'service' && !v) return 'Choose the service you need.';
     if (id === 'careFor' && !v) return 'Choose who this is for.';
     if (id === 'timeframe' && !v) return 'Choose a timeframe.';
     if (id === 'funding' && !v) return 'Choose a funding type — "Not sure" is a fine answer.';
@@ -167,13 +177,24 @@ export default function MatchingWizard() {
 
   async function submitRequest() {
     setSubmitting(true);
-    // NOTE: no real matching-request endpoint exists in the API yet —
-    // this simulates success rather than fabricating a working
-    // network call. Replace with a real POST once the backend has a
-    // /api/match-requests resource.
-    await new Promise((r) => setTimeout(r, 900));
-    setSubmitting(false);
-    setPhase('success');
+    setSubmitError('');
+    try {
+      const API_URL = (import.meta as any).env?.VITE_API_URL ?? '/api';
+      const res = await fetch(`${API_URL}/match-requests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new ApiError(body.error ?? 'Something went wrong sending your request.', res.status);
+      }
+      setPhase('success');
+    } catch (err) {
+      setSubmitError(err instanceof ApiError ? err.message : 'Something went wrong sending your request. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -225,6 +246,7 @@ export default function MatchingWizard() {
                   set={set}
                   headingRef={headingRef}
                   error={error}
+                  serviceOptions={serviceOptions}
                 />
               </div>
 
@@ -249,6 +271,7 @@ export default function MatchingWizard() {
 
               <div className="mw-review-list">
                 <ReviewRow label="Location" value={form.location} onEdit={() => editField('location')} />
+                <ReviewRow label="Service" value={form.service} onEdit={() => editField('service')} />
                 <ReviewRow label="Care for" value={form.careFor} onEdit={() => editField('careFor')} />
                 <ReviewRow label="Timeframe" value={form.timeframe} onEdit={() => editField('timeframe')} />
                 <ReviewRow label="Funding" value={form.funding} onEdit={() => editField('funding')} />
@@ -267,6 +290,7 @@ export default function MatchingWizard() {
                   {submitting ? 'Sending…' : 'Send my request →'}
                 </button>
               </div>
+              {submitError && <p className="mw-error" role="alert" style={{ marginTop: 12 }}>{submitError}</p>}
             </>
           )}
 
@@ -314,13 +338,14 @@ function ReviewRow({ label, value, onEdit }: { label: string; value: string; onE
 }
 
 function WizardStep({
-  stepId, form, set, headingRef, error,
+  stepId, form, set, headingRef, error, serviceOptions,
 }: {
   stepId: StepId;
   form: MatchFormData;
   set: <K extends keyof MatchFormData>(key: K, value: string) => void;
   headingRef: React.RefObject<HTMLHeadingElement>;
   error: string;
+  serviceOptions: ActiveService[];
 }) {
   if (stepId === 'location') {
     return (
@@ -337,6 +362,28 @@ function WizardStep({
             autoFocus
           />
         </div>
+        {error && <p className="mw-error" role="alert">{error}</p>}
+      </>
+    );
+  }
+
+  if (stepId === 'service') {
+    return (
+      <>
+        <h2 ref={headingRef} tabIndex={-1} className="mw-question">What kind of support do you need?</h2>
+        <p className="mw-supporting">Choose the service that best matches what you're looking for.</p>
+        <div className="mw-card-grid mw-card-grid-2">
+          {serviceOptions.map((s) => (
+            <button
+              key={s.id}
+              className={`mw-option-card ${form.service === s.name ? 'mw-option-card-selected' : ''}`}
+              onClick={() => set('service', s.name)}
+            >
+              {s.name}
+            </button>
+          ))}
+        </div>
+        {serviceOptions.length === 0 && <p className="mw-supporting">Loading services…</p>}
         {error && <p className="mw-error" role="alert">{error}</p>}
       </>
     );

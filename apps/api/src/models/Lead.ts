@@ -3,6 +3,18 @@ import type { LeadMasked, LeadUnlocked } from '@soldirectory/shared-types';
 
 export interface LeadDoc extends Document {
   need: string;
+  // Broad funding category (NDIS/Aged Care/Private/DVA/etc.) — always
+  // collected by the real matching-request form. Distinct from
+  // `funding` below, which is specifically NDIS plan-management
+  // style and only ever collected when this is 'NDIS'. Conflating
+  // these was the exact bug found and fixed earlier in this project
+  // (Provider.acceptedFunding matches against `funding`, not this).
+  fundingType: string;
+  requesterEmail: string;
+  requesterName: string;
+  careFor: string;
+  timeframe: string;
+  planManagement?: string;
   // Structured support requirements (condition names from the real
   // Condition catalogue) — 'need' stays free text/service name as
   // before, this is additive. Whatever form actually submits leads
@@ -18,7 +30,7 @@ export interface LeadDoc extends Document {
   suburb: string;
   distanceKm: number;
   hoursPerWeek: string;
-  funding: 'Plan-managed' | 'Self-managed' | 'NDIA-managed';
+  funding?: 'Plan-managed' | 'Self-managed' | 'NDIA-managed';
   contactName: string;
   contactPhone: string;
   budget: string;
@@ -36,6 +48,12 @@ const leadSchema = new Schema<LeadDoc>(
       coordinates: { type: [Number], default: undefined },
     },
     suburb: String,
+    fundingType: String,
+    requesterEmail: String,
+    requesterName: String,
+    careFor: String,
+    timeframe: String,
+    planManagement: String,
     distanceKm: Number,
     hoursPerWeek: String,
     funding: { type: String, enum: ['Plan-managed', 'Self-managed', 'NDIA-managed'] },

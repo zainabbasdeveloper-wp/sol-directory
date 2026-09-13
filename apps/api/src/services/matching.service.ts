@@ -27,6 +27,14 @@ export interface MatchBreakdown {
 }
 
 function scoreFunding(lead: LeadDoc, provider: ProviderDoc): { score: number; matched: boolean } {
+  // A non-NDIS lead (Aged Care, Private, DVA, etc.) never has this
+  // set — the wizard only asks NDIS plan-management style when the
+  // broader funding type is 'NDIS'. That's genuinely "no data to
+  // compare" here, not a missing value to treat as non-matching, so
+  // this dimension is neutral (full score) rather than 0 — same
+  // principle scoreCondition already uses when a lead has no
+  // condition requirements at all.
+  if (!lead.funding) return { score: 100, matched: false };
   const matched = (provider.acceptedFunding ?? []).includes(lead.funding);
   return { score: matched ? 100 : 0, matched };
 }
