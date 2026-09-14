@@ -41,3 +41,10 @@ temp/
 # Vite / React
 *.tsbuildinfo
 .vite/
+# Local only files
+apps.zip
+deploy.sh
+ecosystem.config.js
+apps/cms/seed-ndis-services.php
+apps/cms/wp-content/plugins/secure-custom-fields/
+apps/cms/wordpress
