@@ -1,14 +1,39 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MEGA_CATS, MEGA } from '../data/megaMenu';
+import { MEGA_CATS, MEGA, type MegaColumn } from '../data/megaMenu';
 import { slugify } from '../data/slugHelpers';
+import { getMegaColumnsForTaxonomy } from '../api/wordpressApi';
 import './MegaMenu.css';
+
+// Maps each mega menu tab key to its real WordPress taxonomy rest_base.
+// Editing terms under any of these in wp-admin updates the live menu —
+// no React code change needed, per the "solely from WordPress" goal.
+const TAB_TAXONOMY: Record<string, string> = {
+  service: 'service-categories',
+  condition: 'condition-categories',
+  funding: 'funding-categories',
+  coordinator: 'coordinator-categories',
+  language: 'language-categories',
+};
 
 export default function MegaMenu() {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState('service');
   const closeTimer = useRef<ReturnType<typeof setTimeout>>();
   const navigate = useNavigate();
+
+  // One real fetch per tab, each independently falling back to the
+  // existing static MEGA data if WordPress has no terms for it yet —
+  // a category with zero terms shouldn't blank out that whole tab.
+  const [wpColumns, setWpColumns] = useState<Record<string, MegaColumn[]>>({});
+
+  useEffect(() => {
+    Object.entries(TAB_TAXONOMY).forEach(([tabKey, restBase]) => {
+      getMegaColumnsForTaxonomy(restBase, 4)
+        .then((cols) => { if (cols.length > 0) setWpColumns((prev) => ({ ...prev, [tabKey]: cols })); })
+        .catch(() => {});
+    });
+  }, []);
 
   function show() {
     if (closeTimer.current) clearTimeout(closeTimer.current);
@@ -20,17 +45,11 @@ export default function MegaMenu() {
 
   function handleLinkClick(label: string) {
     setOpen(false);
-    // Every mega menu entry — service, condition, funding, coordinator
-    // or language — opens the same rich template page, themed around
-    // whatever was clicked. Default suburb is Sydney since the menu
-    // itself carries no location context; the real example (Nursing →
-    // Bankstown) still gets its exact populated content, see
-    // ServiceLocationPage.tsx.
     const suburb = label === 'Nursing' ? 'bankstown' : 'sydney';
     navigate(`/services/${slugify(label)}/${suburb}`);
   }
 
-  const columns = MEGA[tab] ?? [];
+  const columns = wpColumns[tab] ?? (MEGA[tab] ?? []);
 
   return (
     <div className="mega-root" onMouseEnter={show} onMouseLeave={hideDelayed}>

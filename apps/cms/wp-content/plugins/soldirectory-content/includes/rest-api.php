@@ -1,4 +1,13 @@
 <?php
+/**
+ * Without this, the browser blocks apps/web's fetch() calls to
+ * /wp-json/* entirely. FRONTEND_ORIGIN comes from .env — IMPORTANT:
+ * a duplicate FRONTEND_ORIGIN line later in the same .env file
+ * silently overrides an earlier one (last value wins in .env files).
+ * This caused a real, hard-to-spot bug in this project — check for
+ * duplicates if this ever breaks again.
+ */
+
 if (!defined('ABSPATH')) exit;
 
 function soldirectory_allowed_cors_origins(): array {
@@ -15,16 +24,6 @@ add_action('rest_api_init', function () {
     add_filter('rest_pre_serve_request', function ($value) {
         $allowed_origins = soldirectory_allowed_cors_origins();
         $origin = $_SERVER['HTTP_ORIGIN'] ?? get_http_origin();
-
-        // TEMPORARY DEBUG — remove once this is resolved. Logs the
-        // exact raw values being compared, since guessing further
-        // without seeing them isn't productive at this point.
-        error_log('[SOLDIRECTORY CORS DEBUG] raw HTTP_ORIGIN: ' . var_export($_SERVER['HTTP_ORIGIN'] ?? null, true));
-        error_log('[SOLDIRECTORY CORS DEBUG] get_http_origin(): ' . var_export(get_http_origin(), true));
-        error_log('[SOLDIRECTORY CORS DEBUG] resolved $origin: ' . var_export($origin, true));
-        error_log('[SOLDIRECTORY CORS DEBUG] raw FRONTEND_ORIGIN env: ' . var_export(getenv('FRONTEND_ORIGIN'), true));
-        error_log('[SOLDIRECTORY CORS DEBUG] allowed_origins array: ' . var_export($allowed_origins, true));
-        error_log('[SOLDIRECTORY CORS DEBUG] match result: ' . var_export($origin && in_array(rtrim($origin, '/'), $allowed_origins, true), true));
 
         if ($origin && in_array(rtrim($origin, '/'), $allowed_origins, true)) {
             header('Access-Control-Allow-Origin: ' . esc_url_raw($origin));
