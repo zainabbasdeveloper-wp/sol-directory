@@ -167,10 +167,26 @@ export async function getWordPressPage(slug: string): Promise<WPContentBase | nu
 
 // One generic fetcher for any CPT registered in cptRouteConfig.ts.
 export interface WPCPTItem extends WPContentBase { meta: Record<string, unknown> }
+export type WPService = WPCPTItem;
+export type WPLocation = WPCPTItem;
+export type WPGuide = WPCPTItem;
+
 export async function getCPTItem(restBase: string, slug: string): Promise<WPCPTItem | null> {
   const results = await wpFetch<any[]>(`/wp-json/wp/v2/${restBase}?slug=${encodeURIComponent(slug)}&_embed`, `${restBase}:${slug}`);
   if (!results?.length) return null;
   return { ...mapBaseContent(results[0]), meta: results[0].meta ?? {} };
+}
+
+export async function getService(slug: string): Promise<WPService | null> {
+  return getCPTItem('services', slug);
+}
+
+export async function getLocation(slug: string): Promise<WPLocation | null> {
+  return getCPTItem('locations', slug);
+}
+
+export async function getGuide(slug: string): Promise<WPGuide | null> {
+  return getCPTItem('guides', slug);
 }
 
 // --- Real taxonomy term lists ---
