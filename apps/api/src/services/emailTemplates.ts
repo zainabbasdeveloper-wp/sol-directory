@@ -117,3 +117,46 @@ export function adminNotificationTemplate(input: { title: string; message: strin
   });
   return { subject: `[SolDirectory Admin] ${input.title}`, html };
 }
+
+export function passwordResetTemplate(input: { resetUrl: string }): { subject: string; html: string } {
+  const html = renderEmailLayout({
+    preheader: 'Reset your SolDirectory password',
+    heading: 'Reset your password',
+    bodyHtml: `
+      <p>We received a request to reset your SolDirectory password. This link expires in 1 hour.</p>
+      <p>If you didn't request this, you can safely ignore this email — your password won't change.</p>
+    `,
+    ctaLabel: 'Reset password',
+    ctaUrl: input.resetUrl,
+  });
+  return { subject: 'Reset your SolDirectory password', html };
+}
+
+export function passwordChangedTemplate(): { subject: string; html: string } {
+  const html = renderEmailLayout({
+    preheader: 'Your password was changed',
+    heading: 'Your password was changed',
+    bodyHtml: `<p>Your SolDirectory password was just changed. If this wasn't you, contact support immediately.</p>`,
+  });
+  return { subject: 'Your SolDirectory password was changed', html };
+}
+
+export function verificationResultTemplate(input: { approved: boolean; reason?: string }): { subject: string; html: string } {
+  const html = renderEmailLayout({
+    preheader: input.approved ? 'Your verification has been approved' : 'An update on your verification',
+    heading: input.approved ? "You're verified!" : 'Verification update',
+    bodyHtml: input.approved
+      ? `<p>Good news — your worker verification has been approved and your profile is now published.</p>`
+      : `<p>Your worker verification was not approved this time.${input.reason ? ` Reason: ${input.reason}` : ''}</p><p>You're welcome to update your documents and resubmit.</p>`,
+  });
+  return { subject: input.approved ? "You're verified on SolDirectory" : 'Your SolDirectory verification update', html };
+}
+
+export function welcomeTemplate(input: { name: string }): { subject: string; html: string } {
+  const html = renderEmailLayout({
+    preheader: 'Welcome to SolDirectory',
+    heading: `Welcome, ${input.name}!`,
+    bodyHtml: `<p>Your SolDirectory account is ready. We're glad you're here.</p>`,
+  });
+  return { subject: 'Welcome to SolDirectory', html };
+}

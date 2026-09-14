@@ -2,7 +2,9 @@ import nodemailer, { type Transporter } from 'nodemailer';
 import {
   leadConfirmationTemplate, providerMatchedTemplate, providerResponseTemplate,
   providerLeadNotificationTemplate, adminNotificationTemplate, renderEmailLayout,
+  passwordResetTemplate, passwordChangedTemplate, verificationResultTemplate, welcomeTemplate,
 } from './emailTemplates.js';
+import EmailLog from '../models/EmailLog.js';
 
 // Backend-only. Credentials come from environment variables, never
 // hardcoded and never sent to the frontend — nothing in this file
@@ -48,11 +50,13 @@ async function sendMail(to: string, subject: string, html: string): Promise<bool
 
   if (!t) {
     console.log(`[EmailService] (not sent — SMTP not configured) To: ${to} | Subject: ${subject}`);
+    EmailLog.create({ to, subject, status: 'skipped_not_configured' }).catch(() => {});
     return false;
   }
 
   try {
     await t.sendMail({ from, to, subject, html });
+    EmailLog.create({ to, subject, status: 'sent' }).catch(() => {});
     return true;
   } catch (err) {
     // Logged, not thrown. TODO: push failed sends to a retry
@@ -60,6 +64,7 @@ async function sendMail(to: string, subject: string, html: string): Promise<bool
     // best-effort — no existing job queue was found in this
     // codebase to hook into.
     console.error(`[EmailService] Failed to send "${subject}" to ${to}:`, err);
+    EmailLog.create({ to, subject, status: 'failed', error: (err as Error).message }).catch(() => {});
     return false;
   }
 }
@@ -98,6 +103,26 @@ export const EmailService = {
 
   async sendAdminNotification(to: string, title: string, message: string, dashboardUrl?: string) {
     const { subject, html } = adminNotificationTemplate({ title, message, dashboardUrl });
+    return sendMail(to, subject, html);
+  },
+
+  async sendPasswordReset(to: string, resetUrl: string) {
+    const { subject, html } = passwordResetTemplate({ resetUrl });
+    return sendMail(to, subject, html);
+  },
+
+  async sendPasswordChanged(to: string) {
+    const { subject, html } = passwordChangedTemplate();
+    return sendMail(to, subject, html);
+  },
+
+  async sendVerificationResult(to: string, approved: boolean, reason?: string) {
+    const { subject, html } = verificationResultTemplate({ approved, reason });
+    return sendMail(to, subject, html);
+  },
+
+  async sendWelcome(to: string, name: string) {
+    const { subject, html } = welcomeTemplate({ name });
     return sendMail(to, subject, html);
   },
 };

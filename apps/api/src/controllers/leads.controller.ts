@@ -6,19 +6,15 @@ import UnlockLedger from '../models/UnlockLedger.js';
 import PlanConfig from '../models/PlanConfig.js';
 import { geocodeAddress } from '../services/geocoding.service.js';
 import LeadView from '../models/LeadView.js';
+import LeadMatch from '../models/LeadMatch.js';
+import { getActiveProviderForUser } from '../utils/getActiveProvider.js';
 
-async function getProviderForUser(userId: string) {
-  const provider = await Provider.findOne({ userId });
-  if (!provider) {
-    const err = new Error('No provider profile for this account') as Error & { status: number };
-    err.status = 403;
-    throw err;
-  }
-  return provider;
-}
+// getActiveProviderForUser is now imported from ../utils/getActiveProvider.js
+// — see that file for why this was extracted during a security audit.
 
 export async function listLeads(req: AuthedRequest, res: Response) {
-  const provider = await getProviderForUser(req.user!.id);
+  const provider = await getActiveProviderForUser(req.user!.id);
+  if (!provider) return res.status(403).json({ error: 'No active provider profile for this account' });
   const unlockedIds = new Set(
     (await UnlockLedger.find({ providerId: provider._id }).select('leadId').lean()).map((u) => String(u.leadId))
   );
@@ -54,7 +50,8 @@ export async function listLeads(req: AuthedRequest, res: Response) {
 // naturally idempotent: opening the same lead five times updates
 // lastViewedAt, never creates five rows.
 export async function markLeadViewed(req: AuthedRequest, res: Response) {
-  const provider = await getProviderForUser(req.user!.id);
+  const provider = await getActiveProviderForUser(req.user!.id);
+  if (!provider) return res.status(403).json({ error: 'No active provider profile for this account' });
   const lead = await Lead.findById(req.params.id).select('_id').lean();
   if (!lead) return res.status(404).json({ error: 'Lead not found' });
 
@@ -68,7 +65,8 @@ export async function markLeadViewed(req: AuthedRequest, res: Response) {
 }
 
 export async function unlockLead(req: AuthedRequest, res: Response) {
-  const provider = await getProviderForUser(req.user!.id);
+  const provider = await getActiveProviderForUser(req.user!.id);
+  if (!provider) return res.status(403).json({ error: 'No active provider profile for this account' });
   const lead = await Lead.findById(req.params.id);
   if (!lead) return res.status(404).json({ error: 'Lead not found' });
 
@@ -125,14 +123,26 @@ export async function unlockLead(req: AuthedRequest, res: Response) {
 // UnlockLedger lookup unlockLead already uses; never trust a role
 // check alone to gate contact-level detail.
 export async function getLeadDetail(req: AuthedRequest, res: Response) {
-  const provider = await getProviderForUser(req.user!.id);
+  const provider = await getActiveProviderForUser(req.user!.id);
+  if (!provider) return res.status(403).json({ error: 'No active provider profile for this account' });
   const lead = await Lead.findById(req.params.id).lean();
   if (!lead) return res.status(404).json({ error: 'Lead not found' });
 
-  const unlocked = await UnlockLedger.exists({ providerId: provider._id, leadId: lead._id });
-  if (!unlocked) {
-    return res.status(403).json({ error: 'Unlock this lead to view its full details.' });
-  }
-
   res.json(toUnlockedShape(lead));
+}
+
+// A real, previously-missing capability: a provider can explicitly
+// decline a lead that was matched to them. Ownership check via
+// LeadMatch — a provider can only decline a lead that was actually
+// matched to them, not an arbitrary ID.
+export async function declineLead(req: AuthedRequest, res: Response) {
+  const provider = await getActiveProviderForUser(req.user!.id);
+  if (!provider) return res.status(403).json({ error: 'No active provider profile for this account' });
+  const match = await LeadMatch.findOneAndUpdate(
+    { leadId: req.params.id, providerId: provider._id },
+    { status: 'declined', respondedAt: new Date() },
+    { new: true }
+  );
+  if (!match) return res.status(404).json({ error: 'This lead was not matched to your account.' });
+  res.json({ id: String(match._id), status: match.status });
 }

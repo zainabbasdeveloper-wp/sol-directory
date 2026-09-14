@@ -4,6 +4,19 @@ import Provider from '../models/Provider.js';
 import { geocodeAddress } from '../services/geocoding.service.js';
 import { scoreMatch } from '../services/matching.service.js';
 import { EmailService } from '../services/email.service.js';
+import Notification from '../models/Notification.js';
+import LeadMatch from '../models/LeadMatch.js';
+
+function describeMatchReason(result: ReturnType<typeof scoreMatch>): string {
+  const reasons: string[] = [];
+  if (result.breakdown.service.matched) reasons.push('offers this service');
+  if (result.breakdown.location.matched) reasons.push('serves this area');
+  if (result.breakdown.condition.matchedCount > 0) {
+    reasons.push(`experience with ${result.breakdown.condition.matchedCount}/${result.breakdown.condition.requiredCount} listed conditions`);
+  }
+  if (result.breakdown.funding.matched) reasons.push('accepts this funding type');
+  return reasons.length > 0 ? reasons.join(', ') : 'partial match on availability/location only';
+}
 
 // Maps the wizard's NDIS-specific plan-management wording onto
 // Lead.funding's existing enum, used by matching's scoreFunding
@@ -73,10 +86,22 @@ export async function submitMatchRequest(req: Request, res: Response) {
   // Fire-and-forget — a slow/failed email must never fail the
   // request itself, same reliability principle as every other
   // EmailService call in this codebase.
-  for (const { provider } of matchedProviders) {
+  for (const { provider, result } of matchedProviders) {
     if (provider.intakeEmail) {
       EmailService.sendProviderLeadNotification(provider.intakeEmail, lead.need, lead.suburb).catch(() => {});
     }
+    Notification.create({
+      userId: provider.userId,
+      type: 'new_lead',
+      message: `New ${lead.need} request in ${lead.suburb}`,
+      link: `/leads/${lead._id}`,
+    }).catch(() => {});
+    LeadMatch.create({
+      leadId: lead._id,
+      providerId: provider._id,
+      score: result.score,
+      matchReason: describeMatchReason(result),
+    }).catch(() => {});
   }
   EmailService.sendLeadConfirmation(email, requestNumber, service).catch(() => {});
 

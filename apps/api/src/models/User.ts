@@ -20,6 +20,12 @@ export interface UserDoc extends Document {
   // rather than maintaining a separate read/unread flag per
   // notification, which would duplicate AdminActivity for no reason.
   lastNotificationsViewedAt?: Date;
+  // Real password reset support — the token itself is never stored,
+  // only its hash (same principle as passwordHash never storing the
+  // plaintext password), so a database read alone can't be used to
+  // reset someone's account.
+  passwordResetTokenHash?: string;
+  passwordResetExpiresAt?: Date;
 }
 
 const userSchema = new Schema<UserDoc>(
@@ -33,6 +39,8 @@ const userSchema = new Schema<UserDoc>(
     workerId: { type: Schema.Types.ObjectId, ref: 'Worker' },
     accountStatus: { type: String, enum: ['active', 'suspended'], default: 'active' },
     lastNotificationsViewedAt: Date,
+    passwordResetTokenHash: String,
+    passwordResetExpiresAt: Date,
   },
   { timestamps: true }
 );

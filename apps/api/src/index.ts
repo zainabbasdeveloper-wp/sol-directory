@@ -18,6 +18,7 @@ import verificationRoutes from './routes/verification.routes.js';
 import webhooksRoutes from './routes/webhooks.routes.js';
 import wpRoutes from './routes/wp.routes.js';
 import matchRequestsRoutes from './routes/matchRequests.routes.js';
+import notificationsRoutes from './routes/notifications.routes.js';
 import sitemapRoutes from './routes/sitemap.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import adminDashboardRoutes from './routes/admin.dashboard.routes.js';
@@ -26,6 +27,7 @@ import adminServicesRoutes from './routes/admin.services.routes.js';
 import adminConditionsRoutes from './routes/admin.conditions.routes.js';
 import adminDiagnosticsRoutes from './routes/admin.diagnostics.routes.js';
 import adminLeadsRoutes from './routes/admin.leads.routes.js';
+import adminEmailLogsRoutes from './routes/admin.emailLogs.routes.js';
 
 const app = express();
 
@@ -48,6 +50,7 @@ app.use('/api/verification', verificationRoutes);
 app.use('/api/webhooks', webhooksRoutes);
 app.use('/api/wp', wpRoutes);
 app.use('/api/match-requests', matchRequestsRoutes);
+app.use('/api/notifications', notificationsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/dashboard', adminDashboardRoutes);
 app.use('/api/admin/plans', adminPlansRoutes);
@@ -58,6 +61,7 @@ app.use('/api/admin/conditions', adminConditionsRoutes);
 // against this file, not assumed.
 app.use('/api/admin/diagnostics', adminDiagnosticsRoutes);
 app.use('/api/admin/leads', adminLeadsRoutes);
+app.use('/api/admin/email-logs', adminEmailLogsRoutes);
 app.use('/sitemap.xml', sitemapRoutes);
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { listLeads, getPlans } from '../api/resources';
 import { getMyReferrals, type ReferralInfo } from '../api/providerResources';
 import { ApiError } from '../api/client';
+import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../context/AuthContext';
 import AdminDashboard from './admin/AdminDashboard';
 import type { Lead, PlanConfig } from '@soldirectory/shared-types';
@@ -72,13 +73,38 @@ function ProviderDashboard() {
   const [loading, setLoading] = useState(true);
   const [referral, setReferral] = useState<ReferralInfo | null>(null);
   const [copied, setCopied] = useState(false);
+  const showToast = useToast();
+  const knownLeadIds = useRef<Set<string> | null>(null);
 
   useEffect(() => {
     Promise.all([listLeads(), getPlans()])
-      .then(([l, p]) => { setLeads(l); setPlans(p); })
+      .then(([l, p]) => { setLeads(l); setPlans(p); knownLeadIds.current = new Set(l.map((x) => x.id)); })
       .finally(() => setLoading(false));
     getMyReferrals().then(setReferral).catch(() => {});
   }, []);
+
+  // Real-time updates via short polling (spec item 21's own stated
+  // fallback) — no WebSocket/SSE infrastructure exists anywhere in
+  // this codebase to build a push-based version on top of, so this
+  // is the honest, working option rather than an unbuilt promise of
+  // "real-time". Every 30s, checks for leads that weren't in the
+  // previous poll and surfaces them without requiring a manual
+  // refresh, per the spec's explicit requirement.
+  useEffect(() => {
+    const interval = setInterval(() => {
+      listLeads().then((fresh) => {
+        if (knownLeadIds.current) {
+          const newOnes = fresh.filter((l) => !knownLeadIds.current!.has(l.id));
+          if (newOnes.length > 0) {
+            showToast(`${newOnes.length} new lead${newOnes.length === 1 ? '' : 's'} received`);
+          }
+        }
+        knownLeadIds.current = new Set(fresh.map((l) => l.id));
+        setLeads(fresh);
+      }).catch(() => {});
+    }, 30_000);
+    return () => clearInterval(interval);
+  }, [showToast]);
 
   function copyReferralLink() {
     if (!referral) return;

@@ -36,10 +36,23 @@ export interface ProviderDoc extends Document {
   conditionExperience: string[];
   intakeEmail: string;
   serviceSuburbs: string[];
+  // The provider's own physical/business address — distinct from
+  // serviceSuburbs above, which is the list of areas they SERVE, not
+  // where they're actually based. Spec-requested structured shape
+  // (address/suburb/state/postcode/country) rather than a single
+  // free-text string, so each part is independently queryable
+  // (e.g. "all providers in NSW") without string parsing.
+  businessAddress?: {
+    address?: string;
+    suburb?: string;
+    state?: string;
+    postcode?: string;
+    country?: string;
+  };
   // Real geo-coordinates — mirrors Worker's location field exactly.
-  // serviceSuburbs above are just name strings; this is what makes
-  // actual radius search and map display possible, populated via
-  // Google Maps geocoding (see services/geocoding.service.ts).
+  // Geocoded from businessAddress when present, falling back to the
+  // first serviceSuburbs entry otherwise (see onboarding.controller.ts) —
+  // this is what makes actual radius search and map display possible.
   location?: { type: 'Point'; coordinates: [number, number] };
   travelRadiusKm: number;
   weeklyCapacityHours: number;
@@ -100,6 +113,13 @@ const providerSchema = new Schema<ProviderDoc>(
     conditionExperience: [String],
     intakeEmail: String,
     serviceSuburbs: [String],
+    businessAddress: {
+      address: String,
+      suburb: String,
+      state: String,
+      postcode: String,
+      country: { type: String, default: 'Australia' },
+    },
     location: {
       type: { type: String, enum: ['Point'], default: 'Point' },
       coordinates: { type: [Number], default: [0, 0] },

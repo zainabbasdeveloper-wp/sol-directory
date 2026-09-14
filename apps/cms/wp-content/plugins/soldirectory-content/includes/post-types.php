@@ -76,6 +76,12 @@ add_action('init', function () {
         'has_archive' => false,
         'publicly_queryable' => true,
     ]);
+    foreach (['eligibility' => 'string', 'funding_info' => 'string', 'faq_json' => 'string'] as $key => $type) {
+        register_post_meta('service', $key, [
+            'type' => $type, 'single' => true, 'show_in_rest' => true,
+            'auth_callback' => fn() => current_user_can('edit_posts'),
+        ]);
+    }
 
     // --- Location: editorial content about an area (e.g. /locations/sydney) ---
     // This is the CONTENT side only — actual provider search/

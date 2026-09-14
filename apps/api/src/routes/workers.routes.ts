@@ -21,7 +21,12 @@ async function requireAdminOrProProvider(req: AuthedRequest, res: Response, next
   if (!req.user) { res.status(401).json({ error: 'Missing bearer token' }); return; }
   if (req.user.role === 'admin') { next(); return; }
   if (req.user.role === 'provider') {
-    const provider = await Provider.findOne({ userId: req.user.id }).select('plan').lean();
+    // SECURITY: accountStatus filter added — see utils/getActiveProvider.ts
+    // for full context (found during a security audit). Without this,
+    // a suspended provider on the 'pro' plan kept full access to the
+    // worker directory for as long as their JWT stayed valid (up to
+    // 7 days), since only plan was checked, never account status.
+    const provider = await Provider.findOne({ userId: req.user.id, accountStatus: 'active' }).select('plan').lean();
     if (provider?.plan === 'pro') { next(); return; }
   }
   res.status(403).json({ error: 'Not authorized for this action' });

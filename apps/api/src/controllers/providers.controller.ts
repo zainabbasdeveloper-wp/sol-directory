@@ -129,7 +129,7 @@ export async function requestProviderContact(req: AuthedRequest, res: Response) 
 const FULL_PROFILE_PROJECTION =
   'legalEntityName tradingName slug abn registrationGroups serviceSuburbs travelRadiusKm ' +
   'weeklyCapacityHours intakeStatus accountStatus rosterSize afterHoursCover ' +
-  'acceptedFunding conditionExperience intakeEmail location plan planStatus createdAt';
+  'acceptedFunding conditionExperience intakeEmail location businessAddress plan planStatus createdAt';
 
 export async function getProviderBySlug(req: AuthedRequest, res: Response) {
   const provider = await Provider.findOne({ slug: req.params.slug, accountStatus: 'active' })
@@ -170,6 +170,7 @@ export async function getProviderBySlug(req: AuthedRequest, res: Response) {
     conditionExperience: provider.conditionExperience ?? [],
     contactEmail: provider.intakeEmail ?? null,
     location: provider.location?.coordinates ? { lat: provider.location.coordinates[1], lng: provider.location.coordinates[0] } : null,
+    businessAddress: provider.businessAddress ?? null,
     plan: provider.plan,
     memberSince: provider.createdAt,
     relatedProviders: related.map((p: any) => ({

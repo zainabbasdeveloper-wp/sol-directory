@@ -31,9 +31,8 @@ import SavedProviders from '../pages/providers/SavedProviders';
 import AdminUserDetail from '../pages/admin/AdminUserDetail';
 import { useAuth } from '../context/AuthContext';
 import ServiceLocationPage from '../pages/public/ServiceLocationPage';
-import WordPressServicePage from '../pages/wordpress/WordPressServicePage';
-import WordPressLocationPage from '../pages/wordpress/WordPressLocationPage';
-import WordPressGuidePage from '../pages/wordpress/WordPressGuidePage';
+import WordPressCPTPage from '../pages/wordpress/WordPressCPTPage';
+import { CPT_ROUTES } from '../lib/cptRouteConfig';
 import WordPressCatchAllPage from '../pages/wordpress/WordPressCatchAllPage';
 import type { Role } from '@soldirectory/shared-types';
 
@@ -108,9 +107,9 @@ export default function AppRoutes() {
       {/* New WordPress-backed dynamic content routes — single-segment,
           so they never collide with the two-segment route above or
           the exact marketing pages. */}
-      <Route path="/services/:slug" element={<WordPressServicePage />} />
-      <Route path="/locations/:slug" element={<WordPressLocationPage />} />
-      <Route path="/guides/:slug" element={<WordPressGuidePage />} />
+      {CPT_ROUTES.map((cfg) => (
+        <Route key={cfg.pathPrefix} path={`/${cfg.pathPrefix}/:slug`} element={<WordPressCPTPage config={cfg} />} />
+      ))}
 
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />

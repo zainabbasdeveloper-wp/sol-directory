@@ -6,11 +6,12 @@ import { getStorageService } from '../services/s3.service.js';
 import { logActivity } from '../models/AdminActivity.js';
 import { geocodeAddress } from '../services/geocoding.service.js';
 import { generateUniqueProviderSlug } from '../utils/slugify.js';
+import { getActiveProviderForUser } from '../utils/getActiveProvider.js';
 
 const STEP_KEYS = ['org', 'insurance', 'areas', 'team', 'policy', 'billing'];
 
 export async function getOnboarding(req: AuthedRequest, res: Response) {
-  const provider = await Provider.findOne({ userId: req.user!.id });
+  const provider = await getActiveProviderForUser(req.user!.id);
   if (!provider) return res.status(403).json({ error: 'No provider profile for this account' });
   // Previously only returned the step-completion array — the
   // frontend had nothing to pre-fill actual field values with, so a
@@ -39,7 +40,7 @@ export async function saveStep(req: AuthedRequest, res: Response) {
   const { data } = req.body as { data: Record<string, unknown> };
   if (!STEP_KEYS.includes(stepKey)) return res.status(400).json({ error: 'Unknown step' });
 
-  const provider = await Provider.findOne({ userId: req.user!.id });
+  const provider = await getActiveProviderForUser(req.user!.id);
   if (!provider) return res.status(403).json({ error: 'No provider profile for this account' });
 
   if (stepKey === 'org' && data?.abn) {
@@ -66,6 +67,32 @@ export async function saveStep(req: AuthedRequest, res: Response) {
     if (data.legalEntityName) provider.legalEntityName = String(data.legalEntityName);
     if (data.tradingName) provider.tradingName = String(data.tradingName);
 
+    // Real structured address (spec item 15) — each part stored
+    // separately so it's independently queryable (e.g. "providers in
+    // NSW") rather than needing to parse a single free-text string.
+    const addr = data.businessAddress as Record<string, string> | undefined;
+    if (addr && typeof addr === 'object') {
+      provider.businessAddress = {
+        address: addr.address ? String(addr.address) : undefined,
+        suburb: addr.suburb ? String(addr.suburb) : undefined,
+        state: addr.state ? String(addr.state) : undefined,
+        postcode: addr.postcode ? String(addr.postcode) : undefined,
+        country: addr.country ? String(addr.country) : 'Australia',
+      };
+
+      // Geocode the real structured address — more precise than the
+      // areas step's suburb-only fallback below. Never blocks saving
+      // the step if it fails, same principle as every other
+      // geocodeAddress call in this codebase.
+      const fullAddress = [addr.address, addr.suburb, addr.state, addr.postcode, addr.country || 'Australia']
+        .filter(Boolean)
+        .join(', ');
+      if (fullAddress) {
+        const geo = await geocodeAddress(fullAddress);
+        if (geo) provider.location = { type: 'Point', coordinates: [geo.lng, geo.lat] };
+      }
+    }
+
     // Generate the public slug once a real business name exists —
     // never regenerate it on subsequent edits, since that would
     // break any link/bookmark already pointing at the old slug.
@@ -82,13 +109,18 @@ export async function saveStep(req: AuthedRequest, res: Response) {
     if (data.travelRadiusKm !== undefined) provider.travelRadiusKm = Number(data.travelRadiusKm);
     if (data.weeklyCapacityHours !== undefined) provider.weeklyCapacityHours = Number(data.weeklyCapacityHours);
 
-    // Geocode the first listed suburb for real map/radius-search
-    // coordinates. Failure here must never block saving the step —
-    // geocodeAddress already returns null rather than throwing.
-    const firstSuburb = provider.serviceSuburbs?.[0];
-    if (firstSuburb) {
-      const geo = await geocodeAddress(`${firstSuburb}, Australia`);
-      if (geo) provider.location = { type: 'Point', coordinates: [geo.lng, geo.lat] };
+    // Geocode the first listed suburb as a fallback ONLY if the org
+    // step's real structured business address didn't already produce
+    // a more precise geocode — never overwrite a precise address
+    // geocode with a less precise suburb-only one. Failure here must
+    // never block saving the step — geocodeAddress already returns
+    // null rather than throwing.
+    if (!provider.location?.coordinates?.length) {
+      const firstSuburb = provider.serviceSuburbs?.[0];
+      if (firstSuburb) {
+        const geo = await geocodeAddress(`${firstSuburb}, Australia`);
+        if (geo) provider.location = { type: 'Point', coordinates: [geo.lng, geo.lat] };
+      }
     }
   }
   if (stepKey === 'team') {
@@ -120,7 +152,7 @@ export async function saveStep(req: AuthedRequest, res: Response) {
 
 export async function getUploadUrl(req: AuthedRequest, res: Response) {
   const { kind, contentType, filename } = req.body as { kind: string; contentType: string; filename: string };
-  const provider = await Provider.findOne({ userId: req.user!.id });
+  const provider = await getActiveProviderForUser(req.user!.id);
   if (!provider) return res.status(403).json({ error: 'No provider profile for this account' });
 
   const key = `providers/${provider._id}/${kind}/${Date.now()}-${filename}`;

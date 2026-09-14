@@ -1,12 +1,10 @@
-// Routed through the Node API's WordPress REST proxy (/api/wp/rest/...)
-// instead of fetching WordPress directly — the browser only ever
-// talks to the Node API, which is already same-origin and already
-// proven working. A server-to-server request from Node to WordPress
-// has no concept of CORS at all, since CORS is exclusively a
-// browser-enforced restriction — this removes the cross-origin
-// request from existing in the first place, which is a more durable
-// fix than any WordPress-side CORS header configuration.
-const API_URL = ((import.meta as any).env?.VITE_API_URL ?? '/api').replace(/\/$/, '');
+// Real fetch client for the headless WordPress CMS at apps/cms.
+// This is a separate origin/base URL from the Node API — set
+// VITE_WORDPRESS_URL in apps/web's .env (e.g.
+// http://localhost:8080 for local dev, matching whatever apps/cms
+// is actually served from).
+
+const WP_URL = (import.meta as any).env?.VITE_WORDPRESS_URL;
 
 export interface ServiceAreaPage {
   id: number;
@@ -57,8 +55,13 @@ function mapServiceAreaPage(raw: any): ServiceAreaPage {
  * data in that case, not crash.
  */
 export async function getServiceAreaPage(serviceSlug: string, suburbSlug: string): Promise<ServiceAreaPage | null> {
+  if (!WP_URL) {
+    console.warn('[wordpressApi] VITE_WORDPRESS_URL is not set — falling back to illustrative data.');
+    return null;
+  }
+
   try {
-    const res = await fetch(`${API_URL}/wp/rest/wp-json/wp/v2/service-area-pages?slug=${serviceSlug}-${suburbSlug}`);
+    const res = await fetch(`${WP_URL}/wp-json/wp/v2/service-area-pages?slug=${serviceSlug}-${suburbSlug}`);
     if (!res.ok) return null;
     const results = await res.json();
     if (!Array.isArray(results) || results.length === 0) return null;
@@ -79,6 +82,7 @@ export async function getServiceAreaPage(serviceSlug: string, suburbSlug: string
 // cache).
 
 const contentCache = new Map<string, unknown>();
+const API_URL_FOR_REVALIDATION = (import.meta as any).env?.VITE_API_URL ?? '/api';
 
 // The real revalidation check: compares when the cache was last
 // populated against when WordPress last reported a content change
@@ -93,7 +97,7 @@ async function ensureCacheFresh(): Promise<void> {
   lastFreshnessCheck = now;
 
   try {
-    const res = await fetch(`${API_URL}/webhooks/wordpress/last-changed`);
+    const res = await fetch(`${API_URL_FOR_REVALIDATION}/webhooks/wordpress/last-changed`);
     if (!res.ok) return;
     const { lastChangedAt } = await res.json();
     if (lastChangedAt && new Date(lastChangedAt).getTime() > cacheBuiltAt) {
@@ -109,8 +113,12 @@ async function ensureCacheFresh(): Promise<void> {
 async function wpFetch<T>(path: string, cacheKey: string): Promise<T | null> {
   await ensureCacheFresh();
   if (contentCache.has(cacheKey)) return contentCache.get(cacheKey) as T;
+  if (!WP_URL) {
+    console.warn('[wordpressApi] VITE_WORDPRESS_URL is not set.');
+    return null;
+  }
   try {
-    const res = await fetch(`${API_URL}/wp/rest${path}`);
+    const res = await fetch(`${WP_URL}${path}`);
     if (!res.ok) return null;
     const data = await res.json();
     contentCache.set(cacheKey, data);
@@ -148,7 +156,7 @@ export interface WPContentBase {
   seo: { title: string; description: string; ogImage: string | null };
 }
 
-export interface WPTerm { id: number; name: string; slug: string; taxonomy: string }
+export interface WPTerm { id: number; name: string; slug: string; taxonomy: string; parent: number }
 
 function extractTerms(raw: any): WPTerm[] {
   // _embedded['wp:term'] is an array of arrays — one sub-array per
@@ -157,7 +165,7 @@ function extractTerms(raw: any): WPTerm[] {
   // want "all the terms this item has," not grouped by taxonomy.
   const groups = raw._embedded?.['wp:term'] ?? [];
   return groups.flat().filter((t: any) => t && !t.code).map((t: any) => ({
-    id: t.id, name: t.name, slug: t.slug, taxonomy: t.taxonomy,
+    id: t.id, name: t.name, slug: t.slug, taxonomy: t.taxonomy, parent: t.parent ?? 0,
   }));
 }
 
@@ -187,7 +195,7 @@ function mapBaseContent(raw: any): WPContentBase {
 
 async function getTerms(restBase: string, cacheKey: string): Promise<{ items: WPTerm[] }> {
   const raw = await wpFetch<any[]>(`/wp-json/wp/v2/${restBase}?per_page=100`, cacheKey);
-  return { items: (raw ?? []).map((t: any) => ({ id: t.id, name: t.name, slug: t.slug, taxonomy: t.taxonomy })) };
+  return { items: (raw ?? []).map((t: any) => ({ id: t.id, name: t.name, slug: t.slug, taxonomy: t.taxonomy, parent: t.parent ?? 0 })) };
 }
 
 export function getServiceCategories(): Promise<{ items: WPTerm[] }> {
@@ -206,25 +214,31 @@ export async function getWordPressPage(slug: string): Promise<WPContentBase | nu
   return mapBaseContent(results[0]);
 }
 
-export interface WPService extends WPContentBase {}
+// One generic fetcher for any CPT registered in cptRouteConfig.ts,
+// replacing three near-identical per-type functions (getService/
+// getLocation/getGuide) that only differed by rest_base. Adding a
+// new content type now needs a config entry, not a new function.
+export interface WPCPTItem extends WPContentBase { meta: Record<string, unknown> }
+export type WPService = WPCPTItem;
+export type WPLocation = WPCPTItem;
+export type WPGuide = WPCPTItem;
+
+export async function getCPTItem(restBase: string, slug: string): Promise<WPCPTItem | null> {
+  const results = await wpFetch<any[]>(`/wp-json/wp/v2/${restBase}?slug=${encodeURIComponent(slug)}&_embed`, `${restBase}:${slug}`);
+  if (!results?.length) return null;
+  return { ...mapBaseContent(results[0]), meta: results[0].meta ?? {} };
+}
+
 export async function getService(slug: string): Promise<WPService | null> {
-  const results = await wpFetch<any[]>(`/wp-json/wp/v2/services?slug=${encodeURIComponent(slug)}&_embed`, `service:${slug}`);
-  if (!results?.length) return null;
-  return mapBaseContent(results[0]);
+  return getCPTItem('services', slug);
 }
 
-export interface WPLocation extends WPContentBase { state: string }
 export async function getLocation(slug: string): Promise<WPLocation | null> {
-  const results = await wpFetch<any[]>(`/wp-json/wp/v2/locations?slug=${encodeURIComponent(slug)}&_embed`, `location:${slug}`);
-  if (!results?.length) return null;
-  return { ...mapBaseContent(results[0]), state: results[0].meta?.state ?? '' };
+  return getCPTItem('locations', slug);
 }
 
-export interface WPGuide extends WPContentBase {}
 export async function getGuide(slug: string): Promise<WPGuide | null> {
-  const results = await wpFetch<any[]>(`/wp-json/wp/v2/guides?slug=${encodeURIComponent(slug)}&_embed`, `guide:${slug}`);
-  if (!results?.length) return null;
-  return mapBaseContent(results[0]);
+  return getCPTItem('guides', slug);
 }
 
 // --- Dynamic navigation menu — real custom REST route, since core
@@ -235,4 +249,35 @@ export interface WPMenuItem { id: number; title: string; url: string; children: 
 export async function getMenu(location: string): Promise<WPMenuItem[]> {
   const result = await wpFetch<{ items: WPMenuItem[] }>(`/wp-json/soldirectory/v1/menu/${location}`, `menu:${location}`);
   return result?.items ?? [];
+}
+
+/**
+ * Builds the nested category tree AND groups it into the same
+ * MegaColumn[] shape MegaMenu.tsx already renders (columns of
+ * {title, links[]} groups) — so wiring this in means swapping a data
+ * source, not rebuilding the component. Distributes top-level
+ * categories across a fixed number of columns round-robin, same
+ * visual density as the hand-authored static data.
+ */
+export interface MegaGroupFromWP { title: string; links: string[] }
+export async function getServiceCategoryMegaColumns(columnCount = 4): Promise<MegaGroupFromWP[][]> {
+  const { items: terms } = await getServiceCategories();
+  if (terms.length === 0) return [];
+
+  const byParent = new Map<number, WPTerm[]>();
+  for (const t of terms as any[]) {
+    const parentId = t.parent ?? 0;
+    if (!byParent.has(parentId)) byParent.set(parentId, []);
+    byParent.get(parentId)!.push(t);
+  }
+
+  const topLevel = byParent.get(0) ?? [];
+  const groups: MegaGroupFromWP[] = topLevel.map((parent) => ({
+    title: parent.name,
+    links: (byParent.get(parent.id) ?? []).map((child) => child.name),
+  }));
+
+  const columns: MegaGroupFromWP[][] = Array.from({ length: columnCount }, () => []);
+  groups.forEach((g, i) => columns[i % columnCount].push(g));
+  return columns.filter((c) => c.length > 0);
 }

@@ -2,6 +2,7 @@ import type { Response } from 'express';
 import type { AuthedRequest } from '../middleware/auth.middleware.js';
 import Worker from '../models/Worker.js';
 import AuditEntry, { appendAuditEntry } from '../models/AuditEntry.js';
+import { EmailService } from '../services/email.service.js';
 
 export async function listQueue(req: AuthedRequest, res: Response) {
   const { status } = req.query;
@@ -47,6 +48,7 @@ export async function approve(req: AuthedRequest, res: Response) {
   worker.published = true;
   await worker.save();
   await appendAuditEntry(worker._id as any, 'Approved and published', req.user?.email ?? 'Admin');
+  if (worker.email) EmailService.sendVerificationResult(worker.email, true).catch(() => {});
 
   res.json({ status: 'approved' });
 }
@@ -62,6 +64,7 @@ export async function reject(req: AuthedRequest, res: Response) {
   worker.published = false;
   await worker.save();
   await appendAuditEntry(worker._id as any, `Rejected: ${reason}${note ? ` — ${note}` : ''}`, req.user?.email ?? 'Admin');
+  if (worker.email) EmailService.sendVerificationResult(worker.email, false, reason).catch(() => {});
 
   res.json({ status: 'rejected' });
 }
