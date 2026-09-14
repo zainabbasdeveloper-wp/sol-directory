@@ -12,19 +12,15 @@ add_action('init', function () {
         'publicly_queryable' => true,
     ]);
 
+    // service_name, suburb, state, intro_paragraph, faq_json,
+    // suburb_facts_json, and compare_json are now managed by the
+    // real ACF/SCF field group (acf-fields.php) instead of being
+    // registered here directly — removing them from this list avoids
+    // registering the same meta key twice. The remaining ones below
+    // aren't in the ACF field group yet, so they still need this
+    // plain registration to be REST-accessible at all.
     $meta_fields = [
-        'service_name'   => 'string',
-        'suburb'         => 'string',
-        'state'          => 'string',
-        'intro_paragraph'=> 'string',
-        'faq_json'       => 'string',
         'toc_json'       => 'string',
-        'suburb_facts_json' => 'string',
-        'compare_json'   => 'string',
-        // Added to cover the rest of ServiceLocationPage.tsx's
-        // per-combination editorial content, which was previously
-        // 100% hardcoded fixture data reused on every page regardless
-        // of the actual service/suburb.
         'demand_json'    => 'string',   // "Who is asking" bar charts
         'glance_json'    => 'string',   // "At a glance" key/value table
         'service_counts_json' => 'string', // "Care services available in this suburb"
@@ -49,12 +45,9 @@ add_action('init', function () {
         'has_archive' => false,
         'publicly_queryable' => true,
     ]);
-    foreach (['eligibility' => 'string', 'funding_info' => 'string', 'faq_json' => 'string'] as $key => $type) {
-        register_post_meta('service', $key, [
-            'type' => $type, 'single' => true, 'show_in_rest' => true,
-            'auth_callback' => fn() => current_user_can('edit_posts'),
-        ]);
-    }
+    // eligibility, funding_info, faq_json are now managed by the ACF/
+    // SCF field group (acf-fields.php) — nothing left to register
+    // directly here.
 
     // --- Location ---
     register_post_type('location', [
@@ -66,10 +59,7 @@ add_action('init', function () {
         'has_archive' => false,
         'publicly_queryable' => true,
     ]);
-    register_post_meta('location', 'state', [
-        'type' => 'string', 'single' => true, 'show_in_rest' => true,
-        'auth_callback' => fn() => current_user_can('edit_posts'),
-    ]);
+    // 'state' is now managed by the ACF/SCF field group too.
 
     // --- Guide ---
     register_post_type('guide', [
@@ -77,7 +67,7 @@ add_action('init', function () {
         'public' => true,
         'show_in_rest' => true,
         'rest_base' => 'guides',
-        'supports' => ['title', 'editor', 'excerpt', 'thumbnail'],
+        'supports' => ['title', 'editor', 'excerpt', 'thumbnail', 'custom-fields'],
         'has_archive' => false,
         'publicly_queryable' => true,
     ]);
