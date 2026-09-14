@@ -21,6 +21,16 @@ add_action('init', function () {
         'toc_json'       => 'string',
         'suburb_facts_json' => 'string',
         'compare_json'   => 'string',
+        // Added to cover the rest of ServiceLocationPage.tsx's
+        // per-combination editorial content, which was previously
+        // 100% hardcoded fixture data reused on every page regardless
+        // of the actual service/suburb.
+        'demand_json'    => 'string',   // "Who is asking" bar charts
+        'glance_json'    => 'string',   // "At a glance" key/value table
+        'service_counts_json' => 'string', // "Care services available in this suburb"
+        'requested_json' => 'string',   // "Most requested support"
+        'languages_json' => 'string',   // Language support stats for this suburb
+        'hero_stats_json'=> 'string',   // Provider count / response time / price shown in the hero
     ];
     foreach ($meta_fields as $key => $type) {
         register_post_meta('service_area_page', $key, [

@@ -2,14 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MEGA_CATS, MEGA, type MegaColumn } from '../data/megaMenu';
 import { slugify } from '../data/slugHelpers';
-import { getMegaColumnsForTaxonomy } from '../api/wordpressApi';
+import { getServiceMegaColumnsFromPosts, getMegaColumnsForTaxonomy, type MegaGroupWithSlugs } from '../api/wordpressApi';
+import { decodeHtmlEntities } from '../lib/decodeHtmlEntities';
 import './MegaMenu.css';
 
-// Maps each mega menu tab key to its real WordPress taxonomy rest_base.
-// Editing terms under any of these in wp-admin updates the live menu —
-// no React code change needed, per the "solely from WordPress" goal.
 const TAB_TAXONOMY: Record<string, string> = {
-  service: 'service-categories',
   condition: 'condition-categories',
   funding: 'funding-categories',
   coordinator: 'coordinator-categories',
@@ -22,12 +19,17 @@ export default function MegaMenu() {
   const closeTimer = useRef<ReturnType<typeof setTimeout>>();
   const navigate = useNavigate();
 
-  // One real fetch per tab, each independently falling back to the
-  // existing static MEGA data if WordPress has no terms for it yet —
-  // a category with zero terms shouldn't blank out that whole tab.
+  // Service tab is real 'service' posts grouped by category (with
+  // real slugs for routing) — structurally different from the other
+  // 4 tabs, which are genuine two-level term hierarchies. Kept
+  // separate rather than forced into one shape.
+  const [wpServiceColumns, setWpServiceColumns] = useState<MegaGroupWithSlugs[][] | null>(null);
   const [wpColumns, setWpColumns] = useState<Record<string, MegaColumn[]>>({});
 
   useEffect(() => {
+    getServiceMegaColumnsFromPosts(4)
+      .then((cols) => { if (cols.length > 0) setWpServiceColumns(cols); })
+      .catch(() => {});
     Object.entries(TAB_TAXONOMY).forEach(([tabKey, restBase]) => {
       getMegaColumnsForTaxonomy(restBase, 4)
         .then((cols) => { if (cols.length > 0) setWpColumns((prev) => ({ ...prev, [tabKey]: cols })); })
@@ -43,13 +45,34 @@ export default function MegaMenu() {
     closeTimer.current = setTimeout(() => setOpen(false), 150);
   }
 
+  function handleServiceLinkClick(slug: string) {
+    setOpen(false);
+    navigate(`/services/${slug}`);
+  }
+
   function handleLinkClick(label: string) {
     setOpen(false);
+    // Condition/Funding/Coordinator/Language tabs still route to the
+    // illustrative combo page — there's no real per-topic destination
+    // page for these yet (unlike Service, which now has real
+    // WordPress-backed pages at /services/:slug). Wiring these to
+    // something real is the next step once those destinations exist.
     const suburb = label === 'Nursing' ? 'bankstown' : 'sydney';
     navigate(`/services/${slugify(label)}/${suburb}`);
   }
 
-  const columns = wpColumns[tab] ?? (MEGA[tab] ?? []);
+  // Normalize both real shapes (service posts with slugs, term-based
+  // tabs without) plus the static fallback into one renderable shape.
+  type RenderLink = { name: string; slug?: string };
+  type RenderGroup = { title: string; links: RenderLink[] };
+
+  let columns: RenderGroup[][];
+  if (tab === 'service') {
+    columns = wpServiceColumns ?? (MEGA.service ?? []).map((col) => col.map((g) => ({ title: g.title, links: g.links.map((l) => ({ name: l })) })));
+  } else {
+    const wp = wpColumns[tab];
+    columns = (wp ?? (MEGA[tab] ?? [])).map((col) => col.map((g) => ({ title: g.title, links: g.links.map((l) => ({ name: l })) })));
+  }
 
   return (
     <div className="mega-root" onMouseEnter={show} onMouseLeave={hideDelayed}>
@@ -98,20 +121,21 @@ export default function MegaMenu() {
                   <div key={ci} className="mega-column">
                     {col.map((g) => (
                       <div key={g.title} className="mega-group">
-                        <h3 className="mega-group-title">{g.title}</h3>
+                        <h3 className="mega-group-title">{decodeHtmlEntities(g.title)}</h3>
                         <div className="mega-group-rule" />
                         <div className="mega-group-links">
-                          {g.links.map((label) => (
+                          {g.links.map((link) => (
                             <a
-                              key={label}
+                              key={link.slug ?? link.name}
                               href="#directory"
                               className="mega-link"
                               onClick={(e) => {
                                 e.preventDefault();
-                                handleLinkClick(label);
+                                if (link.slug) handleServiceLinkClick(link.slug);
+                                else handleLinkClick(link.name);
                               }}
                             >
-                              {label}
+                              {decodeHtmlEntities(link.name)}
                             </a>
                           ))}
                         </div>

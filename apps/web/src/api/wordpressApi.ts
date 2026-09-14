@@ -15,10 +15,16 @@ export interface ServiceAreaPage {
   suburb: string;
   state: string;
   introParagraph: string;
-  faq: { question: string; answer: string }[];
-  toc: string[];
-  suburbFacts: { label: string; value: string }[];
-  compare: unknown[];
+  faq: { q: string; a: string }[];
+  toc: { label: string; href: string }[];
+  suburbFacts: { label: string; value: string; note?: string }[];
+  compare: { title: string; body: string; ask: string }[];
+  demand: { title: string; rows: [string, number][] }[];
+  glance: [string, string][];
+  serviceCounts: [string, number][];
+  requested: { label: string; requests: string; providers: string; v: number; on: boolean }[];
+  languages: { name: string; native: string; count: string; share: string }[];
+  heroStats: { providerCount?: number; medianResponseMinutes?: number; hourlyRate?: number } | null;
 }
 
 function safeParseJson<T>(raw: unknown, fallback: T): T {
@@ -44,6 +50,12 @@ function mapServiceAreaPage(raw: any): ServiceAreaPage {
     toc: safeParseJson(meta.toc_json, []),
     suburbFacts: safeParseJson(meta.suburb_facts_json, []),
     compare: safeParseJson(meta.compare_json, []),
+    demand: safeParseJson(meta.demand_json, []),
+    glance: safeParseJson(meta.glance_json, []),
+    serviceCounts: safeParseJson(meta.service_counts_json, []),
+    requested: safeParseJson(meta.requested_json, []),
+    languages: safeParseJson(meta.languages_json, []),
+    heroStats: safeParseJson(meta.hero_stats_json, null),
   };
 }
 
@@ -185,23 +197,6 @@ export async function getMenu(location: string): Promise<WPMenuItem[]> {
   return result?.items ?? [];
 }
 
-// Backward compatibility for older WordPress page components.
-export type WPService = WPCPTItem;
-export type WPLocation = WPCPTItem;
-export type WPGuide = WPCPTItem;
-
-export async function getService(slug: string): Promise<WPService | null> {
-  return getCPTItem('services', slug);
-}
-
-export async function getLocation(slug: string): Promise<WPLocation | null> {
-  return getCPTItem('locations', slug);
-}
-
-export async function getGuide(slug: string): Promise<WPGuide | null> {
-  return getCPTItem('guides', slug);
-}
-
 // --- Mega menu columns, built from any real taxonomy ---
 export interface MegaGroupFromWP { title: string; links: string[] }
 
@@ -238,4 +233,43 @@ export async function getMegaColumnsForTaxonomy(restBase: string, columnCount = 
 // equivalent to getMegaColumnsForTaxonomy('service-categories', n).
 export function getServiceCategoryMegaColumns(columnCount = 4): Promise<MegaGroupFromWP[][]> {
   return getMegaColumnsForTaxonomy('service-categories', columnCount);
+}
+
+// --- Real fix for the Service tab specifically: unlike the other 4
+// mega menu taxonomies (which are genuine two-level term hierarchies
+// seeded directly as terms), Service categories are top-level terms
+// only — the actual 89 services live as real 'service' POSTS
+// assigned to those categories, not as child terms. This function
+// queries posts-by-category instead of terms-by-parent, and returns
+// each link with its REAL slug so clicking it can go to the actual
+// service page rather than guessing a slug from the display name.
+export interface MegaLinkWithSlug { name: string; slug: string }
+export interface MegaGroupWithSlugs { title: string; links: MegaLinkWithSlug[] }
+
+export async function getServiceMegaColumnsFromPosts(columnCount = 4): Promise<MegaGroupWithSlugs[][]> {
+  const { items: categories } = await getServiceCategories();
+  if (categories.length === 0) return [];
+
+  const groups: MegaGroupWithSlugs[] = [];
+  for (const cat of categories) {
+    const posts = await wpFetch<any[]>(
+      // WordPress auto-generates this collection filter param from
+      // the taxonomy's rest_base ('service-categories', hyphenated —
+      // see post-types.php), NOT the taxonomy's own name
+      // (service_category, underscored). Using the wrong one here
+      // would silently return unfiltered results instead of an
+      // error, which is a much harder bug to notice.
+      `/wp-json/wp/v2/services?service-categories=${cat.id}&per_page=100`,
+      `services-in-category:${cat.id}`
+    );
+    if (!posts?.length) continue;
+    groups.push({
+      title: cat.name,
+      links: posts.map((p: any) => ({ name: p.title?.rendered ?? '', slug: p.slug })),
+    });
+  }
+
+  const columns: MegaGroupWithSlugs[][] = Array.from({ length: columnCount }, () => []);
+  groups.forEach((g, i) => columns[i % columnCount].push(g));
+  return columns.filter((c) => c.length > 0);
 }
