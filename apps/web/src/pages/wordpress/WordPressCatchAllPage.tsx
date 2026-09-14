@@ -2,16 +2,10 @@ import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { getWordPressPage, type WPContentBase } from '../../api/wordpressApi';
 import { isReservedPath } from '../../lib/reservedRoutes';
+import { PublicHeader, PublicFooter } from '../public/PublicLayout';
 import WordPressTemplate from '../../components/wordpress/WordPressTemplate';
 import NotFound from './NotFound';
 
-/**
- * The actual catch-all (item 3/5): any path that didn't match a
- * real application route AND isn't reserved gets treated as a
- * potential WordPress Page slug. This is what makes
- * "create a WordPress page, it just works at /that-slug" true
- * without any React code changes per page.
- */
 export default function WordPressCatchAllPage() {
   const location = useLocation();
   const [content, setContent] = useState<WPContentBase | null>(null);
@@ -21,9 +15,6 @@ export default function WordPressCatchAllPage() {
 
   useEffect(() => {
     if (isReservedPath(location.pathname)) {
-      // Should be unreachable in practice — React Router's own route
-      // declarations already take priority over this catch-all — but
-      // this is the explicit defense-in-depth check item 25 asked for.
       setNotFound(true);
       setLoading(false);
       return;
@@ -48,7 +39,15 @@ export default function WordPressCatchAllPage() {
       .finally(() => setLoading(false));
   }, [location.pathname]);
 
-  if (!loading && !error && notFound) return <NotFound />;
+  if (!loading && !error && notFound) {
+    return (<><PublicHeader /><NotFound /><PublicFooter /></>);
+  }
 
-  return <WordPressTemplate loading={loading} error={error} content={content} />;
+  return (
+    <>
+      <PublicHeader />
+      <WordPressTemplate loading={loading} error={error} content={content} />
+      <PublicFooter />
+    </>
+  );
 }

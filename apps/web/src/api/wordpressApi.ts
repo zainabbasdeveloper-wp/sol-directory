@@ -167,26 +167,10 @@ export async function getWordPressPage(slug: string): Promise<WPContentBase | nu
 
 // One generic fetcher for any CPT registered in cptRouteConfig.ts.
 export interface WPCPTItem extends WPContentBase { meta: Record<string, unknown> }
-export type WPService = WPCPTItem;
-export type WPLocation = WPCPTItem;
-export type WPGuide = WPCPTItem;
-
 export async function getCPTItem(restBase: string, slug: string): Promise<WPCPTItem | null> {
   const results = await wpFetch<any[]>(`/wp-json/wp/v2/${restBase}?slug=${encodeURIComponent(slug)}&_embed`, `${restBase}:${slug}`);
   if (!results?.length) return null;
   return { ...mapBaseContent(results[0]), meta: results[0].meta ?? {} };
-}
-
-export async function getService(slug: string): Promise<WPService | null> {
-  return getCPTItem('services', slug);
-}
-
-export async function getLocation(slug: string): Promise<WPLocation | null> {
-  return getCPTItem('locations', slug);
-}
-
-export async function getGuide(slug: string): Promise<WPGuide | null> {
-  return getCPTItem('guides', slug);
 }
 
 // --- Real taxonomy term lists ---
@@ -266,24 +250,26 @@ export async function getServiceMegaColumnsFromPosts(columnCount = 4): Promise<M
   const { items: categories } = await getServiceCategories();
   if (categories.length === 0) return [];
 
-  const groups: MegaGroupWithSlugs[] = [];
-  for (const cat of categories) {
-    const posts = await wpFetch<any[]>(
-      // WordPress auto-generates this collection filter param from
-      // the taxonomy's rest_base ('service-categories', hyphenated —
-      // see post-types.php), NOT the taxonomy's own name
-      // (service_category, underscored). Using the wrong one here
-      // would silently return unfiltered results instead of an
-      // error, which is a much harder bug to notice.
-      `/wp-json/wp/v2/services?service-categories=${cat.id}&per_page=100`,
-      `services-in-category:${cat.id}`
-    );
-    if (!posts?.length) continue;
-    groups.push({
-      title: cat.name,
-      links: posts.map((p: any) => ({ name: p.title?.rendered ?? '', slug: p.slug })),
-    });
-  }
+  // Fetched in parallel — with 15 real categories, doing this
+  // sequentially (one await per category in a for loop) meant
+  // waiting on 15 full network round-trips back to back, which could
+  // easily take several seconds. That's the actual cause of "shows
+  // old data on first load" — the menu can be opened before the slow
+  // sequential fetch finishes, so it still shows the static fallback.
+  const results = await Promise.all(
+    categories.map(async (cat) => {
+      const posts = await wpFetch<any[]>(
+        `/wp-json/wp/v2/services?service-categories=${cat.id}&per_page=100`,
+        `services-in-category:${cat.id}`
+      );
+      if (!posts?.length) return null;
+      return {
+        title: cat.name,
+        links: posts.map((p: any) => ({ name: p.title?.rendered ?? '', slug: p.slug })),
+      };
+    })
+  );
+  const groups = results.filter((g): g is MegaGroupWithSlugs => g !== null);
 
   const columns: MegaGroupWithSlugs[][] = Array.from({ length: columnCount }, () => []);
   groups.forEach((g, i) => columns[i % columnCount].push(g));
