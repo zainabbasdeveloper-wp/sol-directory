@@ -1,8 +1,15 @@
 <?php
-// Deliberately blank. Nobody should ever see this rendered — every
-// real request that matters goes to /wp-json/* (the REST API), which
-// bypasses theme templates entirely. If someone lands here directly,
-// send them to the real site instead of showing broken/empty markup.
-$frontend = ($_ENV['FRONTEND_ORIGIN'] ?? null) ?: (getenv('FRONTEND_ORIGIN') ?: '/');
+// Never redirect these paths — WordPress core handles them.
+$path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$skip_prefixes = ['/wp-admin', '/wp-login.php', '/wp-json', '/wp-content', '/wp-includes'];
+foreach ($skip_prefixes as $prefix) {
+    if (strpos($path, $prefix) === 0) {
+        // Let WordPress handle it normally.
+        return;
+    }
+}
+
+// Everything else goes to the frontend.
+$frontend = $_ENV['FRONTEND_ORIGIN'] ?? 'https://directory.solbusinessconsultant.com.au';
 wp_redirect($frontend);
 exit;
