@@ -2,6 +2,25 @@
 if (!defined('ABSPATH')) exit;
 
 add_action('init', function () {
+    // --- Mega Menu Tab (real, dedicated CPT — replaces the
+    // taxonomy-based mega menu approach). One post per tab
+    // (Service/Condition/Funding/Coordinator/Language), with a full
+    // Column -> Link nested structure via SCF, giving a WordPress
+    // admin genuine control over icons, descriptions, CTAs,
+    // ordering, and active/inactive state per item — none of which
+    // the earlier taxonomy-term approach could represent. ---
+    register_post_type('mega_menu_tab', [
+        'labels' => ['name' => 'Mega Menu Tabs', 'singular_name' => 'Mega Menu Tab'],
+        'public' => true,
+        'show_in_rest' => true,
+        'rest_base' => 'mega-menu-tabs',
+        'supports' => ['title', 'custom-fields', 'page-attributes'], // page-attributes gives a native "Order" field for tab ordering
+        'has_archive' => false,
+        'publicly_queryable' => false, // this is menu config, not a page anyone should visit directly
+        'show_in_menu' => true,
+        'menu_icon' => 'dashicons-menu',
+    ]);
+
     register_post_type('service_area_page', [
         'labels' => ['name' => 'Service Area Pages', 'singular_name' => 'Service Area Page'],
         'public' => true,

@@ -21,6 +21,64 @@ if (!function_exists('acf_add_local_field_group')) return; // SCF/ACF not active
 
 add_action('acf/init', function () {
 
+    // --- Mega Menu Tab ---
+    // Post title = tab label. Native "Order" (page-attributes,
+    // already added to the CPT) = tab sort order. Everything else
+    // below is the real structured control the taxonomy approach
+    // couldn't offer: a stable key for the frontend to map against,
+    // icon, description, active toggle, and the full Column -> Link
+    // hierarchy.
+    acf_add_local_field_group([
+        'key' => 'group_mega_menu_tab_fields',
+        'title' => 'Mega Menu Tab Details',
+        'fields' => [
+            [
+                'key' => 'field_mmt_slug_key', 'label' => 'Slug / Key',
+                'name' => 'tab_key', 'type' => 'text',
+                'instructions' => "Stable identifier the frontend uses to match this tab (e.g. 'service', 'condition', 'funding'). Changing this after launch requires a matching frontend update — coordinate before renaming.",
+                'required' => 1,
+            ],
+            ['key' => 'field_mmt_description', 'label' => 'Tab Description', 'name' => 'description', 'type' => 'text', 'instructions' => 'Short subtext shown under the tab label in the menu rail (e.g. "NDIS, aged care, allied health, and more").'],
+            ['key' => 'field_mmt_icon', 'label' => 'Icon (optional)', 'name' => 'icon', 'type' => 'text', 'instructions' => 'An icon identifier or short text/emoji — how this renders depends on the frontend icon system in use.'],
+            ['key' => 'field_mmt_active', 'label' => 'Active', 'name' => 'active', 'type' => 'true_false', 'default_value' => 1, 'ui' => 1, 'instructions' => 'Inactive tabs are hidden from the live menu without deleting them.'],
+            [
+                'key' => 'field_mmt_columns', 'label' => 'Columns', 'name' => 'columns', 'type' => 'repeater',
+                'layout' => 'block', 'button_label' => 'Add column',
+                'sub_fields' => [
+                    ['key' => 'field_mmt_col_title', 'label' => 'Column Title', 'name' => 'title', 'type' => 'text', 'required' => 1],
+                    [
+                        'key' => 'field_mmt_col_links', 'label' => 'Links', 'name' => 'links', 'type' => 'repeater',
+                        'layout' => 'table', 'button_label' => 'Add link',
+                        'sub_fields' => [
+                            ['key' => 'field_mmt_link_label', 'label' => 'Label', 'name' => 'label', 'type' => 'text', 'required' => 1],
+                            ['key' => 'field_mmt_link_url', 'label' => 'URL', 'name' => 'url', 'type' => 'text', 'instructions' => 'A relative app path (e.g. /services/personal-care) or a full URL.'],
+                            ['key' => 'field_mmt_link_description', 'label' => 'Description', 'name' => 'description', 'type' => 'text'],
+                            ['key' => 'field_mmt_link_icon', 'label' => 'Icon', 'name' => 'icon', 'type' => 'text'],
+                            ['key' => 'field_mmt_link_badge', 'label' => 'Badge', 'name' => 'badge', 'type' => 'text', 'instructions' => 'e.g. "New" — leave blank for none.'],
+                            ['key' => 'field_mmt_link_new_tab', 'label' => 'Open in new tab', 'name' => 'open_in_new_tab', 'type' => 'true_false', 'ui' => 1],
+                            ['key' => 'field_mmt_link_active', 'label' => 'Active', 'name' => 'active', 'type' => 'true_false', 'default_value' => 1, 'ui' => 1],
+                        ],
+                    ],
+                ],
+            ],
+            [
+                // Matches Part 3's "featured links / CTA buttons" —
+                // one optional CTA per tab, shown at the bottom of
+                // that tab's panel.
+                'key' => 'field_mmt_cta', 'label' => 'Tab CTA (optional)', 'name' => 'cta', 'type' => 'group',
+                'sub_fields' => [
+                    ['key' => 'field_mmt_cta_label', 'label' => 'CTA Label', 'name' => 'label', 'type' => 'text'],
+                    [
+                        'key' => 'field_mmt_cta_action', 'label' => 'CTA Action', 'name' => 'action', 'type' => 'text',
+                        'instructions' => "An action key the frontend interprets (e.g. 'get_matched', 'find_providers') rather than a hardcoded URL — this is required if the CTA should open an app flow/modal instead of navigating to a page. Leave blank and fill in URL below for a plain link instead.",
+                    ],
+                    ['key' => 'field_mmt_cta_url', 'label' => 'CTA URL (if not using an action)', 'name' => 'url', 'type' => 'text'],
+                ],
+            ],
+        ],
+        'location' => [[['param' => 'post_type', 'operator' => '==', 'value' => 'mega_menu_tab']]],
+    ]);
+
     // --- Service ---
     acf_add_local_field_group([
         'key' => 'group_service_fields',
@@ -269,7 +327,7 @@ function soldirectory_inject_acf_meta(array $response_data, WP_Post $post): arra
     return $response_data;
 }
 
-foreach (['service', 'location', 'guide', 'service_area_page'] as $post_type) {
+foreach (['service', 'location', 'guide', 'service_area_page', 'mega_menu_tab'] as $post_type) {
     add_filter("rest_prepare_{$post_type}", function ($response, $post) {
         $data = $response->get_data();
         $data = soldirectory_inject_acf_meta($data, $post);
@@ -277,3 +335,49 @@ foreach (['service', 'location', 'guide', 'service_area_page'] as $post_type) {
         return $response;
     }, 10, 2);
 }
+
+/**
+ * Real endpoint for the frontend mega menu — returns every active
+ * tab, in order, with its full column/link/CTA structure already
+ * assembled. This is what PART 7/8 of the spec asked for: one clean
+ * response the frontend can render directly, rather than the
+ * frontend re-assembling structure from raw taxonomy terms.
+ */
+add_action('rest_api_init', function () {
+    register_rest_route('soldirectory/v1', '/mega-menu', [
+        'methods' => 'GET',
+        'permission_callback' => '__return_true',
+        'callback' => function () {
+            $tabs = get_posts([
+                'post_type' => 'mega_menu_tab',
+                'post_status' => 'publish',
+                'numberposts' => -1,
+                'orderby' => 'menu_order',
+                'order' => 'ASC',
+            ]);
+
+            $result = [];
+            foreach ($tabs as $tab) {
+                if (!get_field('active', $tab->ID)) continue; // inactive tabs are skipped, not just hidden client-side
+
+                $columns = get_field('columns', $tab->ID) ?: [];
+                $result[] = [
+                    'key' => get_field('tab_key', $tab->ID),
+                    'label' => $tab->post_title,
+                    'description' => get_field('description', $tab->ID),
+                    'icon' => get_field('icon', $tab->ID),
+                    'cta' => get_field('cta', $tab->ID),
+                    'columns' => array_map(function ($col) {
+                        $links = array_filter($col['links'] ?? [], fn($l) => !empty($l['active']));
+                        return [
+                            'title' => $col['title'],
+                            'links' => array_values($links),
+                        ];
+                    }, $columns),
+                ];
+            }
+
+            return new WP_REST_Response(['tabs' => $result], 200);
+        },
+    ]);
+});

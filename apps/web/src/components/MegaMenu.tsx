@@ -1,40 +1,44 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MEGA_CATS, MEGA, type MegaColumn } from '../data/megaMenu';
+import { MEGA_CATS, MEGA } from '../data/megaMenu';
 import { slugify } from '../data/slugHelpers';
-import { getServiceMegaColumnsFromPosts, getMegaColumnsForTaxonomy, type MegaGroupWithSlugs } from '../api/wordpressApi';
+import { getMegaMenuTabs, type MegaMenuTab } from '../api/wordpressApi';
+import { useMatchModal } from '../context/MatchModalContext';
 import { decodeHtmlEntities } from '../lib/decodeHtmlEntities';
 import './MegaMenu.css';
 
-const TAB_TAXONOMY: Record<string, string> = {
-  condition: 'condition-categories',
-  funding: 'funding-categories',
-  coordinator: 'coordinator-categories',
-  language: 'language-categories',
-};
-
+/**
+ * Real, dedicated WordPress-managed mega menu (replaces the earlier
+ * taxonomy-based approach per the explicit architecture request).
+ * getMegaMenuTabs() returning null means "couldn't reach WordPress or
+ * genuinely has zero tabs configured" — in that case, and ONLY in
+ * that case, this falls back to the original static MEGA/MEGA_CATS
+ * data, so a CMS outage degrades gracefully instead of breaking the
+ * header entirely (per the spec's explicit fallback requirement).
+ * Once WordPress data loads successfully, it's the source of truth
+ * for both the rail (tabs) and each tab's columns — not just the
+ * columns like the previous version.
+ */
 export default function MegaMenu() {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState('service');
   const closeTimer = useRef<ReturnType<typeof setTimeout>>();
   const navigate = useNavigate();
+  const { openMatchModal } = useMatchModal();
 
-  // Service tab is real 'service' posts grouped by category (with
-  // real slugs for routing) — structurally different from the other
-  // 4 tabs, which are genuine two-level term hierarchies. Kept
-  // separate rather than forced into one shape.
-  const [wpServiceColumns, setWpServiceColumns] = useState<MegaGroupWithSlugs[][] | null>(null);
-  const [wpColumns, setWpColumns] = useState<Record<string, MegaColumn[]>>({});
+  const [wpTabs, setWpTabs] = useState<MegaMenuTab[] | null>(null);
 
   useEffect(() => {
-    getServiceMegaColumnsFromPosts(4)
-      .then((cols) => { if (cols.length > 0) setWpServiceColumns(cols); })
-      .catch(() => {});
-    Object.entries(TAB_TAXONOMY).forEach(([tabKey, restBase]) => {
-      getMegaColumnsForTaxonomy(restBase, 4)
-        .then((cols) => { if (cols.length > 0) setWpColumns((prev) => ({ ...prev, [tabKey]: cols })); })
-        .catch(() => {});
-    });
+    getMegaMenuTabs()
+      .then((tabs) => {
+        if (tabs && tabs.length > 0) {
+          setWpTabs(tabs);
+          setTab(tabs[0].key);
+        }
+        // tabs === null or [] -> stay on static fallback, which is
+        // already the initial state (wpTabs starts null).
+      })
+      .catch(() => {}); // network failure -> stays on static fallback
   }, []);
 
   function show() {
@@ -45,34 +49,36 @@ export default function MegaMenu() {
     closeTimer.current = setTimeout(() => setOpen(false), 150);
   }
 
-  function handleServiceLinkClick(slug: string) {
+  // Real admin-controlled URL, opened exactly as configured — no
+  // more guessing a destination from the link's label text.
+  function handleRealLinkClick(url: string | undefined, openInNewTab: boolean | undefined) {
     setOpen(false);
-    navigate(`/services/${slug}`);
+    if (!url) return;
+    if (openInNewTab) { window.open(url, '_blank', 'noopener,noreferrer'); return; }
+    if (/^https?:\/\//.test(url)) { window.location.href = url; return; }
+    navigate(url);
   }
 
-  function handleLinkClick(label: string) {
+  function handleStaticLinkClick(label: string) {
     setOpen(false);
-    // Condition/Funding/Coordinator/Language tabs still route to the
-    // illustrative combo page — there's no real per-topic destination
-    // page for these yet (unlike Service, which now has real
-    // WordPress-backed pages at /services/:slug). Wiring these to
-    // something real is the next step once those destinations exist.
     const suburb = label === 'Nursing' ? 'bankstown' : 'sydney';
     navigate(`/services/${slugify(label)}/${suburb}`);
   }
 
-  // Normalize both real shapes (service posts with slugs, term-based
-  // tabs without) plus the static fallback into one renderable shape.
-  type RenderLink = { name: string; slug?: string };
-  type RenderGroup = { title: string; links: RenderLink[] };
-
-  let columns: RenderGroup[][];
-  if (tab === 'service') {
-    columns = wpServiceColumns ?? (MEGA.service ?? []).map((col) => col.map((g) => ({ title: g.title, links: g.links.map((l) => ({ name: l })) })));
-  } else {
-    const wp = wpColumns[tab];
-    columns = (wp ?? (MEGA[tab] ?? [])).map((col) => col.map((g) => ({ title: g.title, links: g.links.map((l) => ({ name: l })) })));
+  function handleCtaClick(cta: MegaMenuTab['cta']) {
+    setOpen(false);
+    if (!cta) return;
+    if (cta.action === 'get_matched' || cta.action === 'find_providers') { openMatchModal(); return; }
+    if (cta.url) navigate(cta.url);
   }
+
+  const usingWordPress = wpTabs !== null;
+  const rail = usingWordPress
+    ? wpTabs.map((t) => ({ key: t.key, title: t.label, desc: t.description ?? '' }))
+    : MEGA_CATS;
+
+  const activeWpTab = usingWordPress ? wpTabs.find((t) => t.key === tab) : undefined;
+  const columns = usingWordPress ? (activeWpTab?.columns ?? []) : (MEGA[tab] ?? []);
 
   return (
     <div className="mega-root" onMouseEnter={show} onMouseLeave={hideDelayed}>
@@ -94,7 +100,7 @@ export default function MegaMenu() {
           <div className="mega-panel" role="navigation" aria-label="Services navigation">
             <div className="mega-rail">
               <p className="mega-rail-heading">What are you looking for?</p>
-              {MEGA_CATS.map((c) => (
+              {rail.map((c) => (
                 <button
                   key={c.key}
                   type="button"
@@ -104,8 +110,8 @@ export default function MegaMenu() {
                   onClick={() => setTab(c.key)}
                 >
                   <span className="mega-rail-text">
-                    <span className="mega-rail-title">{c.title}</span>
-                    <span className="mega-rail-desc">{c.desc}</span>
+                    <span className="mega-rail-title">{decodeHtmlEntities(c.title)}</span>
+                    <span className="mega-rail-desc">{decodeHtmlEntities(c.desc)}</span>
                   </span>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mega-rail-arrow">
                     <path d="M5 12h14" />
@@ -117,33 +123,60 @@ export default function MegaMenu() {
 
             <div className="mega-columns-wrap">
               <div className="mega-columns" style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))` }}>
-                {columns.map((col, ci) => (
-                  <div key={ci} className="mega-column">
-                    {col.map((g) => (
-                      <div key={g.title} className="mega-group">
-                        <h3 className="mega-group-title">{decodeHtmlEntities(g.title)}</h3>
-                        <div className="mega-group-rule" />
-                        <div className="mega-group-links">
-                          {g.links.map((link) => (
-                            <a
-                              key={link.slug ?? link.name}
-                              href="#directory"
-                              className="mega-link"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                if (link.slug) handleServiceLinkClick(link.slug);
-                                else handleLinkClick(link.name);
-                              }}
-                            >
-                              {decodeHtmlEntities(link.name)}
-                            </a>
-                          ))}
+                {usingWordPress
+                  ? (columns as { title: string; links: any[] }[]).map((col, ci) => (
+                      <div key={ci} className="mega-column">
+                        <div className="mega-group">
+                          <h3 className="mega-group-title">{decodeHtmlEntities(col.title)}</h3>
+                          <div className="mega-group-rule" />
+                          <div className="mega-group-links">
+                            {col.links.map((link) => (
+                              <a
+                                key={link.label}
+                                href={link.url || '#'}
+                                className="mega-link"
+                                onClick={(e) => { e.preventDefault(); handleRealLinkClick(link.url, link.open_in_new_tab); }}
+                                title={link.description || undefined}
+                              >
+                                {decodeHtmlEntities(link.label)}
+                                {link.badge && <span className="mega-link-badge">{decodeHtmlEntities(link.badge)}</span>}
+                              </a>
+                            ))}
+                          </div>
                         </div>
                       </div>
+                    ))
+                  : (columns as { title: string; links: string[] }[][]).map((col, ci) => (
+                      <div key={ci} className="mega-column">
+                        {col.map((g) => (
+                          <div key={g.title} className="mega-group">
+                            <h3 className="mega-group-title">{g.title}</h3>
+                            <div className="mega-group-rule" />
+                            <div className="mega-group-links">
+                              {g.links.map((label) => (
+                                <a
+                                  key={label}
+                                  href="#directory"
+                                  className="mega-link"
+                                  onClick={(e) => { e.preventDefault(); handleStaticLinkClick(label); }}
+                                >
+                                  {label}
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     ))}
-                  </div>
-                ))}
               </div>
+
+              {usingWordPress && activeWpTab?.cta?.label && (
+                <div className="mega-tab-cta">
+                  <button className="btn-gradient" onClick={() => handleCtaClick(activeWpTab.cta)}>
+                    {decodeHtmlEntities(activeWpTab.cta.label)}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

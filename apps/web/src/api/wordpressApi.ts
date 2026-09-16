@@ -275,3 +275,37 @@ export async function getServiceMegaColumnsFromPosts(columnCount = 4): Promise<M
   groups.forEach((g, i) => columns[i % columnCount].push(g));
   return columns.filter((c) => c.length > 0);
 }
+
+// --- Real dedicated Mega Menu CPT (replaces the taxonomy-based
+// approach) — one clean endpoint returning the full Tab -> Column ->
+// Link structure, already assembled server-side. ---
+export interface MegaMenuLink {
+  label: string;
+  url?: string;
+  description?: string;
+  icon?: string;
+  badge?: string;
+  open_in_new_tab?: boolean;
+  active?: boolean;
+}
+export interface MegaMenuColumn {
+  title: string;
+  links: MegaMenuLink[];
+}
+export interface MegaMenuTab {
+  key: string;
+  label: string;
+  description?: string;
+  icon?: string;
+  cta?: { label?: string; action?: string; url?: string } | null;
+  columns: MegaMenuColumn[];
+}
+
+export async function getMegaMenuTabs(): Promise<MegaMenuTab[] | null> {
+  const result = await wpFetch<{ tabs: MegaMenuTab[] }>('/wp-json/soldirectory/v1/mega-menu', 'mega-menu-tabs');
+  // null (not []） distinguishes "couldn't reach WordPress" from "WP
+  // reached, but genuinely has zero active tabs configured" — the
+  // caller needs to tell these apart to decide whether falling back
+  // to static data is appropriate.
+  return result?.tabs ?? null;
+}
