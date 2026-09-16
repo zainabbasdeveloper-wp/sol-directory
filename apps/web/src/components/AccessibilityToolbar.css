@@ -1,0 +1,186 @@
+.accessibility-toolbar {
+  position: fixed;
+  right: 18px;
+  bottom: 20px;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.accessibility-toolbar__toggle-wrap {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.accessibility-toolbar__toggle {
+  width: 56px;
+  height: 56px;
+  border: 0;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #1a5bbf, #0d2b57);
+  color: #fff;
+  font-size: 26px;
+  box-shadow: 0 10px 24px rgba(11, 36, 74, 0.22);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.accessibility-toolbar__toggle:hover,
+.accessibility-toolbar__toggle:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(11, 36, 74, 0.28);
+}
+
+.accessibility-toolbar__panel {
+  width: min(285px, calc(100vw - 26px));
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid rgba(16, 35, 63, 0.08);
+  border-radius: 18px;
+  box-shadow: 0 18px 44px rgba(15, 30, 58, 0.18);
+  padding: 16px 14px 12px;
+  backdrop-filter: blur(8px);
+}
+
+.accessibility-toolbar__panel h2 {
+  margin: 0 0 10px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text, #10233F);
+}
+
+.accessibility-toolbar__item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  background: transparent;
+  padding: 10px 8px;
+  margin: 0;
+  border-radius: 10px;
+  color: var(--color-text, #10233F);
+  font-size: 15px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.18s ease, transform 0.18s ease;
+}
+
+.accessibility-toolbar__item:hover,
+.accessibility-toolbar__item:focus-visible {
+  background: rgba(23, 105, 224, 0.06);
+}
+
+.accessibility-toolbar__item.is-active {
+  background: rgba(23, 105, 224, 0.08);
+  color: var(--color-primary, #1769E0);
+  font-weight: 600;
+}
+
+.accessibility-toolbar__item.is-active span:first-child {
+  color: var(--color-primary, #1769E0);
+}
+
+.accessibility-toolbar__item span:first-child {
+  width: 20px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  color: var(--color-primary, #1769E0);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.accessibility-toolbar__item--read {
+  border-top: 1px solid rgba(16, 35, 63, 0.08);
+  margin-top: 8px;
+  padding-top: 14px;
+}
+
+.accessibility-toolbar__reset {
+  width: 100%;
+  margin-top: 12px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--color-primary, #1769E0);
+  color: #fff;
+  padding: 12px 14px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.18s ease, transform 0.18s ease;
+}
+
+.accessibility-toolbar__reset:hover,
+.accessibility-toolbar__reset:focus-visible {
+  filter: brightness(0.96);
+  transform: translateY(-1px);
+}
+
+html { --accessibility-scale: 1; }
+
+body.a11y-grayscale,
+body.a11y-grayscale * {
+  filter: grayscale(1) !important;
+}
+
+body.a11y-high-contrast,
+body.a11y-high-contrast * {
+  background-color: #000 !important;
+  color: #fff !important;
+  border-color: #fff !important;
+}
+
+body.a11y-negative-contrast,
+body.a11y-negative-contrast * {
+  background-color: #0b0b0b !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+
+body.a11y-light-background,
+body.a11y-light-background * {
+  background-color: #f5f7fb !important;
+  color: #111827 !important;
+}
+
+body.a11y-underline-links a,
+body.a11y-underline-links a:visited,
+body.a11y-underline-links a:hover,
+body.a11y-underline-links a:focus {
+  text-decoration: underline !important;
+  text-underline-offset: 2px;
+}
+
+body.a11y-reduced-motion *,
+body.a11y-reduced-motion *::before,
+body.a11y-reduced-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+html, body {
+  font-size: calc(15px * var(--accessibility-scale));
+}
+
+body,
+body * {
+  line-height: 1.5;
+}
+
+@media (max-width: 640px) {
+  .accessibility-toolbar {
+    right: 10px;
+    bottom: 12px;
+  }
+
+  .accessibility-toolbar__toggle {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+  }
+}
