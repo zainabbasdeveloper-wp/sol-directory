@@ -12,28 +12,9 @@ add_action('init', function () {
         'publicly_queryable' => true,
     ]);
 
-    // service_name, suburb, state, intro_paragraph, faq_json,
-    // suburb_facts_json, and compare_json are now managed by the
-    // real ACF/SCF field group (acf-fields.php) instead of being
-    // registered here directly — removing them from this list avoids
-    // registering the same meta key twice. The remaining ones below
-    // aren't in the ACF field group yet, so they still need this
-    // plain registration to be REST-accessible at all.
-    $meta_fields = [
-        'toc_json'       => 'string',
-        'demand_json'    => 'string',   // "Who is asking" bar charts
-        'glance_json'    => 'string',   // "At a glance" key/value table
-        'service_counts_json' => 'string', // "Care services available in this suburb"
-        'requested_json' => 'string',   // "Most requested support"
-        'languages_json' => 'string',   // Language support stats for this suburb
-        'hero_stats_json'=> 'string',   // Provider count / response time / price shown in the hero
-    ];
-    foreach ($meta_fields as $key => $type) {
-        register_post_meta('service_area_page', $key, [
-            'type' => $type, 'single' => true, 'show_in_rest' => true,
-            'auth_callback' => fn() => current_user_can('edit_posts'),
-        ]);
-    }
+    // Every service_area_page field is now managed by the ACF/SCF
+    // field group (acf-fields.php) — nothing left to register
+    // directly here.
 
     // --- Service ---
     register_post_type('service', [
@@ -107,17 +88,26 @@ add_action('init', function () {
     // to 'service' (the only real CPT here) since WordPress
     // taxonomies need at least one object type — this doesn't
     // require every service to actually use them.
+    //
+    // rest_base and singular_name are explicit here, not derived via
+    // string manipulation — an earlier version appended a naive 's'
+    // to pluralize (condition_category -> condition-categorys),
+    // which doesn't match English pluralization and silently didn't
+    // match what the frontend (MegaMenu.tsx) actually calls
+    // (condition-categories). That mismatch meant these 4 REST
+    // endpoints 404'd from the day they were registered — found via
+    // a real REST response showing the wrong URLs, not guessed.
     foreach ([
-        'condition_category' => 'Condition Categories',
-        'funding_category' => 'Funding Categories',
-        'coordinator_category' => 'Coordinator Categories',
-        'language_category' => 'Language Categories',
-    ] as $taxKey => $label) {
+        'condition_category'   => ['label' => 'Condition Categories',   'singular' => 'Condition Category',   'rest_base' => 'condition-categories'],
+        'funding_category'     => ['label' => 'Funding Categories',     'singular' => 'Funding Category',     'rest_base' => 'funding-categories'],
+        'coordinator_category' => ['label' => 'Coordinator Categories', 'singular' => 'Coordinator Category', 'rest_base' => 'coordinator-categories'],
+        'language_category'    => ['label' => 'Language Categories',    'singular' => 'Language Category',    'rest_base' => 'language-categories'],
+    ] as $taxKey => $cfg) {
         register_taxonomy($taxKey, ['service'], [
-            'labels' => ['name' => $label, 'singular_name' => rtrim($label, 'ies') . 'y'],
+            'labels' => ['name' => $cfg['label'], 'singular_name' => $cfg['singular']],
             'public' => true,
             'show_in_rest' => true,
-            'rest_base' => str_replace('_', '-', $taxKey) . 's',
+            'rest_base' => $cfg['rest_base'],
             'hierarchical' => true,
             'show_admin_column' => false,
         ]);

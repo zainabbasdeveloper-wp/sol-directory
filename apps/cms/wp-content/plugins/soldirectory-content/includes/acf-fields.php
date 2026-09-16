@@ -101,6 +101,73 @@ add_action('acf/init', function () {
                     ['key' => 'field_sap_compare_ask', 'label' => 'Ask', 'name' => 'ask', 'type' => 'text'],
                 ],
             ],
+            [
+                'key' => 'field_sap_toc', 'label' => 'Table of Contents', 'name' => 'toc_repeater', 'type' => 'repeater', 'layout' => 'table',
+                'sub_fields' => [
+                    ['key' => 'field_sap_toc_label', 'label' => 'Label', 'name' => 'label', 'type' => 'text'],
+                    ['key' => 'field_sap_toc_href', 'label' => 'Anchor (e.g. #compare)', 'name' => 'href', 'type' => 'text'],
+                ],
+            ],
+            [
+                // Nested repeater — each "Who is asking" panel (e.g.
+                // "Also asked for in the same request") has its own
+                // set of label/value bar-chart rows. Matches
+                // ServiceAreaPage.demand's real shape:
+                // { title, rows: [string, number][] }[].
+                'key' => 'field_sap_demand', 'label' => "Who Is Asking (demand panels)", 'name' => 'demand_repeater', 'type' => 'repeater', 'layout' => 'block',
+                'sub_fields' => [
+                    ['key' => 'field_sap_demand_title', 'label' => 'Panel Title', 'name' => 'title', 'type' => 'text'],
+                    [
+                        'key' => 'field_sap_demand_rows', 'label' => 'Rows', 'name' => 'rows', 'type' => 'repeater', 'layout' => 'table',
+                        'sub_fields' => [
+                            ['key' => 'field_sap_demand_row_label', 'label' => 'Label', 'name' => 'label', 'type' => 'text'],
+                            ['key' => 'field_sap_demand_row_value', 'label' => 'Value (%)', 'name' => 'value', 'type' => 'number'],
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'key' => 'field_sap_glance', 'label' => 'At a Glance (key/value table)', 'name' => 'glance_repeater', 'type' => 'repeater', 'layout' => 'table',
+                'sub_fields' => [
+                    ['key' => 'field_sap_glance_label', 'label' => 'Label', 'name' => 'label', 'type' => 'text'],
+                    ['key' => 'field_sap_glance_value', 'label' => 'Value', 'name' => 'value', 'type' => 'text'],
+                ],
+            ],
+            [
+                'key' => 'field_sap_service_counts', 'label' => 'Services Available (counts)', 'name' => 'service_counts_repeater', 'type' => 'repeater', 'layout' => 'table',
+                'sub_fields' => [
+                    ['key' => 'field_sap_svccount_label', 'label' => 'Service', 'name' => 'label', 'type' => 'text'],
+                    ['key' => 'field_sap_svccount_value', 'label' => 'Provider Count', 'name' => 'count', 'type' => 'number'],
+                ],
+            ],
+            [
+                'key' => 'field_sap_requested', 'label' => 'Most Requested Support', 'name' => 'requested_repeater', 'type' => 'repeater', 'layout' => 'table',
+                'sub_fields' => [
+                    ['key' => 'field_sap_req_label', 'label' => 'Label', 'name' => 'label', 'type' => 'text'],
+                    ['key' => 'field_sap_req_requests', 'label' => 'Requests (display text)', 'name' => 'requests', 'type' => 'text'],
+                    ['key' => 'field_sap_req_providers', 'label' => 'Providers (display text)', 'name' => 'providers', 'type' => 'text'],
+                    ['key' => 'field_sap_req_v', 'label' => 'Bar Value (number)', 'name' => 'v', 'type' => 'number'],
+                    ['key' => 'field_sap_req_on', 'label' => 'Highlighted?', 'name' => 'on', 'type' => 'true_false'],
+                ],
+            ],
+            [
+                'key' => 'field_sap_languages', 'label' => 'Language Support Stats', 'name' => 'languages_repeater', 'type' => 'repeater', 'layout' => 'table',
+                'sub_fields' => [
+                    ['key' => 'field_sap_lang_name', 'label' => 'Language', 'name' => 'name', 'type' => 'text'],
+                    ['key' => 'field_sap_lang_native', 'label' => 'Native Name', 'name' => 'native', 'type' => 'text'],
+                    ['key' => 'field_sap_lang_count', 'label' => 'Speaker Count (display text)', 'name' => 'count', 'type' => 'text'],
+                    ['key' => 'field_sap_lang_share', 'label' => 'Share (display text)', 'name' => 'share', 'type' => 'text'],
+                ],
+            ],
+            [
+                // Not a repeater — one set of hero stats per page.
+                'key' => 'field_sap_hero_stats', 'label' => 'Hero Stats', 'name' => 'hero_stats_group', 'type' => 'group',
+                'sub_fields' => [
+                    ['key' => 'field_sap_hero_provider_count', 'label' => 'Provider Count', 'name' => 'providerCount', 'type' => 'number'],
+                    ['key' => 'field_sap_hero_response_minutes', 'label' => 'Median Response (minutes)', 'name' => 'medianResponseMinutes', 'type' => 'number'],
+                    ['key' => 'field_sap_hero_hourly_rate', 'label' => 'Hourly Rate ($)', 'name' => 'hourlyRate', 'type' => 'number'],
+                ],
+            ],
         ],
         'location' => [[['param' => 'post_type', 'operator' => '==', 'value' => 'service_area_page']]],
     ]);
@@ -142,12 +209,60 @@ function soldirectory_inject_acf_meta(array $response_data, WP_Post $post): arra
             'faq_repeater' => 'faq_json',
             'suburb_facts_repeater' => 'suburb_facts_json',
             'compare_repeater' => 'compare_json',
+            // These 3 pass straight through — their ACF sub-field
+            // names already match the frontend's real TypeScript
+            // object shapes exactly (see wordpressApi.ts's
+            // ServiceAreaPage interface).
+            'toc_repeater' => 'toc_json',
+            'requested_repeater' => 'requested_json',
+            'languages_repeater' => 'languages_json',
         ],
     ];
     foreach ($repeater_fields[$post->post_type] ?? [] as $acf_name => $json_key) {
         $rows = get_field($acf_name, $post->ID);
         if ($rows) {
             $response_data['meta'][$json_key] = wp_json_encode($rows);
+        }
+    }
+
+    // These 3 need transforming: ACF's repeater naturally produces
+    // {label, value} objects per row, but the frontend's real
+    // TypeScript types (ServiceAreaPage.glance, .serviceCounts, and
+    // .demand's nested .rows) expect [string, number] TUPLES — a
+    // deliberate shape decision made when those types were written,
+    // matching the original fixture data exactly. Getting this wrong
+    // silently produces a page that fails to render these sections,
+    // rather than an error.
+    if ($post->post_type === 'service_area_page') {
+        $glance = get_field('glance_repeater', $post->ID);
+        if ($glance) {
+            $response_data['meta']['glance_json'] = wp_json_encode(array_map(
+                fn($row) => [$row['label'], $row['value']], $glance
+            ));
+        }
+
+        $counts = get_field('service_counts_repeater', $post->ID);
+        if ($counts) {
+            $response_data['meta']['service_counts_json'] = wp_json_encode(array_map(
+                fn($row) => [$row['label'], (int) $row['count']], $counts
+            ));
+        }
+
+        $demand = get_field('demand_repeater', $post->ID);
+        if ($demand) {
+            $response_data['meta']['demand_json'] = wp_json_encode(array_map(
+                fn($panel) => [
+                    'title' => $panel['title'],
+                    'rows' => array_map(fn($row) => [$row['label'], (int) $row['value']], $panel['rows'] ?? []),
+                ],
+                $demand
+            ));
+        }
+
+        // Not a repeater — a single group of 3 numbers per page.
+        $hero = get_field('hero_stats_group', $post->ID);
+        if ($hero) {
+            $response_data['meta']['hero_stats_json'] = wp_json_encode($hero);
         }
     }
 
