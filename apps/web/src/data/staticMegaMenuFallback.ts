@@ -63,12 +63,35 @@ const SERVICE_CATEGORIES: { title: string; items: string[] }[] = [
   { title: 'Home Modifications & SDA', items: ['Minor home modifications', 'Complex home modifications', 'Specialist Disability Accommodation (SDA)'] },
 ];
 
+// The 15 real NDIS categories above are the source of truth for
+// content and for /admin/services' own categorization — but showing
+// all 15 as separate top-level mega-menu columns overwhelmed both
+// the frontend grid (all 15 forced into one unreadable row) and the
+// ACF/SCF admin UI (15 separate repeater blocks was too much for
+// Add link/Add column to stay responsive). Regrouped into 4 wider
+// columns here, matching the mega menu's original 4-column design —
+// each column merges several of the 15 real categories' items into
+// one flat list. This does mean losing the sub-heading distinction
+// between merged categories within a column; if that distinction
+// matters enough to keep, the real fix is a 3-level ACF schema
+// (Column -> Group -> Link) rather than flattening, which is a
+// larger change than this pass — flag it if you want that instead.
+function groupInto(title: string, indices: number[]): { title: string; items: string[] } {
+  return { title, items: indices.flatMap((i) => SERVICE_CATEGORIES[i].items) };
+}
+const SERVICE_COLUMNS_4 = [
+  groupInto('Daily Living & Accommodation', [0, 1, 2]),
+  groupInto('Community & Consumables', [3, 4, 5]),
+  groupInto('Coordination, Skills & Employment', [6, 7, 8, 10]),
+  groupInto('Therapy, Equipment & Home', [9, 11, 12, 13, 14]),
+];
+
 export const STATIC_MEGA_MENU_FALLBACK: MegaMenuTab[] = [
   {
     key: 'service',
     label: 'Service',
     description: 'NDIS, aged care, allied health, and more',
-    columns: SERVICE_CATEGORIES.map((cat) => ({
+    columns: SERVICE_COLUMNS_4.map((cat) => ({
       title: cat.title,
       links: cat.items.map(serviceLink),
     })),

@@ -75,23 +75,41 @@ function sd_columns(array $groups, string $urlFn): array {
     return array_map(fn($g) => ['title' => $g[0], 'links' => sd_links($g[1], $urlFn)], $groups);
 }
 
-// --- Service ---
+// The 15 real NDIS categories are the source of truth for content,
+// but showing all 15 as separate top-level mega-menu columns
+// overwhelmed both the frontend grid and the ACF/SCF admin UI (15
+// separate repeater blocks made Add link/Add column unresponsive).
+// Regrouped into 4 wider columns here, matching the frontend's same
+// regrouping in staticMegaMenuFallback.ts exactly.
+$serviceCategoriesRaw = [
+    'Personal & Nursing Care' => ['Personal care', 'Medication assistance', 'Overnight support', 'High-intensity personal care', 'Community nursing care'],
+    'Accommodation & Living Supports' => ['Supported Independent Living (SIL)', 'Individualised Living Options (ILO)', 'Short Term Accommodation (STA) / respite', 'Medium Term Accommodation (MTA)', 'Group / shared living support'],
+    'Household Tasks' => ['House cleaning and household tasks', 'Meal preparation', 'Yard maintenance and gardening', 'Tenancy and accommodation assistance', 'Household management'],
+    'Community Participation' => ['One-to-one community access', 'Group and centre-based activities', 'Social and recreation activities', 'Cultural, religious and civic participation', 'Supported holidays and camps', 'Innovative community participation', 'Volunteering and community groups'],
+    'Transport' => ['Transport to activities and appointments', 'Recurring transport allowance', 'Activity-based transport', 'Specialised transport'],
+    'Consumables' => ['Continence products', 'Low-cost assistive technology', 'Home enteral nutrition (HEN)', 'Interpreting and translation', 'Assistance animal upkeep'],
+    'Support Coordination' => ['Support Connection (Level 1)', 'Support Coordination (Level 2)', 'Specialist Support Coordination (Level 3)', 'Psychosocial Recovery Coaching'],
+    'Capacity Building — Daily Living' => ['Housing search and matching', 'Tenancy skills and sustainment', 'Skill-building community access', 'Life transition planning and mentoring', 'Group skills development', 'Skill-building camps and classes'],
+    'Employment & Education Supports' => ['School Leaver Employment Supports (SLES)', 'Employment assessment and counselling', 'Supported employment', 'Job coaching and workplace assistance', 'Higher education and training support'],
+    'Behaviour & Allied Health' => ['Specialist Positive Behaviour Support', 'Behaviour support implementation', 'Social skills and relationship development', 'Dietitian', 'Exercise physiology', 'Personal training'],
+    'Life & Plan Skills' => ['Transition to further education', 'Study and learning skills', 'Plan management', 'Self-management training', 'Financial and organisational skills'],
+    'Therapeutic Supports' => ['Occupational therapy', 'Physiotherapy', 'Speech pathology', 'Psychology', 'Social work', 'Counselling', 'Podiatry', 'Music therapy and art therapy', 'Therapy assistants', 'Early Childhood Intervention'],
+    'Training & Assessments' => ['Assistive technology assessment and training', 'Specialised driver training', 'Hearing services and audiology', 'Vision and orientation & mobility', 'Daily living and life skills development', 'Training for carers and parents', 'Assistance animal training and assessment', 'Nursing training for support workers'],
+    'Assistive Technology & Equipment' => ['Mobility equipment', 'Personal care and safety equipment', 'Communication and information equipment', 'Vision equipment', 'Hearing equipment', 'Household task equipment', 'Recreation equipment', 'Customised prosthetics and orthotics', 'Vehicle modifications', 'AT repairs, maintenance, rental and trial', 'Assistance animals'],
+    'Home Modifications & SDA' => ['Minor home modifications', 'Complex home modifications', 'Specialist Disability Accommodation (SDA)'],
+];
+$cats = array_values($serviceCategoriesRaw);
+$catNames = array_keys($serviceCategoriesRaw);
+function sd_merge(array $cats, array $indices): array {
+    $items = [];
+    foreach ($indices as $i) $items = array_merge($items, $cats[$i]);
+    return $items;
+}
 $serviceGroups = [
-    ['Personal & Nursing Care', ['Personal care', 'Medication assistance', 'Overnight support', 'High-intensity personal care', 'Community nursing care']],
-    ['Accommodation & Living Supports', ['Supported Independent Living (SIL)', 'Individualised Living Options (ILO)', 'Short Term Accommodation (STA) / respite', 'Medium Term Accommodation (MTA)', 'Group / shared living support']],
-    ['Household Tasks', ['House cleaning and household tasks', 'Meal preparation', 'Yard maintenance and gardening', 'Tenancy and accommodation assistance', 'Household management']],
-    ['Community Participation', ['One-to-one community access', 'Group and centre-based activities', 'Social and recreation activities', 'Cultural, religious and civic participation', 'Supported holidays and camps', 'Innovative community participation', 'Volunteering and community groups']],
-    ['Transport', ['Transport to activities and appointments', 'Recurring transport allowance', 'Activity-based transport', 'Specialised transport']],
-    ['Consumables', ['Continence products', 'Low-cost assistive technology', 'Home enteral nutrition (HEN)', 'Interpreting and translation', 'Assistance animal upkeep']],
-    ['Support Coordination', ['Support Connection (Level 1)', 'Support Coordination (Level 2)', 'Specialist Support Coordination (Level 3)', 'Psychosocial Recovery Coaching']],
-    ['Capacity Building — Daily Living', ['Housing search and matching', 'Tenancy skills and sustainment', 'Skill-building community access', 'Life transition planning and mentoring', 'Group skills development', 'Skill-building camps and classes']],
-    ['Employment & Education Supports', ['School Leaver Employment Supports (SLES)', 'Employment assessment and counselling', 'Supported employment', 'Job coaching and workplace assistance', 'Higher education and training support']],
-    ['Behaviour & Allied Health', ['Specialist Positive Behaviour Support', 'Behaviour support implementation', 'Social skills and relationship development', 'Dietitian', 'Exercise physiology', 'Personal training']],
-    ['Life & Plan Skills', ['Transition to further education', 'Study and learning skills', 'Plan management', 'Self-management training', 'Financial and organisational skills']],
-    ['Therapeutic Supports', ['Occupational therapy', 'Physiotherapy', 'Speech pathology', 'Psychology', 'Social work', 'Counselling', 'Podiatry', 'Music therapy and art therapy', 'Therapy assistants', 'Early Childhood Intervention']],
-    ['Training & Assessments', ['Assistive technology assessment and training', 'Specialised driver training', 'Hearing services and audiology', 'Vision and orientation & mobility', 'Daily living and life skills development', 'Training for carers and parents', 'Assistance animal training and assessment', 'Nursing training for support workers']],
-    ['Assistive Technology & Equipment', ['Mobility equipment', 'Personal care and safety equipment', 'Communication and information equipment', 'Vision equipment', 'Hearing equipment', 'Household task equipment', 'Recreation equipment', 'Customised prosthetics and orthotics', 'Vehicle modifications', 'AT repairs, maintenance, rental and trial', 'Assistance animals']],
-    ['Home Modifications & SDA', ['Minor home modifications', 'Complex home modifications', 'Specialist Disability Accommodation (SDA)']],
+    ['Daily Living & Accommodation', sd_merge($cats, [0, 1, 2])],
+    ['Community & Consumables', sd_merge($cats, [3, 4, 5])],
+    ['Coordination, Skills & Employment', sd_merge($cats, [6, 7, 8, 10])],
+    ['Therapy, Equipment & Home', sd_merge($cats, [9, 11, 12, 13, 14])],
 ];
 $id = sd_get_or_create_tab('service', 'Service', 'NDIS, aged care, allied health, and more');
 update_field('columns', sd_columns($serviceGroups, 'sd_real_service_url'), $id);

@@ -104,7 +104,7 @@ export default function MegaMenu() {
             </div>
 
             <div className="mega-columns-wrap">
-              <div className="mega-columns" style={{ gridTemplateColumns: `repeat(${activeTab.columns.length}, minmax(0, 1fr))` }}>
+              <div className="mega-columns" style={{ gridTemplateColumns: `repeat(${Math.min(activeTab.columns.length, 4)}, minmax(0, 1fr))` }}>
                 {activeTab.columns.map((col, ci) => (
                   <div key={ci} className="mega-column">
                     <div className="mega-group">
