@@ -5,6 +5,7 @@ import { listProviders, type ProviderRow } from '../../api/providerResources';
 import { useMatchModal } from '../../context/MatchModalContext';
 import { PublicHeader, PublicFooter } from '../public/PublicLayout';
 import WordPressTemplate from '../../components/wordpress/WordPressTemplate';
+import PhotoSlot from '../../components/PhotoSlot';
 import NotFound from './NotFound';
 import type { CPTRouteConfig } from '../../lib/cptRouteConfig';
 import './WordPressCPTPage.css';
@@ -46,6 +47,7 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
   const fundingInfo = typeof content?.meta.funding_info === 'string' ? content.meta.funding_info : '';
   const faqs = content ? safeParseJson<FAQItem[]>(content.meta.faq_json, []) : [];
   const hasRelatedProviders = config.showRelatedProviders && providers.length > 0;
+  const isServicePage = config.pathPrefix === 'services';
 
   // Real TOC — only lists sections that actually have content to show.
   // A link to an empty section would be a dead anchor, which is worse
@@ -65,7 +67,54 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
       <PublicHeader />
 
       {!loading && !error && content ? (
-        <div className="wp-cpt-body">
+        <>
+          {isServicePage && (
+            <section className="wp-service-hero" aria-labelledby="wp-service-hero-title">
+              <div className="wp-service-breadcrumb" aria-label="Breadcrumb">
+                <Link to="/">Home</Link>
+                <span aria-hidden="true">›</span>
+                <Link to="/services">Services</Link>
+                <span aria-hidden="true">›</span>
+                <strong>{content.title}</strong>
+              </div>
+
+              <div className="wp-service-hero-card">
+                <div className="wp-service-hero-photo">
+                  <PhotoSlot src="/images/service-hero.jpg" alt={`Support worker providing ${content.title}`} variant="care" />
+                </div>
+                <div className="wp-service-hero-overlay" />
+                <div className="wp-service-hero-grid">
+                  <div className="wp-service-hero-copy">
+                    <span className="wp-service-hero-eyebrow">
+                      <span className="wp-service-hero-rule" />
+                      Verified care · Australia wide
+                    </span>
+                    <h1 id="wp-service-hero-title">Find {content.title.toLowerCase()} providers who are taking clients</h1>
+                    <p>
+                      Compare verified {content.title.toLowerCase()} providers, check availability,
+                      and send one request to get matched with the right support.
+                    </p>
+                  </div>
+
+                  <div className="wp-service-hero-panel">
+                    <h2>For {content.title.toLowerCase()}</h2>
+                    <ul>
+                      <li>Verified provider listings</li>
+                      <li>NDIS and aged care support</li>
+                      <li>Free, no obligation</li>
+                      <li>One request, providers respond</li>
+                    </ul>
+                    <button className="btn-gradient" onClick={openMatchModal}>
+                      Find providers →
+                    </button>
+                    <p>One minute to send, and it costs nothing.</p>
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+
+          <div className="wp-cpt-body">
           <aside className="wp-cpt-toc">
             <p className="wp-cpt-toc-title">On this page</p>
             <div className="wp-cpt-toc-list">
@@ -77,13 +126,15 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
 
           <main className="wp-cpt-main">
             <WordPressTemplate loading={loading} error={error} content={content}>
-              <nav className="wp-cpt-breadcrumb" aria-label="Breadcrumb">
-                <Link to="/">Home</Link>
-                <span aria-hidden="true"> / </span>
-                <Link to={`/${config.pathPrefix}`} style={{ textTransform: 'capitalize' }}>{config.pathPrefix}</Link>
-                <span aria-hidden="true"> / </span>
-                <span>{content.title}</span>
-              </nav>
+              {!isServicePage && (
+                <nav className="wp-cpt-breadcrumb" aria-label="Breadcrumb">
+                  <Link to="/">Home</Link>
+                  <span aria-hidden="true"> / </span>
+                  <Link to={`/${config.pathPrefix}`} style={{ textTransform: 'capitalize' }}>{config.pathPrefix}</Link>
+                  <span aria-hidden="true"> / </span>
+                  <span>{content.title}</span>
+                </nav>
+              )}
 
               <div id="wp-cpt-overview" />
 
@@ -135,7 +186,8 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
               </section>
             </WordPressTemplate>
           </main>
-        </div>
+          </div>
+        </>
       ) : (
         <WordPressTemplate loading={loading} error={error} content={content} />
       )}
