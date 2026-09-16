@@ -119,7 +119,18 @@
   transform: translateY(-1px);
 }
 
-html { --accessibility-scale: 1; }
+html {
+  --accessibility-scale: 1;
+  font-size: calc(100% * var(--accessibility-scale));
+}
+
+#root {
+  zoom: var(--accessibility-scale);
+}
+
+#root .accessibility-toolbar {
+  zoom: calc(1 / var(--accessibility-scale));
+}
 
 body.a11y-grayscale,
 body.a11y-grayscale * {
@@ -161,10 +172,6 @@ body.a11y-reduced-motion *::after {
   animation-iteration-count: 1 !important;
   transition-duration: 0.01ms !important;
   scroll-behavior: auto !important;
-}
-
-html, body {
-  font-size: calc(15px * var(--accessibility-scale));
 }
 
 body,
