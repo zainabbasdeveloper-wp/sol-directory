@@ -82,16 +82,149 @@ add_action('acf/init', function () {
     // --- Service ---
     acf_add_local_field_group([
         'key' => 'group_service_fields',
-        'title' => 'Service Details',
+        'title' => 'Service Information',
         'fields' => [
+            ['key' => 'field_service_overview_heading', 'label' => 'Overview Heading', 'name' => 'overview_heading', 'type' => 'text'],
+            ['key' => 'field_service_overview_content', 'label' => 'Overview Content', 'name' => 'overview_content', 'type' => 'textarea', 'rows' => 4],
+            ['key' => 'field_service_who_for', 'label' => 'Who Is This Service For?', 'name' => 'who_for', 'type' => 'textarea', 'rows' => 3],
             ['key' => 'field_service_eligibility', 'label' => 'Eligibility', 'name' => 'eligibility', 'type' => 'textarea', 'rows' => 3],
-            ['key' => 'field_service_funding_info', 'label' => 'Funding Info', 'name' => 'funding_info', 'type' => 'textarea', 'rows' => 3],
+            ['key' => 'field_service_funding_info', 'label' => 'Funding Options', 'name' => 'funding_info', 'type' => 'textarea', 'rows' => 3],
+            ['key' => 'field_service_plan_mgmt', 'label' => 'Plan Management Information', 'name' => 'plan_management_info', 'type' => 'textarea', 'rows' => 2],
+            ['key' => 'field_service_availability', 'label' => 'Availability', 'name' => 'availability', 'type' => 'text', 'instructions' => 'e.g. "Seven days a week"'],
+            ['key' => 'field_service_wait_time', 'label' => 'Typical Wait Time', 'name' => 'wait_time', 'type' => 'text', 'instructions' => 'e.g. "1-2 weeks" — an editorial estimate, not a live figure.'],
+            ['key' => 'field_service_typical_cost', 'label' => 'Typical Cost', 'name' => 'typical_cost', 'type' => 'text'],
+            ['key' => 'field_service_how_to_pay', 'label' => 'How to Pay', 'name' => 'how_to_pay', 'type' => 'text', 'instructions' => 'Short sentence, e.g. "Funding options include NDIS Assistive Technology. Eligibility depends on your assessment and plan."'],
+            ['key' => 'field_service_hours', 'label' => 'Typical Hours', 'name' => 'hours', 'type' => 'text'],
+            ['key' => 'field_service_registration_info', 'label' => 'Registration Information', 'name' => 'registration_info', 'type' => 'textarea', 'rows' => 2],
             [
                 'key' => 'field_service_faq', 'label' => 'FAQ', 'name' => 'faq_repeater', 'type' => 'repeater',
                 'layout' => 'block', 'button_label' => 'Add FAQ item',
                 'sub_fields' => [
                     ['key' => 'field_faq_q', 'label' => 'Question', 'name' => 'question', 'type' => 'text'],
                     ['key' => 'field_faq_a', 'label' => 'Answer', 'name' => 'answer', 'type' => 'textarea', 'rows' => 2],
+                ],
+            ],
+        ],
+        'location' => [[['param' => 'post_type', 'operator' => '==', 'value' => 'service']]],
+    ]);
+
+    // --- Service Hero ---
+    acf_add_local_field_group([
+        'key' => 'group_service_hero_fields',
+        'title' => 'Service Hero',
+        'fields' => [
+            ['key' => 'field_sh_eyebrow', 'label' => 'Hero Eyebrow', 'name' => 'hero_eyebrow', 'type' => 'text', 'instructions' => 'Small label above the headline, e.g. the service category name.'],
+            ['key' => 'field_sh_headline', 'label' => 'Hero Headline', 'name' => 'hero_headline', 'type' => 'text', 'instructions' => 'Leave blank to use the post title.'],
+            ['key' => 'field_sh_description', 'label' => 'Hero Description', 'name' => 'hero_description', 'type' => 'textarea', 'rows' => 2, 'instructions' => 'Leave blank to use the excerpt.'],
+            ['key' => 'field_sh_bg_image', 'label' => 'Hero Background Image', 'name' => 'hero_background_image', 'type' => 'image', 'return_format' => 'url', 'instructions' => 'Leave blank to use the featured image.'],
+            ['key' => 'field_sh_cta_label', 'label' => 'Hero CTA Label', 'name' => 'hero_cta_label', 'type' => 'text'],
+            ['key' => 'field_sh_cta_url', 'label' => 'Hero CTA URL/Action', 'name' => 'hero_cta_url', 'type' => 'text', 'instructions' => "A path/URL, or an action key like 'get_matched' for the frontend to interpret as opening an app flow instead of navigating."],
+            [
+                'key' => 'field_sh_stats', 'label' => 'Hero Stats', 'name' => 'hero_stats_repeater', 'type' => 'repeater', 'layout' => 'table',
+                'instructions' => 'Editorial stats only — real provider counts/response times must come from the application, not typed in here.',
+                'sub_fields' => [
+                    ['key' => 'field_sh_stat_label', 'label' => 'Label', 'name' => 'label', 'type' => 'text'],
+                    ['key' => 'field_sh_stat_value', 'label' => 'Value', 'name' => 'value', 'type' => 'text'],
+                    ['key' => 'field_sh_stat_desc', 'label' => 'Description', 'name' => 'description', 'type' => 'text'],
+                ],
+            ],
+            [
+                'key' => 'field_sh_summary_card', 'label' => 'Hero Summary Card', 'name' => 'hero_summary_card', 'type' => 'group',
+                'sub_fields' => [
+                    ['key' => 'field_sh_card_title', 'label' => 'Title', 'name' => 'title', 'type' => 'text'],
+                    ['key' => 'field_sh_card_funding_text', 'label' => 'Funding Text', 'name' => 'funding_text', 'type' => 'text'],
+                    ['key' => 'field_sh_card_availability_text', 'label' => 'Availability Text', 'name' => 'availability_text', 'type' => 'text'],
+                    ['key' => 'field_sh_card_response_text', 'label' => 'Response Text', 'name' => 'response_text', 'type' => 'text'],
+                    ['key' => 'field_sh_card_cta_label', 'label' => 'CTA Label', 'name' => 'cta_label', 'type' => 'text'],
+                    ['key' => 'field_sh_card_cta_url', 'label' => 'CTA URL/Action', 'name' => 'cta_url', 'type' => 'text'],
+                ],
+            ],
+        ],
+        'location' => [[['param' => 'post_type', 'operator' => '==', 'value' => 'service']]],
+    ]);
+
+    // --- Provider Finder Configuration (config only — real providers
+    // always come from the application database, never from WP) ---
+    acf_add_local_field_group([
+        'key' => 'group_service_finder_fields',
+        'title' => 'Provider Finder Configuration',
+        'fields' => [
+            ['key' => 'field_pf_heading', 'label' => 'Finder Heading', 'name' => 'finder_heading', 'type' => 'text'],
+            ['key' => 'field_pf_description', 'label' => 'Finder Description', 'name' => 'finder_description', 'type' => 'text'],
+            ['key' => 'field_pf_default_location', 'label' => 'Default Location', 'name' => 'finder_default_location', 'type' => 'text'],
+            ['key' => 'field_pf_cta_label', 'label' => 'Finder CTA Label', 'name' => 'finder_cta_label', 'type' => 'text'],
+            ['key' => 'field_pf_count', 'label' => 'Number of Providers to Display', 'name' => 'finder_count', 'type' => 'number', 'default_value' => 6],
+            ['key' => 'field_pf_sort', 'label' => 'Sort Option', 'name' => 'finder_sort', 'type' => 'select', 'choices' => ['relevance' => 'Relevance', 'distance' => 'Distance', 'recent_activity' => 'Recent Activity'], 'default_value' => 'relevance'],
+            ['key' => 'field_pf_show_filters', 'label' => 'Show Filters', 'name' => 'finder_show_filters', 'type' => 'true_false', 'default_value' => 1, 'ui' => 1],
+            ['key' => 'field_pf_show_map', 'label' => 'Show Map', 'name' => 'finder_show_map', 'type' => 'true_false', 'default_value' => 1, 'ui' => 1],
+            ['key' => 'field_pf_show_count', 'label' => 'Show Provider Count', 'name' => 'finder_show_count', 'type' => 'true_false', 'default_value' => 1, 'ui' => 1],
+        ],
+        'location' => [[['param' => 'post_type', 'operator' => '==', 'value' => 'service']]],
+    ]);
+
+    // --- CTA (reusable pattern: action key takes priority over a
+    // plain URL, so the frontend can open an app flow/modal) ---
+    acf_add_local_field_group([
+        'key' => 'group_service_cta_fields',
+        'title' => 'CTA Section',
+        'fields' => [
+            ['key' => 'field_cta_heading', 'label' => 'CTA Heading', 'name' => 'cta_heading', 'type' => 'text'],
+            ['key' => 'field_cta_description', 'label' => 'CTA Description', 'name' => 'cta_description', 'type' => 'text'],
+            ['key' => 'field_cta_primary_label', 'label' => 'Primary Button Label', 'name' => 'cta_primary_label', 'type' => 'text'],
+            ['key' => 'field_cta_primary_action', 'label' => 'Primary Button URL/Action', 'name' => 'cta_primary_action', 'type' => 'text'],
+            ['key' => 'field_cta_secondary_label', 'label' => 'Secondary Button Label', 'name' => 'cta_secondary_label', 'type' => 'text'],
+            ['key' => 'field_cta_secondary_action', 'label' => 'Secondary Button URL/Action', 'name' => 'cta_secondary_action', 'type' => 'text'],
+        ],
+        'location' => [[['param' => 'post_type', 'operator' => '==', 'value' => 'service']]],
+    ]);
+
+    // --- Related Services (real relationship field, not typed URLs) ---
+    acf_add_local_field_group([
+        'key' => 'group_service_related_fields',
+        'title' => 'Related Services',
+        'fields' => [
+            [
+                'key' => 'field_related_services', 'label' => 'Related Services', 'name' => 'related_services',
+                'type' => 'post_object', 'post_type' => ['service'], 'multiple' => 1, 'return_format' => 'id',
+                'instructions' => 'Select existing Service posts — the frontend resolves each into its real title, slug, and featured image, so nothing here goes stale if a related service is renamed.',
+            ],
+        ],
+        'location' => [[['param' => 'post_type', 'operator' => '==', 'value' => 'service']]],
+    ]);
+
+    // --- Regulations & Compliance ---
+    acf_add_local_field_group([
+        'key' => 'group_service_regulations_fields',
+        'title' => 'Regulations & Compliance',
+        'fields' => [
+            ['key' => 'field_reg_heading', 'label' => 'Section Heading', 'name' => 'regulations_heading', 'type' => 'text'],
+            ['key' => 'field_reg_intro', 'label' => 'Introduction', 'name' => 'regulations_intro', 'type' => 'textarea', 'rows' => 2],
+            [
+                'key' => 'field_reg_cards', 'label' => 'Regulator Cards', 'name' => 'regulator_cards_repeater', 'type' => 'repeater', 'layout' => 'block',
+                'sub_fields' => [
+                    ['key' => 'field_reg_card_title', 'label' => 'Title', 'name' => 'title', 'type' => 'text'],
+                    ['key' => 'field_reg_card_desc', 'label' => 'Description', 'name' => 'description', 'type' => 'text'],
+                    ['key' => 'field_reg_card_phone', 'label' => 'Phone', 'name' => 'phone', 'type' => 'text'],
+                    ['key' => 'field_reg_card_website', 'label' => 'Website', 'name' => 'website', 'type' => 'text'],
+                    ['key' => 'field_reg_card_cta', 'label' => 'CTA Label', 'name' => 'cta', 'type' => 'text'],
+                ],
+            ],
+        ],
+        'location' => [[['param' => 'post_type', 'operator' => '==', 'value' => 'service']]],
+    ]);
+
+    // --- Credentials / Verification (editorial explanation of what
+    // to check — the actual verification STATUS of any provider must
+    // still come from the application, never asserted here) ---
+    acf_add_local_field_group([
+        'key' => 'group_service_credentials_fields',
+        'title' => 'Credentials / Verification Guidance',
+        'fields' => [
+            [
+                'key' => 'field_cred_items', 'label' => 'Credential Checks', 'name' => 'credentials_repeater', 'type' => 'repeater', 'layout' => 'block',
+                'sub_fields' => [
+                    ['key' => 'field_cred_title', 'label' => 'Title', 'name' => 'title', 'type' => 'text'],
+                    ['key' => 'field_cred_desc', 'label' => 'Description', 'name' => 'description', 'type' => 'textarea', 'rows' => 2],
                 ],
             ],
         ],
@@ -229,6 +362,142 @@ add_action('acf/init', function () {
         ],
         'location' => [[['param' => 'post_type', 'operator' => '==', 'value' => 'service_area_page']]],
     ]);
+
+    // --- Service Area Page — Extended Details ---
+    // A second, separate field group (not crammed into the first)
+    // covering the remaining document sections: Provider Finder
+    // config, Cost & Payment, What To Expect, Regulations &
+    // Compliance, Response Times, Local Information, CTA, and
+    // Related Services. Kept logically grouped per the document's
+    // own explicit instruction not to build one giant flat list.
+    acf_add_local_field_group([
+        'key' => 'group_service_area_page_extended',
+        'title' => 'Service Area Page — Extended Details',
+        'fields' => [
+            // --- Provider Finder configuration (Part 14) — the
+            // PROVIDERS THEMSELVES still come from the real
+            // application database via listProviders(), never from
+            // WordPress. These fields only control how that real
+            // finder displays.
+            [
+                'key' => 'field_sap_finder', 'label' => 'Provider Finder', 'name' => 'finder_group', 'type' => 'group',
+                'sub_fields' => [
+                    ['key' => 'field_finder_heading', 'label' => 'Heading', 'name' => 'heading', 'type' => 'text'],
+                    ['key' => 'field_finder_description', 'label' => 'Description', 'name' => 'description', 'type' => 'text'],
+                    ['key' => 'field_finder_count', 'label' => 'Number of Providers to Display', 'name' => 'display_count', 'type' => 'number', 'default_value' => 6],
+                    ['key' => 'field_finder_sort', 'label' => 'Sort Option', 'name' => 'sort', 'type' => 'select', 'choices' => ['relevance' => 'Relevance', 'distance' => 'Distance', 'recent' => 'Recently Active'], 'default_value' => 'relevance'],
+                    ['key' => 'field_finder_show_filters', 'label' => 'Show Filters', 'name' => 'show_filters', 'type' => 'true_false', 'default_value' => 1, 'ui' => 1],
+                    ['key' => 'field_finder_show_map', 'label' => 'Show Map', 'name' => 'show_map', 'type' => 'true_false', 'default_value' => 1, 'ui' => 1],
+                    ['key' => 'field_finder_show_count', 'label' => 'Show Provider Count', 'name' => 'show_count', 'type' => 'true_false', 'default_value' => 1, 'ui' => 1],
+                ],
+            ],
+
+            // --- Cost & Payment (Part 17) ---
+            [
+                'key' => 'field_sap_cost', 'label' => 'Cost & Payment', 'name' => 'cost_group', 'type' => 'group',
+                'sub_fields' => [
+                    ['key' => 'field_cost_heading', 'label' => 'Heading', 'name' => 'heading', 'type' => 'text'],
+                    ['key' => 'field_cost_intro', 'label' => 'Introduction', 'name' => 'intro', 'type' => 'textarea', 'rows' => 2],
+                    ['key' => 'field_cost_pricing', 'label' => 'Pricing Information', 'name' => 'pricing_info', 'type' => 'wysiwyg'],
+                    ['key' => 'field_cost_ndis', 'label' => 'NDIS Information', 'name' => 'ndis_info', 'type' => 'textarea', 'rows' => 2],
+                    ['key' => 'field_cost_private', 'label' => 'Private Payment Information', 'name' => 'private_info', 'type' => 'textarea', 'rows' => 2],
+                    ['key' => 'field_cost_aged_care', 'label' => 'Aged Care Information', 'name' => 'aged_care_info', 'type' => 'textarea', 'rows' => 2],
+                    ['key' => 'field_cost_dva', 'label' => 'DVA Information', 'name' => 'dva_info', 'type' => 'textarea', 'rows' => 2],
+                    ['key' => 'field_cost_notes', 'label' => 'Additional Notes', 'name' => 'notes', 'type' => 'textarea', 'rows' => 2],
+                ],
+            ],
+
+            // --- What To Expect (Part 18) ---
+            [
+                'key' => 'field_sap_expect', 'label' => 'What To Expect', 'name' => 'expect_group', 'type' => 'group',
+                'sub_fields' => [
+                    ['key' => 'field_expect_heading', 'label' => 'Heading', 'name' => 'heading', 'type' => 'text'],
+                    ['key' => 'field_expect_intro', 'label' => 'Introduction', 'name' => 'intro', 'type' => 'textarea', 'rows' => 2],
+                    [
+                        'key' => 'field_expect_steps', 'label' => 'Steps', 'name' => 'steps', 'type' => 'repeater', 'layout' => 'block',
+                        'sub_fields' => [
+                            ['key' => 'field_expect_step_number', 'label' => 'Step Number', 'name' => 'number', 'type' => 'number'],
+                            ['key' => 'field_expect_step_title', 'label' => 'Title', 'name' => 'title', 'type' => 'text'],
+                            ['key' => 'field_expect_step_desc', 'label' => 'Description', 'name' => 'description', 'type' => 'textarea', 'rows' => 2],
+                        ],
+                    ],
+                ],
+            ],
+
+            // --- Regulations & Compliance (Part 21) ---
+            [
+                'key' => 'field_sap_regs', 'label' => 'Regulations & Compliance', 'name' => 'regulations_group', 'type' => 'group',
+                'sub_fields' => [
+                    ['key' => 'field_regs_heading', 'label' => 'Heading', 'name' => 'heading', 'type' => 'text'],
+                    ['key' => 'field_regs_intro', 'label' => 'Introduction', 'name' => 'intro', 'type' => 'textarea', 'rows' => 2],
+                    [
+                        'key' => 'field_regs_cards', 'label' => 'Regulator Cards', 'name' => 'cards', 'type' => 'repeater', 'layout' => 'block',
+                        'sub_fields' => [
+                            ['key' => 'field_regs_card_title', 'label' => 'Title', 'name' => 'title', 'type' => 'text'],
+                            ['key' => 'field_regs_card_desc', 'label' => 'Description', 'name' => 'description', 'type' => 'textarea', 'rows' => 2],
+                            ['key' => 'field_regs_card_phone', 'label' => 'Phone', 'name' => 'phone', 'type' => 'text'],
+                            ['key' => 'field_regs_card_website', 'label' => 'Website', 'name' => 'website', 'type' => 'text'],
+                            ['key' => 'field_regs_card_cta', 'label' => 'CTA Label', 'name' => 'cta_label', 'type' => 'text'],
+                        ],
+                    ],
+                ],
+            ],
+
+            // --- Response Times By State (Part 26) ---
+            [
+                'key' => 'field_sap_response_times', 'label' => 'Response Times By State', 'name' => 'response_times', 'type' => 'repeater', 'layout' => 'table',
+                'sub_fields' => [
+                    ['key' => 'field_rt_state', 'label' => 'State', 'name' => 'state', 'type' => 'text'],
+                    ['key' => 'field_rt_minutes', 'label' => 'Response Time (minutes)', 'name' => 'minutes', 'type' => 'number'],
+                    ['key' => 'field_rt_description', 'label' => 'Description', 'name' => 'description', 'type' => 'text'],
+                ],
+            ],
+
+            // --- Local Information (Part 22) — NOT hardcoded to
+            // Sydney; this is per-page, so a Melbourne/Brisbane/etc.
+            // Service Area Page fills in its own values here.
+            [
+                'key' => 'field_sap_local', 'label' => 'Local Information', 'name' => 'local_group', 'type' => 'group',
+                'sub_fields' => [
+                    ['key' => 'field_local_population', 'label' => 'Population', 'name' => 'population', 'type' => 'text'],
+                    ['key' => 'field_local_income', 'label' => 'Median Personal Income', 'name' => 'median_income', 'type' => 'text'],
+                    ['key' => 'field_local_hospital', 'label' => 'Nearest Hospital', 'name' => 'nearest_hospital', 'type' => 'text'],
+                    ['key' => 'field_local_transport', 'label' => 'Public Transport', 'name' => 'public_transport', 'type' => 'text'],
+                    ['key' => 'field_local_community', 'label' => 'Community Information', 'name' => 'community_info', 'type' => 'textarea', 'rows' => 2],
+                    ['key' => 'field_local_postcode', 'label' => 'Postcode', 'name' => 'postcode', 'type' => 'text'],
+                    ['key' => 'field_local_data_date', 'label' => 'Data Date/Source', 'name' => 'data_date', 'type' => 'text'],
+                ],
+            ],
+
+            // --- CTA (Part 27) — same action-key pattern already
+            // proven on the Mega Menu Tab CTA, so 'get_matched' opens
+            // the real app modal instead of needing a hardcoded URL.
+            [
+                'key' => 'field_sap_cta', 'label' => 'Page CTA', 'name' => 'cta_group', 'type' => 'group',
+                'sub_fields' => [
+                    ['key' => 'field_sap_cta_heading', 'label' => 'CTA Heading', 'name' => 'heading', 'type' => 'text'],
+                    ['key' => 'field_sap_cta_desc', 'label' => 'CTA Description', 'name' => 'description', 'type' => 'text'],
+                    ['key' => 'field_sap_cta_primary_label', 'label' => 'Primary Button Label', 'name' => 'primary_label', 'type' => 'text'],
+                    ['key' => 'field_sap_cta_primary_action', 'label' => 'Primary Button Action (e.g. get_matched)', 'name' => 'primary_action', 'type' => 'text'],
+                    ['key' => 'field_sap_cta_primary_url', 'label' => 'Primary Button URL (if not using an action)', 'name' => 'primary_url', 'type' => 'text'],
+                    ['key' => 'field_sap_cta_secondary_label', 'label' => 'Secondary Button Label', 'name' => 'secondary_label', 'type' => 'text'],
+                    ['key' => 'field_sap_cta_secondary_action', 'label' => 'Secondary Button Action', 'name' => 'secondary_action', 'type' => 'text'],
+                    ['key' => 'field_sap_cta_secondary_url', 'label' => 'Secondary Button URL', 'name' => 'secondary_url', 'type' => 'text'],
+                ],
+            ],
+
+            // --- Related Services (Part 28) — a real ACF
+            // relationship to OTHER 'service' posts, so an admin
+            // picks existing services rather than retyping URLs.
+            [
+                'key' => 'field_sap_related', 'label' => 'Related Services', 'name' => 'related_services',
+                'type' => 'relationship', 'post_type' => ['service'],
+                'filters' => ['search'], 'return_format' => 'id',
+                'instructions' => 'Pick existing Service posts — the frontend receives their real title, slug, and featured image, not manually typed values.',
+            ],
+        ],
+        'location' => [[['param' => 'post_type', 'operator' => '==', 'value' => 'service_area_page']]],
+    ]);
 });
 
 /**
@@ -249,7 +518,15 @@ add_action('acf/init', function () {
  */
 function soldirectory_inject_acf_meta(array $response_data, WP_Post $post): array {
     $simple_fields = [
-        'service' => ['eligibility', 'funding_info'],
+        'service' => [
+            'overview_heading', 'overview_content', 'who_for', 'eligibility', 'funding_info',
+            'plan_management_info', 'availability', 'wait_time', 'typical_cost', 'how_to_pay', 'hours', 'registration_info',
+            'hero_eyebrow', 'hero_headline', 'hero_description', 'hero_background_image', 'hero_cta_label', 'hero_cta_url',
+            'finder_heading', 'finder_description', 'finder_default_location', 'finder_cta_label',
+            'finder_count', 'finder_sort', 'finder_show_filters', 'finder_show_map', 'finder_show_count',
+            'cta_heading', 'cta_description', 'cta_primary_label', 'cta_primary_action', 'cta_secondary_label', 'cta_secondary_action',
+            'regulations_heading', 'regulations_intro',
+        ],
         'location' => ['state', 'population', 'key_stats'],
         'guide' => ['reading_time'],
         'service_area_page' => ['service_name', 'suburb', 'state', 'intro_paragraph'],
@@ -261,8 +538,21 @@ function soldirectory_inject_acf_meta(array $response_data, WP_Post $post): arra
         }
     }
 
+    // hero_summary_card is a single group object (not a repeater) —
+    // passed through as-is since its sub-field names already match
+    // what the frontend expects.
+    if ($post->post_type === 'service') {
+        $card = get_field('hero_summary_card', $post->ID);
+        if ($card) $response_data['meta']['hero_summary_card'] = $card;
+    }
+
     $repeater_fields = [
-        'service' => ['faq_repeater' => 'faq_json'],
+        'service' => [
+            'faq_repeater' => 'faq_json',
+            'hero_stats_repeater' => 'hero_stats_json',
+            'regulator_cards_repeater' => 'regulator_cards_json',
+            'credentials_repeater' => 'credentials_json',
+        ],
         'service_area_page' => [
             'faq_repeater' => 'faq_json',
             'suburb_facts_repeater' => 'suburb_facts_json',
@@ -291,6 +581,30 @@ function soldirectory_inject_acf_meta(array $response_data, WP_Post $post): arra
     // matching the original fixture data exactly. Getting this wrong
     // silently produces a page that fails to render these sections,
     // rather than an error.
+    // related_services: resolve raw post IDs into full objects
+    // (id, title, slug, featuredImage, url) so the frontend never
+    // has to make a second request or risk a stale link if a related
+    // service is later renamed — matches the document's explicit
+    // spec for this field.
+    if ($post->post_type === 'service') {
+        $relatedIds = get_field('related_services', $post->ID);
+        if ($relatedIds) {
+            $resolved = array_map(function ($id) {
+                $p = get_post($id);
+                if (!$p) return null;
+                $thumbId = get_post_thumbnail_id($id);
+                return [
+                    'id' => $p->ID,
+                    'title' => $p->post_title,
+                    'slug' => $p->post_name,
+                    'featuredImage' => $thumbId ? wp_get_attachment_url($thumbId) : null,
+                    'url' => '/services/' . $p->post_name,
+                ];
+            }, $relatedIds);
+            $response_data['meta']['related_services'] = array_values(array_filter($resolved));
+        }
+    }
+
     if ($post->post_type === 'service_area_page') {
         $glance = get_field('glance_repeater', $post->ID);
         if ($glance) {
