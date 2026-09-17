@@ -17,9 +17,11 @@
  */
 
 if (!defined('ABSPATH')) exit;
-if (!function_exists('acf_add_local_field_group')) return; // SCF/ACF not active — skip gracefully rather than fatal-erroring
 
 add_action('acf/init', function () {
+    // SCF/ACF may load after this plugin. Check here, after its init hook,
+    // rather than during plugin file loading when the API may not exist yet.
+    if (!function_exists('acf_add_local_field_group')) return;
 
     // --- Mega Menu Tab ---
     // Post title = tab label. Native "Order" (page-attributes,
@@ -517,6 +519,8 @@ add_action('acf/init', function () {
  * through ACF/SCF's UI needs no frontend change either.
  */
 function soldirectory_inject_acf_meta(array $response_data, WP_Post $post): array {
+    if (!function_exists('get_field')) return $response_data;
+
     $simple_fields = [
         'service' => [
             'overview_heading', 'overview_content', 'who_for', 'eligibility', 'funding_info',
