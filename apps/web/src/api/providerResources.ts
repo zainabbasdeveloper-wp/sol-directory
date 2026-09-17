@@ -55,6 +55,7 @@ export interface FullProviderProfile {
   weeklyCapacityHours: number | null; intakeStatus: string; rosterSize: number | null;
   afterHoursCover: string | null; acceptedFunding: string[]; conditionExperience: string[];
   contactEmail: string | null; location: { lat: number; lng: number } | null;
+  businessAddress: { address?: string; suburb?: string; state?: string; postcode?: string; country?: string } | null;
   plan: string; memberSince: string;
   relatedProviders: { slug: string; name: string; suburbs: string[] }[];
 }

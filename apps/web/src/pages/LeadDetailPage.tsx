@@ -60,7 +60,7 @@ export default function LeadDetailPage() {
 
       {lead.location && (
         <div style={{ marginBottom: 24 }}>
-          <ProviderMap providers={[{ id: lead.id, name: lead.suburb, location: lead.location }]} />
+          <ProviderMap providers={[{ id: lead.id, name: lead.suburb, location: lead.location, suburb: lead.suburb }]} address={lead.suburb} />
         </div>
       )}
 
