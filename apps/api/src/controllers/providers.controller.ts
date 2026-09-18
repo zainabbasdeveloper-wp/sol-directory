@@ -20,8 +20,11 @@ export async function listProviders(req: AuthedRequest, res: Response) {
 
   // Suspended providers never appear in search results — this is
   // the same accountStatus gate the admin suspend/reactivate action
-  // relies on actually meaning something.
-  const filter: Record<string, unknown> = { accountStatus: 'active' };
+  // relies on actually meaning something. listingPaused is the
+  // weekly-capacity-confirmation gate (scripts/weeklyCapacityCheck.ts)
+  // — an unconfirmed provider drops from results the same way, per
+  // the developer brief's "checked, not scraped" requirement.
+  const filter: Record<string, unknown> = { accountStatus: 'active', listingPaused: { $ne: true } };
   if (req.query.suburb) filter.serviceSuburbs = req.query.suburb;
   if (req.query.service) filter.registrationGroups = req.query.service;
   if (req.query.q) {

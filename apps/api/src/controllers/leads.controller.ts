@@ -5,9 +5,15 @@ import Provider from '../models/Provider.js';
 import UnlockLedger from '../models/UnlockLedger.js';
 import PlanConfig from '../models/PlanConfig.js';
 import { geocodeAddress } from '../services/geocoding.service.js';
+import { scoreMatch } from '../services/matching.service.js';
 import LeadView from '../models/LeadView.js';
 import LeadMatch from '../models/LeadMatch.js';
 import { getActiveProviderForUser } from '../utils/getActiveProvider.js';
+
+// Same threshold matchRequests.controller.ts uses to decide a match is
+// genuine — kept in sync so "notified" and "browsable" mean the same
+// thing, just with the notify-side cap removed here.
+const NEARBY_THRESHOLD = 40;
 
 // getActiveProviderForUser is now imported from ../utils/getActiveProvider.js
 // — see that file for why this was extracted during a security audit.
@@ -23,7 +29,10 @@ export async function listLeads(req: AuthedRequest, res: Response) {
   // fields only for the specific leads this provider has actually
   // unlocked — never trust an in-memory flag to decide what to
   // serialize for a lead the query didn't already scope to.
-  const leads = await Lead.find({}).select(MASKED_PROJECTION).lean();
+  // status != draft — a wizard-in-progress enquiry (see the draft
+  // endpoints in matchRequests.controller.ts) is private, incomplete
+  // user data, never a real lead for providers to see.
+  const leads = await Lead.find({ status: { $ne: 'draft' } }).select(MASKED_PROJECTION).lean();
   const unlockedFull = unlockedIds.size
     ? await Lead.find({ _id: { $in: [...unlockedIds] } }).lean()
     : [];
@@ -42,6 +51,44 @@ export async function listLeads(req: AuthedRequest, res: Response) {
       return { ...shaped, viewed: viewedIds.has(String(l._id)) };
     })
   );
+}
+
+// "Browse nearby requests" (developer brief / architecture doc's
+// Referral Marketplace "Browse Requests" screen, Nearby tab) — a paid-
+// only feature distinct from listLeads above. listLeads only ever
+// shows leads this provider was actually auto-notified about (capped
+// at MAX_NOTIFIED_PER_LEAD in matchRequests.controller.ts); this
+// surfaces every OTHER open lead the provider would still score as a
+// genuine match for, so a good-fit lead that missed the notify cap
+// isn't invisible to a paying provider willing to look for it
+// themselves. Free ('starter') providers get nothing here — matches
+// the plan comparison table's "Browse nearby open requests: No/Yes".
+export async function listNearbyLeads(req: AuthedRequest, res: Response) {
+  const provider = await getActiveProviderForUser(req.user!.id);
+  if (!provider) return res.status(403).json({ error: 'No active provider profile for this account' });
+
+  if (provider.plan === 'starter') {
+    return res.status(402).json({ error: 'Browsing nearby requests requires a paid plan', code: 'PLAN_REQUIRED' });
+  }
+  // A paused (unconfirmed capacity) provider shouldn't be discovering
+  // and claiming new work either — they can still see/manage leads
+  // already matched or unlocked (listLeads above), just not browse for
+  // more until they confirm again.
+  if (provider.listingPaused) {
+    return res.status(403).json({ error: 'Confirm your capacity to browse new requests.', code: 'CAPACITY_UNCONFIRMED' });
+  }
+
+  // Only open leads (matched, not yet closed) — dead/closed enquiries
+  // shouldn't show up as something new to browse.
+  const openLeads = await Lead.find({ status: 'matched' }).lean();
+
+  const nearby = openLeads
+    .map((l) => ({ lead: l, result: scoreMatch(l as any, provider as any) }))
+    .filter(({ result }) => result.score >= NEARBY_THRESHOLD)
+    .sort((a, b) => b.result.score - a.result.score)
+    .map(({ lead }) => toMaskedShape(lead));
+
+  res.json(nearby);
 }
 
 // Records a meaningful view — the frontend calls this when a

@@ -8,6 +8,7 @@ import Locations from '../pages/public/Locations';
 import ForProviders from '../pages/public/ForProviders';
 import Login from '../pages/auth/Login';
 import Signup from '../pages/auth/Signup';
+import ConfirmCapacity from '../pages/ConfirmCapacity';
 import Dashboard from '../pages/Dashboard';
 import WorkerDirectory from '../pages/workers/WorkerDirectory';
 import WorkerProfile from '../pages/workers/WorkerProfile';
@@ -113,6 +114,9 @@ export default function AppRoutes() {
 
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
+      {/* Public — the weekly capacity confirmation email link's token
+          IS the credential, same principle as password-reset links. */}
+      <Route path="/confirm-capacity" element={<ConfirmCapacity />} />
 
       {/* Authenticated app */}
       <Route

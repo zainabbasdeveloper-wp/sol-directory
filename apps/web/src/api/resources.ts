@@ -63,12 +63,30 @@ export function listLeads(): Promise<Lead[]> {
   return api.get<Lead[]>('/leads');
 }
 
+// Paid-plan-only — "browse nearby requests" (leads that score as a
+// genuine match but missed the per-enquiry notify cap). Throws
+// ApiError with code PLAN_REQUIRED on a starter plan; callers already
+// handle that same code from unlockLead.
+export function listNearbyLeads(): Promise<Lead[]> {
+  return api.get<Lead[]>('/leads/browse/nearby');
+}
+
 export function unlockLead(id: string): Promise<Lead> {
   // A fresh idempotency key per user action — a retry of the SAME
   // click should reuse it, but that's a UI-level concern (disable
   // the button while in flight) rather than something to fake here.
   const idempotencyKey = crypto.randomUUID();
   return api.post<Lead>(`/leads/${id}/unlock`, undefined, { idempotencyKey });
+}
+
+// --- Capacity confirmation ---
+
+export function confirmCapacityByToken(token: string): Promise<{ confirmed: boolean; providerName?: string }> {
+  return api.post('/capacity/confirm', { token });
+}
+
+export function confirmCapacityNow(): Promise<{ confirmed: boolean; lastCapacityConfirmedAt: string; listingPaused: boolean }> {
+  return api.post('/capacity/confirm-now');
 }
 
 // --- Plans ---

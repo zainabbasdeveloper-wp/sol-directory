@@ -3,6 +3,7 @@ import {
   leadConfirmationTemplate, providerMatchedTemplate, providerResponseTemplate,
   providerLeadNotificationTemplate, adminNotificationTemplate, renderEmailLayout,
   passwordResetTemplate, passwordChangedTemplate, verificationResultTemplate, welcomeTemplate,
+  capacityConfirmationTemplate,
 } from './emailTemplates.js';
 import EmailLog from '../models/EmailLog.js';
 
@@ -98,6 +99,11 @@ export const EmailService = {
 
   async sendProviderLeadNotification(to: string, need: string, suburb: string, dashboardUrl?: string) {
     const { subject, html } = providerLeadNotificationTemplate({ need, suburb, dashboardUrl });
+    return sendMail(to, subject, html);
+  },
+
+  async sendCapacityConfirmation(to: string, providerName: string, confirmUrl: string) {
+    const { subject, html } = capacityConfirmationTemplate({ providerName, confirmUrl });
     return sendMail(to, subject, html);
   },
 
