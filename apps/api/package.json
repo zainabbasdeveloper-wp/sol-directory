@@ -8,8 +8,8 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "seed": "tsx src/seed/seed.ts" ,
-    "db:seed:admin": "tsx src/seed/seedAdminDemo.ts"
-
+    "db:seed:admin": "tsx src/seed/seedAdminDemo.ts",
+    "import:providers": "tsx src/scripts/importScrapedProviders.ts"
   },
   "dependencies": {
     "@soldirectory/shared-types": "*",

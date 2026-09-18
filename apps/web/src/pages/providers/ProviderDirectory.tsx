@@ -93,6 +93,7 @@ export default function ProviderDirectory() {
           {items.map((p) => (
             <button key={p.id} className="pd-card" onClick={() => setOpenId(p.id)}>
               {shortlistedIds.has(p.id) && <span className="pd-shortlisted-badge">✓ Shortlisted</span>}
+              {p.logoUrl && <img className="pd-card-logo" src={p.logoUrl} alt="" />}
               <h3 className="pd-card-name">{p.tradingName || p.legalEntityName}</h3>
               <p className="pd-card-suburbs">{p.serviceSuburbs.join(', ') || 'No suburbs listed'}</p>
               <div className="pd-card-chips">
