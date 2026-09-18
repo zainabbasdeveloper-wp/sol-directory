@@ -1,5 +1,7 @@
 .pp-page { max-width: 720px; margin: 0 auto; }
 .pp-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 28px; }
+.pp-header-identity { display: flex; align-items: center; gap: 14px; }
+.pp-logo { width: 56px; height: 56px; border-radius: 10px; object-fit: contain; background: var(--color-page-bg, #F5F8FC); border: 1px solid var(--color-border, #E8EEF7); flex-shrink: 0; }
 .pp-name { font-size: 26px; font-weight: 700; margin: 0 0 8px; }
 .pp-status-pill { font-size: 12px; font-weight: 700; background: #E4F5EC; color: #177C4B; padding: 4px 10px; border-radius: 100px; }
 .pp-header-actions { display: flex; gap: 10px; flex-wrap: wrap; }

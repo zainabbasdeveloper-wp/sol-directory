@@ -34,6 +34,15 @@ export interface ProviderDoc extends Document {
   // scoreMatch's funding comparison always score 0.
   acceptedFunding: string[];
   conditionExperience: string[];
+  // Spec-requested provider attributes (languages spoken, age groups
+  // served) — not collected anywhere in the onboarding wizard UI yet,
+  // but settable via onboarding data and, more commonly, by the
+  // scraper import script. Free-form string arrays, same convention
+  // as registrationGroups/acceptedFunding/conditionExperience above,
+  // rather than a fixed enum — mirrors how those already-shipped
+  // fields are modeled.
+  languages: string[];
+  ageGroups: string[];
   intakeEmail: string;
   serviceSuburbs: string[];
   // The provider's own physical/business address — distinct from
@@ -81,6 +90,15 @@ export interface ProviderDoc extends Document {
   referralCode: string;
   leadUnlocksUsedThisPeriod: number;
   periodResetsAt?: Date;
+  // WordPress sync (see services/wordpressSync.service.ts). Mongo is
+  // the source of truth for provider data and pushes to a mirrored WP
+  // "provider" post on every onboarding save — wpPostId links the two
+  // records so updates PUT the same post instead of duplicating it.
+  // logoUrl is the one field that flows the OTHER way: content admins
+  // manage the provider's logo in the WordPress Media Library, and
+  // the WP webhook pushes the resulting URL back here.
+  wpPostId?: number;
+  logoUrl?: string;
 }
 
 const onboardingStepSchema = new Schema<OnboardingStepSub>(
@@ -111,6 +129,8 @@ const providerSchema = new Schema<ProviderDoc>(
     registrationGroups: [String],
     acceptedFunding: [String],
     conditionExperience: [String],
+    languages: [String],
+    ageGroups: [String],
     intakeEmail: String,
     serviceSuburbs: [String],
     businessAddress: {
@@ -142,6 +162,8 @@ const providerSchema = new Schema<ProviderDoc>(
     referralCode: { type: String, unique: true, sparse: true, index: true },
     leadUnlocksUsedThisPeriod: { type: Number, default: 0 },
     periodResetsAt: Date,
+    wpPostId: { type: Number, index: true },
+    logoUrl: String,
   },
   { timestamps: true }
 );

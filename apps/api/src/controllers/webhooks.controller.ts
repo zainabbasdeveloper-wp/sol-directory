@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import ContentRevalidation from '../models/ContentRevalidation.js';
+import { pullProviderLogoFromWordPress } from '../services/wordpressSync.service.js';
 
 // WordPress calls this (from a small hook in the custom plugin, on
 // save_post/transition_post_status) whenever content changes.
@@ -18,6 +19,19 @@ export async function receiveWordPressWebhook(req: Request, res: Response) {
   // client-side session cache only needs to know "is anything I have
   // cached now stale," which a single global timestamp answers.
   await ContentRevalidation.findOneAndUpdate({}, { lastChangedAt: new Date() }, { upsert: true });
+
+  // The one WP -> Mongo sync direction: a provider post's logo
+  // (featured image) can be managed directly in wp-admin, and needs
+  // to flow back onto the matching Provider record. Every other
+  // provider field goes the other way (see wordpressSync.service.ts)
+  // and is intentionally ignored here — editing them in WP has no
+  // effect, they'd just get overwritten on the provider's next sync.
+  // Fire-and-forget: a failed pull must never fail this webhook
+  // response (WordPress only waits 2s and doesn't care about the body).
+  const { postId, postType } = req.body as { postId?: number; postType?: string };
+  if (postType === 'provider' && postId) {
+    pullProviderLogoFromWordPress(postId).catch(() => {});
+  }
 
   res.json({ received: true });
 }

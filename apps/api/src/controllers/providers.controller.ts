@@ -12,7 +12,7 @@ const MAX_LIMIT = 50;
 // billing/subscription internals (stripe ids, lead quota usage),
 // onboarding progress, and account-status (an admin concern, not a
 // search-result concern).
-const PUBLIC_PROJECTION = 'legalEntityName tradingName slug abn registrationGroups serviceSuburbs travelRadiusKm weeklyCapacityHours intakeStatus location';
+const PUBLIC_PROJECTION = 'legalEntityName tradingName slug abn registrationGroups serviceSuburbs travelRadiusKm weeklyCapacityHours intakeStatus location logoUrl';
 
 export async function listProviders(req: AuthedRequest, res: Response) {
   const page = Math.max(1, Number(req.query.page) || 1);
@@ -62,6 +62,7 @@ export async function listProviders(req: AuthedRequest, res: Response) {
       weeklyCapacityHours: p.weeklyCapacityHours,
       intakeStatus: p.intakeStatus,
       location: p.location?.coordinates ? { lat: p.location.coordinates[1], lng: p.location.coordinates[0] } : null,
+      logoUrl: p.logoUrl ?? null,
     })),
     page,
     limit,
@@ -91,6 +92,7 @@ export async function getProviderProfile(req: AuthedRequest, res: Response) {
     travelRadiusKm: provider.travelRadiusKm,
     weeklyCapacityHours: provider.weeklyCapacityHours,
     intakeStatus: provider.intakeStatus,
+    logoUrl: provider.logoUrl ?? null,
   });
 }
 
@@ -120,16 +122,19 @@ export async function requestProviderContact(req: AuthedRequest, res: Response) 
   res.status(202).json({ status: 'pending', message: 'Request sent. The provider will be notified.' });
 }
 
-// Full field list, everything that actually exists on Provider —
-// per the spec's explicit "only display fields that actually exist,
-// do not invent provider information." No logo, languages, website,
-// opening hours, team/qualifications, or reviews here, because none
-// of those fields exist on this model. Adding fake ones to satisfy a
-// UI mockup would be exactly the fabrication the spec forbids.
+// Full field list, everything that actually exists on Provider — per
+// the spec's explicit "only display fields that actually exist, do
+// not invent provider information." No website, team/qualifications,
+// or reviews here, because none of those fields exist on this model.
+// Adding fake ones to satisfy a UI mockup would be exactly the
+// fabrication the spec forbids. logoUrl/languages/ageGroups DO exist
+// (logoUrl synced from WordPress, languages/ageGroups settable via
+// onboarding or the scraper import — see wordpressSync.service.ts).
 const FULL_PROFILE_PROJECTION =
   'legalEntityName tradingName slug abn registrationGroups serviceSuburbs travelRadiusKm ' +
   'weeklyCapacityHours intakeStatus accountStatus rosterSize afterHoursCover ' +
-  'acceptedFunding conditionExperience intakeEmail location businessAddress plan planStatus createdAt';
+  'acceptedFunding conditionExperience languages ageGroups intakeEmail location businessAddress ' +
+  'logoUrl plan planStatus createdAt';
 
 export async function getProviderBySlug(req: AuthedRequest, res: Response) {
   const provider = await Provider.findOne({ slug: req.params.slug, accountStatus: 'active' })
@@ -168,9 +173,12 @@ export async function getProviderBySlug(req: AuthedRequest, res: Response) {
     afterHoursCover: provider.afterHoursCover ?? null,
     acceptedFunding: provider.acceptedFunding ?? [],
     conditionExperience: provider.conditionExperience ?? [],
+    languages: provider.languages ?? [],
+    ageGroups: provider.ageGroups ?? [],
     contactEmail: provider.intakeEmail ?? null,
     location: provider.location?.coordinates ? { lat: provider.location.coordinates[1], lng: provider.location.coordinates[0] } : null,
     businessAddress: provider.businessAddress ?? null,
+    logoUrl: provider.logoUrl ?? null,
     plan: provider.plan,
     memberSince: provider.createdAt,
     relatedProviders: related.map((p: any) => ({

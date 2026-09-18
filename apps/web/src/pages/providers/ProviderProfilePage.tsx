@@ -19,11 +19,13 @@ function formatAddress(addr: FullProviderProfile['businessAddress']): string | n
 /**
  * Full provider profile at /providers/{slug} — a real page, not a
  * modal, per the spec's explicit ask. Every section here corresponds
- * to a field that actually exists on Provider; sections the spec's
- * own mockup suggested (logo, languages, team/qualifications,
- * reviews, opening hours, website) are deliberately absent because
- * none of those fields exist on this model. Adding them would be
- * exactly the fabrication the spec forbids.
+ * to a field that actually exists on Provider. logo and languages now
+ * do (logoUrl syncs from the WordPress Media Library, languages is
+ * settable via onboarding/the scraper import — see
+ * wordpressSync.service.ts); team/qualifications, reviews, opening
+ * hours, and website remain deliberately absent because those fields
+ * still don't exist on this model. Adding them would be exactly the
+ * fabrication the spec forbids.
  */
 export default function ProviderProfilePage() {
   const { slug = '' } = useParams<{ slug: string }>();
@@ -97,9 +99,12 @@ export default function ProviderProfilePage() {
   return (
     <div className="pp-page">
       <div className="pp-header">
-        <div>
-          <h1 className="pp-name">{provider.name}</h1>
-          {provider.intakeStatus === 'Open to referrals' && <span className="pp-status-pill">Taking new clients</span>}
+        <div className="pp-header-identity">
+          {provider.logoUrl && <img className="pp-logo" src={provider.logoUrl} alt="" />}
+          <div>
+            <h1 className="pp-name">{provider.name}</h1>
+            {provider.intakeStatus === 'Open to referrals' && <span className="pp-status-pill">Taking new clients</span>}
+          </div>
         </div>
         <div className="pp-header-actions">
           <button className="pp-btn-primary" onClick={sendCallback} disabled={callbackSent}>
@@ -154,6 +159,20 @@ export default function ProviderProfilePage() {
         <section className="pp-section">
           <h2>Experience with</h2>
           <div className="pp-chip-row">{provider.conditionExperience.map((c) => <span key={c} className="pp-chip">{c}</span>)}</div>
+        </section>
+      )}
+
+      {provider.languages.length > 0 && (
+        <section className="pp-section">
+          <h2>Languages</h2>
+          <div className="pp-chip-row">{provider.languages.map((l) => <span key={l} className="pp-chip">{l}</span>)}</div>
+        </section>
+      )}
+
+      {provider.ageGroups.length > 0 && (
+        <section className="pp-section">
+          <h2>Age groups served</h2>
+          <div className="pp-chip-row">{provider.ageGroups.map((a) => <span key={a} className="pp-chip">{a}</span>)}</div>
         </section>
       )}
 

@@ -2,6 +2,7 @@ import type { Response } from 'express';
 import type { AuthedRequest } from '../middleware/auth.middleware.js';
 import Provider from '../models/Provider.js';
 import { logActivity } from '../models/AdminActivity.js';
+import { syncProviderToWordPress } from '../services/wordpressSync.service.js';
 
 const MAX_LIMIT = 50;
 
@@ -66,6 +67,11 @@ export async function setProviderAccountStatus(req: AuthedRequest, res: Response
 
   const name = provider.tradingName || provider.legalEntityName || 'A provider';
   await logActivity('provider_status_changed', `${name} was ${status === 'suspended' ? 'suspended' : 'reactivated'}`);
+
+  // Suspending/reactivating flips the WP mirror post between
+  // draft/publish (see wordpressSync.service.ts) — fire-and-forget,
+  // same as every other sync trigger.
+  syncProviderToWordPress(String(provider._id)).catch(() => {});
 
   res.json({ id: String(provider._id), accountStatus: provider.accountStatus });
 }

@@ -31,6 +31,7 @@ export interface ProviderRow {
   registrationGroups: string[]; serviceSuburbs: string[]; travelRadiusKm: number;
   weeklyCapacityHours: number; intakeStatus: string;
   location: { lat: number; lng: number } | null;
+  logoUrl: string | null;
 }
 interface ProviderListResult { items: ProviderRow[]; page: number; limit: number; total: number; hasMore: boolean; }
 
@@ -54,8 +55,10 @@ export interface FullProviderProfile {
   registrationGroups: string[]; serviceSuburbs: string[]; travelRadiusKm: number | null;
   weeklyCapacityHours: number | null; intakeStatus: string; rosterSize: number | null;
   afterHoursCover: string | null; acceptedFunding: string[]; conditionExperience: string[];
+  languages: string[]; ageGroups: string[];
   contactEmail: string | null; location: { lat: number; lng: number } | null;
   businessAddress: { address?: string; suburb?: string; state?: string; postcode?: string; country?: string } | null;
+  logoUrl: string | null;
   plan: string; memberSince: string;
   relatedProviders: { slug: string; name: string; suburbs: string[] }[];
 }

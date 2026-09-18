@@ -7,6 +7,7 @@ import { logActivity } from '../models/AdminActivity.js';
 import { geocodeAddress } from '../services/geocoding.service.js';
 import { generateUniqueProviderSlug } from '../utils/slugify.js';
 import { getActiveProviderForUser } from '../utils/getActiveProvider.js';
+import { syncProviderToWordPress } from '../services/wordpressSync.service.js';
 
 const STEP_KEYS = ['org', 'insurance', 'areas', 'team', 'policy', 'billing'];
 
@@ -139,6 +140,11 @@ export async function saveStep(req: AuthedRequest, res: Response) {
     provider.onboarding.push({ key: stepKey as any, complete: true, data });
   }
   await provider.save();
+
+  // Fire-and-forget — a WordPress outage must never block saving an
+  // onboarding step. Only worth attempting once the provider has a
+  // real name (buildMetaPayload's own guard skips it otherwise).
+  syncProviderToWordPress(String(provider._id)).catch(() => {});
 
   const name = provider.tradingName || provider.legalEntityName || 'A provider';
   const allDone = STEP_KEYS.every((k) => provider.onboarding.find((s) => s.key === k)?.complete);

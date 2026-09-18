@@ -72,8 +72,36 @@ add_action('init', function () {
         'publicly_queryable' => true,
     ]);
 
+    // --- Provider ---
+    // A read/display MIRROR of a real Provider record — the Node API's
+    // MongoDB remains the single source of truth (matching, search,
+    // geocoding, onboarding, the scraper import all write there).
+    // Every provider create/update auto-pushes a mirrored post here
+    // (services/wordpressSync.service.ts in apps/api), keyed by
+    // mongo_id (below) so re-syncs PUT the same post instead of
+    // duplicating it. The ONE field that flows the other way is the
+    // logo: content admins manage it via this post's featured image in
+    // the WordPress Media Library, and the webhook (webhook.php)
+    // pushes the resulting URL back into Mongo. Editing any other
+    // field here has no effect on the live app — it gets overwritten
+    // on the provider's next sync.
+    register_post_type('provider', [
+        'labels' => ['name' => 'Providers', 'singular_name' => 'Provider'],
+        'public' => true,
+        'show_in_rest' => true,
+        'rest_base' => 'providers',
+        'supports' => ['title', 'thumbnail', 'custom-fields'],
+        'has_archive' => false,
+        'publicly_queryable' => true,
+    ]);
+
     // --- Taxonomies ---
-    register_taxonomy('service_category', ['service', 'service_area_page'], [
+    // 'provider' added alongside 'service'/'service_area_page' below —
+    // these 4 categories already existed for editorial content and are
+    // exactly what the provider mirror needs for services/funding/
+    // conditions/languages, so providers reuse them rather than
+    // duplicating a parallel set.
+    register_taxonomy('service_category', ['service', 'service_area_page', 'provider'], [
         'labels' => ['name' => 'Service Categories', 'singular_name' => 'Service Category'],
         'public' => true,
         'show_in_rest' => true,
@@ -103,10 +131,9 @@ add_action('init', function () {
     // The remaining 4 mega menu tabs (Condition/Funding/Coordinator/
     // Language) as real, editable-in-wp-admin taxonomies — same
     // hierarchical pattern as service_category: parent term = column
-    // group heading, child term = individual link. Loosely attached
-    // to 'service' (the only real CPT here) since WordPress
-    // taxonomies need at least one object type — this doesn't
-    // require every service to actually use them.
+    // group heading, child term = individual link. Attaching to a
+    // post type doesn't require every post of that type to actually
+    // use the taxonomy.
     //
     // rest_base and singular_name are explicit here, not derived via
     // string manipulation — an earlier version appended a naive 's'
@@ -116,13 +143,16 @@ add_action('init', function () {
     // (condition-categories). That mismatch meant these 4 REST
     // endpoints 404'd from the day they were registered — found via
     // a real REST response showing the wrong URLs, not guessed.
+    // condition_category and language_category also attach to
+    // 'provider' (funding_category too, further below) — coordinator_category
+    // stays service-only, it's not a provider attribute.
     foreach ([
-        'condition_category'   => ['label' => 'Condition Categories',   'singular' => 'Condition Category',   'rest_base' => 'condition-categories'],
-        'funding_category'     => ['label' => 'Funding Categories',     'singular' => 'Funding Category',     'rest_base' => 'funding-categories'],
-        'coordinator_category' => ['label' => 'Coordinator Categories', 'singular' => 'Coordinator Category', 'rest_base' => 'coordinator-categories'],
-        'language_category'    => ['label' => 'Language Categories',    'singular' => 'Language Category',    'rest_base' => 'language-categories'],
+        'condition_category'   => ['label' => 'Condition Categories',   'singular' => 'Condition Category',   'rest_base' => 'condition-categories',   'types' => ['service', 'provider']],
+        'funding_category'     => ['label' => 'Funding Categories',     'singular' => 'Funding Category',     'rest_base' => 'funding-categories',     'types' => ['service', 'provider']],
+        'coordinator_category' => ['label' => 'Coordinator Categories', 'singular' => 'Coordinator Category', 'rest_base' => 'coordinator-categories', 'types' => ['service']],
+        'language_category'    => ['label' => 'Language Categories',    'singular' => 'Language Category',    'rest_base' => 'language-categories',    'types' => ['service', 'provider']],
     ] as $taxKey => $cfg) {
-        register_taxonomy($taxKey, ['service'], [
+        register_taxonomy($taxKey, $cfg['types'], [
             'labels' => ['name' => $cfg['label'], 'singular_name' => $cfg['singular']],
             'public' => true,
             'show_in_rest' => true,
@@ -131,4 +161,15 @@ add_action('init', function () {
             'show_admin_column' => false,
         ]);
     }
+
+    // Provider-only — age groups served has no existing equivalent
+    // among the editorial taxonomies above.
+    register_taxonomy('age_group_category', ['provider'], [
+        'labels' => ['name' => 'Age Group Categories', 'singular_name' => 'Age Group Category'],
+        'public' => true,
+        'show_in_rest' => true,
+        'rest_base' => 'age-group-categories',
+        'hierarchical' => true,
+        'show_admin_column' => false,
+    ]);
 });

@@ -6,6 +6,7 @@
 .pd-card { position: relative; text-align: left; background: #fff; border: 1px solid var(--color-border, #E8EEF7); border-radius: 12px; padding: 20px; cursor: pointer; display: flex; flex-direction: column; gap: 10px; transition: box-shadow 180ms ease, transform 180ms ease; }
 .pd-card:hover { box-shadow: 0 10px 24px rgba(11,45,92,0.08); transform: translateY(-2px); }
 .pd-shortlisted-badge { align-self: flex-start; font-size: 11.5px; font-weight: 700; color: #1C8354; background: #E4F5EC; padding: 3px 9px; border-radius: 100px; }
+.pd-card-logo { width: 40px; height: 40px; border-radius: 8px; object-fit: contain; background: var(--color-page-bg, #F5F8FC); border: 1px solid var(--color-border, #E8EEF7); }
 .pd-card-name { margin: 0; font-size: 16.5px; font-weight: 700; }
 .pd-card-suburbs { margin: 0; font-size: 13px; color: var(--color-text-muted, #5A6B84); }
 .pd-card-chips { display: flex; flex-wrap: wrap; gap: 6px; }

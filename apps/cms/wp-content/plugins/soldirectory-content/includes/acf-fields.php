@@ -145,8 +145,13 @@ add_action('acf/init', function () {
         'location' => [[['param' => 'post_type', 'operator' => '==', 'value' => 'service']]],
     ]);
 
-    // --- Provider Finder Configuration (config only — real providers
-    // always come from the application database, never from WP) ---
+    // --- Provider Finder Configuration (display config only — the
+    // LIVE provider dataset used to answer finder queries always comes
+    // from the application database/API, never from WP. This is
+    // separate from the 'provider' CPT registered in post-types.php,
+    // which is a one-way display MIRROR of that same database, kept in
+    // sync by apps/api's wordpressSync.service.ts — WP is still never
+    // the thing the finder queries against.) ---
     acf_add_local_field_group([
         'key' => 'group_service_finder_fields',
         'title' => 'Provider Finder Configuration',
@@ -231,6 +236,36 @@ add_action('acf/init', function () {
             ],
         ],
         'location' => [[['param' => 'post_type', 'operator' => '==', 'value' => 'service']]],
+    ]);
+
+    // --- Provider (display mirror — see post-types.php's 'provider'
+    // CPT comment and services/wordpressSync.service.ts. Every field
+    // below is overwritten on the provider's next sync from Mongo;
+    // only the post's featured image (the logo) is actually meant to
+    // be edited here, and flows back to Mongo via the webhook) ---
+    acf_add_local_field_group([
+        'key' => 'group_provider_fields',
+        'title' => 'Provider Details (synced from the application database)',
+        'fields' => [
+            ['key' => 'field_provider_mongo_id', 'label' => 'Application Record ID', 'name' => 'mongo_id', 'type' => 'text', 'readonly' => 1, 'instructions' => 'Links this post to its real record. Do not edit.'],
+            ['key' => 'field_provider_mongo_slug', 'label' => 'Application Slug', 'name' => 'mongo_slug', 'type' => 'text', 'readonly' => 1, 'instructions' => 'The public /providers/{slug} path on the live site.'],
+            ['key' => 'field_provider_legal_name', 'label' => 'Legal Entity Name', 'name' => 'legal_entity_name', 'type' => 'text', 'readonly' => 1],
+            ['key' => 'field_provider_abn', 'label' => 'ABN', 'name' => 'abn', 'type' => 'text', 'readonly' => 1],
+            ['key' => 'field_provider_contact_email', 'label' => 'Contact Email', 'name' => 'contact_email', 'type' => 'text', 'readonly' => 1],
+            ['key' => 'field_provider_address', 'label' => 'Street Address', 'name' => 'address', 'type' => 'text', 'readonly' => 1],
+            ['key' => 'field_provider_suburb', 'label' => 'Suburb', 'name' => 'suburb', 'type' => 'text', 'readonly' => 1],
+            ['key' => 'field_provider_state', 'label' => 'State', 'name' => 'state', 'type' => 'text', 'readonly' => 1],
+            ['key' => 'field_provider_postcode', 'label' => 'Postcode', 'name' => 'postcode', 'type' => 'text', 'readonly' => 1],
+            ['key' => 'field_provider_latitude', 'label' => 'Latitude', 'name' => 'latitude', 'type' => 'number', 'readonly' => 1],
+            ['key' => 'field_provider_longitude', 'label' => 'Longitude', 'name' => 'longitude', 'type' => 'number', 'readonly' => 1],
+            ['key' => 'field_provider_areas_served', 'label' => 'Areas Served (suburbs)', 'name' => 'service_suburbs_json', 'type' => 'textarea', 'rows' => 2, 'readonly' => 1, 'instructions' => 'Stored as a JSON array — matches the *_json convention used elsewhere in this plugin.'],
+            ['key' => 'field_provider_travel_radius', 'label' => 'Travel Radius (km)', 'name' => 'travel_radius_km', 'type' => 'number', 'readonly' => 1],
+            ['key' => 'field_provider_intake_status', 'label' => 'Intake Status', 'name' => 'intake_status', 'type' => 'text', 'readonly' => 1],
+            ['key' => 'field_provider_weekly_capacity', 'label' => 'Weekly Capacity (hours)', 'name' => 'weekly_capacity_hours', 'type' => 'number', 'readonly' => 1],
+            ['key' => 'field_provider_roster_size', 'label' => 'Roster Size', 'name' => 'roster_size', 'type' => 'number', 'readonly' => 1],
+            ['key' => 'field_provider_after_hours', 'label' => 'After-Hours Cover', 'name' => 'after_hours_cover', 'type' => 'text', 'readonly' => 1],
+        ],
+        'location' => [[['param' => 'post_type', 'operator' => '==', 'value' => 'provider']]],
     ]);
 
     // --- Location ---
@@ -534,6 +569,12 @@ function soldirectory_inject_acf_meta(array $response_data, WP_Post $post): arra
         'location' => ['state', 'population', 'key_stats'],
         'guide' => ['reading_time'],
         'service_area_page' => ['service_name', 'suburb', 'state', 'intro_paragraph'],
+        'provider' => [
+            'mongo_id', 'mongo_slug', 'legal_entity_name', 'abn', 'contact_email',
+            'address', 'suburb', 'state', 'postcode', 'latitude', 'longitude',
+            'service_suburbs_json', 'travel_radius_km', 'intake_status',
+            'weekly_capacity_hours', 'roster_size', 'after_hours_cover',
+        ],
     ];
     foreach ($simple_fields[$post->post_type] ?? [] as $field_name) {
         $value = get_field($field_name, $post->ID);
@@ -642,10 +683,20 @@ function soldirectory_inject_acf_meta(array $response_data, WP_Post $post): arra
         }
     }
 
+    // logo_url is a convenience read — the frontend never queries WP's
+    // REST API for this directly (it reads Provider.logoUrl from the
+    // Node API, kept current by the webhook), but exposing it here
+    // makes the sync state inspectable/debuggable directly from
+    // /wp-json/wp/v2/providers/{id}.
+    if ($post->post_type === 'provider') {
+        $thumbId = get_post_thumbnail_id($post->ID);
+        $response_data['meta']['logo_url'] = $thumbId ? wp_get_attachment_url($thumbId) : null;
+    }
+
     return $response_data;
 }
 
-foreach (['service', 'location', 'guide', 'service_area_page', 'mega_menu_tab'] as $post_type) {
+foreach (['service', 'location', 'guide', 'service_area_page', 'mega_menu_tab', 'provider'] as $post_type) {
     add_filter("rest_prepare_{$post_type}", function ($response, $post) {
         $data = $response->get_data();
         $data = soldirectory_inject_acf_meta($data, $post);
