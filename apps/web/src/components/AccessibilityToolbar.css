@@ -27,6 +27,10 @@
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+.accessibility-toolbar.is-closed .accessibility-toolbar__toggle {
+  animation: accessibility-pulse 3.2s ease-in-out 2;
+}
+
 .accessibility-toolbar__toggle:hover,
 .accessibility-toolbar__toggle:focus-visible {
   transform: translateY(-1px);
@@ -159,6 +163,21 @@
 .accessibility-toolbar__reset:focus-visible {
   filter: brightness(0.96);
   transform: translateY(-1px);
+}
+
+@keyframes accessibility-pulse {
+  0%, 72%, 100% {
+    box-shadow: 0 10px 24px rgba(11, 36, 74, 0.22);
+  }
+  80% {
+    box-shadow: 0 0 0 7px rgba(23, 105, 224, 0.14), 0 14px 30px rgba(11, 36, 74, 0.3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .accessibility-toolbar.is-closed .accessibility-toolbar__toggle {
+    animation: none;
+  }
 }
 
 html {
