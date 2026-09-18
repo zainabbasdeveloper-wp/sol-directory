@@ -5,6 +5,7 @@ import { listProviders, type ProviderRow } from '../../api/providerResources';
 import { useMatchModal } from '../../context/MatchModalContext';
 import { PublicHeader, PublicFooter } from '../public/PublicLayout';
 import WordPressTemplate from '../../components/wordpress/WordPressTemplate';
+import ProviderMap from '../../components/ProviderMap';
 import NotFound from './NotFound';
 import type { CPTRouteConfig } from '../../lib/cptRouteConfig';
 import './WordPressCPTPage.css';
@@ -108,6 +109,7 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
   const finderDescription = str(meta.finder_description);
   const finderCtaLabel = str(meta.finder_cta_label) || 'Get matched';
   const finderShowCount = meta.finder_show_count !== false;
+  const finderShowMap = meta.finder_show_map !== false;
 
   // --- CTA ---
   const ctaHeading = str(meta.cta_heading);
@@ -259,6 +261,20 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
                 <h2>{finderHeading}</h2>
                 {finderDescription && <p className="wp-cpt-finder-desc">{finderDescription}</p>}
                 {finderShowCount && <p className="wp-cpt-showing">Showing {providers.length} of {providersTotal} real registered providers</p>}
+                {finderShowMap && (
+                  <div style={{ marginBottom: 20 }}>
+                    <ProviderMap
+                      providers={providers.map((p) => ({
+                        id: p.id,
+                        name: p.tradingName || p.legalEntityName,
+                        location: p.location,
+                        category: p.registrationGroups[0] ?? null,
+                        suburb: p.serviceSuburbs[0] ?? null,
+                        href: p.slug ? `/providers/${p.slug}` : null,
+                      }))}
+                    />
+                  </div>
+                )}
                 <div className="wp-cpt-provider-grid">
                   {providers.map((p) => (
                     <Link key={p.id} to={p.slug ? `/providers/${p.slug}` : '/find-providers'} className="wp-cpt-provider-card">

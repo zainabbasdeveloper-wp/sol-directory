@@ -73,7 +73,15 @@ export default function ProviderDirectory() {
       {!loading && items.length > 0 && (
         <div style={{ marginBottom: 24 }}>
           <ProviderMap
-            providers={items.map((p) => ({ id: p.id, name: p.tradingName || p.legalEntityName, location: p.location }))}
+            providers={items.map((p) => ({
+              id: p.id,
+              name: p.tradingName || p.legalEntityName,
+              location: p.location,
+              category: p.registrationGroups[0] ?? null,
+              suburb: p.serviceSuburbs[0] ?? null,
+              href: p.slug ? `/providers/${p.slug}` : null,
+            }))}
+            selectedProviderId={openId}
             onMarkerClick={(id) => setOpenId(id)}
           />
         </div>

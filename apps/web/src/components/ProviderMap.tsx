@@ -1,136 +1,214 @@
 import { useEffect, useRef, useState } from 'react';
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
+import './ProviderMap.css';
 
-interface MapProvider {
+export interface MapProviderMarker {
   id: string;
   name: string;
   location: { lat: number; lng: number } | null;
+  /** Primary service/category shown in the marker popup. */
+  category?: string | null;
+  /** Suburb shown in the marker popup. */
+  suburb?: string | null;
+  /** "View profile" link in the popup — omit to hide the link (e.g. leads, which have no profile page). */
+  href?: string | null;
 }
 
 interface Props {
-  providers: MapProvider[];
+  providers: MapProviderMarker[];
+  selectedProviderId?: string | null;
   onMarkerClick?: (providerId: string) => void;
+  /**
+   * Address text shown alongside the "Map unavailable" / "Location
+   * unavailable" fallback states — only meaningful for a single-subject
+   * map (a provider profile page), so pass this only from those call sites.
+   */
+  address?: string | null;
 }
 
-let mapsScriptPromise: Promise<void> | null = null;
-function loadGoogleMapsScript(): Promise<void> {
-  if ((window as any).google?.maps) return Promise.resolve();
-  if (mapsScriptPromise) return mapsScriptPromise;
+// Vite bakes VITE_* vars into the client bundle at build time — this
+// must be a PUBLIC Mapbox token (pk.*), never the secret server token
+// used by geocoding.service.ts on the API side.
+const ACCESS_TOKEN = (import.meta as any).env?.VITE_MAPBOX_ACCESS_TOKEN as string | undefined;
+const MAP_STYLE = 'mapbox://styles/mapbox/streets-v12';
+// Australia-wide default view, shown before any markers are drawn —
+// same fallback center/zoom the previous Google-based map used.
+const DEFAULT_CENTER: [number, number] = [133.7751, -25.2744];
+const DEFAULT_ZOOM = 3.5;
 
-  const apiKey = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY;
-  if (!apiKey) {
-    console.warn('[ProviderMap] VITE_GOOGLE_MAPS_API_KEY is not set — map will not render.');
-    return Promise.reject(new Error('Missing VITE_GOOGLE_MAPS_API_KEY'));
-  }
+type MapStatus = 'loading' | 'ready' | 'error';
 
-  mapsScriptPromise = new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}`;
-    script.async = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Failed to load Google Maps script'));
-    document.head.appendChild(script);
-  });
-  return mapsScriptPromise;
-}
+export default function ProviderMap({ providers, selectedProviderId, onMarkerClick, address }: Props) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const markersRef = useRef<globalThis.Map<string, mapboxgl.Marker>>(new globalThis.Map());
+  const [status, setStatus] = useState<MapStatus>(ACCESS_TOKEN ? 'loading' : 'error');
+  const [errorDetail, setErrorDetail] = useState<string>(
+    ACCESS_TOKEN ? '' : 'VITE_MAPBOX_ACCESS_TOKEN is not set — map cannot load.'
+  );
 
-// Loaded the same way as the base Maps script — a CDN <script> tag,
-// not an npm package — so clustering adds zero JS bundle weight,
-// consistent with how the base map itself is loaded.
-let clustererScriptPromise: Promise<void> | null = null;
-function loadClustererScript(): Promise<void> {
-  if ((window as any).markerClusterer) return Promise.resolve();
-  if (clustererScriptPromise) return clustererScriptPromise;
-
-  clustererScriptPromise = new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = 'https://unpkg.com/@googlemaps/markerclusterer@2.5.3/dist/index.min.js';
-    script.async = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Failed to load marker clustering script'));
-    document.head.appendChild(script);
-  });
-  return clustererScriptPromise;
-}
-
-export default function ProviderMap({ providers, onMarkerClick }: Props) {
-  const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<any>(null);
-  const markersRef = useRef<any[]>([]);
-  const clustererRef = useRef<any>(null);
-  // REAL BUG FIXED: mapInstance was a ref, and mutating a ref does
-  // NOT cause the marker-drawing effect below to re-run. If the Maps
-  // script took even a few ms to load (it always does — it's a
-  // network request) and `providers` was already available on first
-  // render, the marker effect ran once, saw mapInstance.current was
-  // still null, and returned early — permanently, since nothing ever
-  // triggered it again. This state variable is what actually makes
-  // "the map became ready" a real dependency the effect reacts to.
-  const [mapReady, setMapReady] = useState(false);
-
+  // Initialize the map exactly once. Re-running this on every
+  // providers/selection change would tear down and recreate the whole
+  // WebGL context on every render — the marker effect below is what
+  // reacts to data changes instead.
   useEffect(() => {
+    if (!ACCESS_TOKEN || !containerRef.current) return;
+    mapboxgl.accessToken = ACCESS_TOKEN;
+
     let cancelled = false;
+    const map = new mapboxgl.Map({
+      container: containerRef.current,
+      style: MAP_STYLE,
+      center: DEFAULT_CENTER,
+      zoom: DEFAULT_ZOOM,
+      attributionControl: true,
+    });
+    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
 
-    Promise.all([loadGoogleMapsScript(), loadClustererScript().catch(() => {})])
-      .then(() => {
-        if (cancelled || !mapRef.current) return;
-        const google = (window as any).google;
+    function handleLoad() {
+      if (cancelled) return;
+      mapRef.current = map;
+      setStatus('ready');
+    }
+    function handleError(e: { error?: unknown }) {
+      if (cancelled) return;
+      console.error('[ProviderMap] Mapbox error:', e?.error ?? e);
+      setStatus('error');
+      setErrorDetail('The map failed to load — the access token may be invalid or restricted for this domain.');
+    }
 
-        mapInstance.current = new google.maps.Map(mapRef.current, {
-          center: { lat: -25.2744, lng: 133.7751 },
-          zoom: 4,
-          disableDefaultUI: false,
-        });
-        setMapReady(true);
-      })
-      .catch(() => {
-        // Already logged inside loadGoogleMapsScript.
-      });
+    map.on('load', handleLoad);
+    map.on('error', handleError as any);
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      map.off('load', handleLoad);
+      map.off('error', handleError as any);
+      markersRef.current.forEach((m) => m.remove());
+      markersRef.current.clear();
+      map.remove();
+      mapRef.current = null;
+    };
   }, []);
 
+  // Draw/update markers whenever the map becomes ready, the provider
+  // list changes, or the selection changes.
   useEffect(() => {
-    if (!mapReady || !mapInstance.current) return;
-    const google = (window as any).google;
-    if (!google) return;
+    const map = mapRef.current;
+    if (status !== 'ready' || !map) return;
 
-    markersRef.current.forEach((m) => m.setMap(null));
-    markersRef.current = [];
-    if (clustererRef.current) {
-      clustererRef.current.clearMarkers();
-    }
+    markersRef.current.forEach((m) => m.remove());
+    markersRef.current.clear();
 
-    const withLocation = providers.filter((p) => p.location);
+    const withLocation = providers.filter(
+      (p): p is MapProviderMarker & { location: { lat: number; lng: number } } => !!p.location
+    );
     if (withLocation.length === 0) return;
 
-    const bounds = new google.maps.LatLngBounds();
-    const newMarkers: any[] = [];
     for (const p of withLocation) {
-      const marker = new google.maps.Marker({
-        position: p.location,
-        title: p.name,
-        // Only attach directly to the map when there's no clusterer
-        // to manage it — the clusterer takes over map assignment
-        // when it exists.
-        map: (window as any).markerClusterer ? undefined : mapInstance.current,
-      });
-      if (onMarkerClick) marker.addListener('click', () => onMarkerClick(p.id));
-      newMarkers.push(marker);
-      bounds.extend(p.location as any);
-    }
-    markersRef.current = newMarkers;
-
-    const MarkerClusterer = (window as any).markerClusterer?.MarkerClusterer;
-    if (MarkerClusterer) {
-      if (!clustererRef.current) {
-        clustererRef.current = new MarkerClusterer({ map: mapInstance.current, markers: newMarkers });
-      } else {
-        clustererRef.current.addMarkers(newMarkers);
-      }
+      const isSelected = p.id === selectedProviderId;
+      const el = buildMarkerElement(p, isSelected, onMarkerClick);
+      const popup = buildPopup(p);
+      const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
+        .setLngLat([p.location.lng, p.location.lat])
+        .setPopup(popup)
+        .addTo(map);
+      markersRef.current.set(p.id, marker);
     }
 
-    mapInstance.current.fitBounds(bounds);
-  }, [mapReady, providers, onMarkerClick]);
+    if (withLocation.length === 1) {
+      // fitBounds on a single point zooms in to the maximum level —
+      // a fixed, sensible neighborhood-level zoom reads better.
+      map.easeTo({ center: [withLocation[0].location.lng, withLocation[0].location.lat], zoom: 12, duration: 0 });
+    } else {
+      const bounds = new mapboxgl.LngLatBounds();
+      withLocation.forEach((p) => bounds.extend([p.location.lng, p.location.lat]));
+      map.fitBounds(bounds, { padding: 56, maxZoom: 14, duration: 0 });
+    }
+  }, [status, providers, selectedProviderId, onMarkerClick]);
 
-  return <div ref={mapRef} style={{ width: '100%', height: 320, borderRadius: 12, border: '1px solid var(--color-border, #E8EEF7)' }} />;
+  const withLocationCount = providers.filter((p) => p.location).length;
+
+  return (
+    <div className="provider-map">
+      <div
+        ref={containerRef}
+        className={`provider-map-canvas${status !== 'ready' ? ' provider-map-canvas-hidden' : ''}`}
+        role="application"
+        aria-label="Map of provider locations"
+      />
+      {status === 'loading' && (
+        <div className="provider-map-overlay">
+          <span className="provider-map-spinner" aria-hidden="true" />
+          <p>Loading map…</p>
+        </div>
+      )}
+      {status === 'error' && (
+        <div className="provider-map-overlay provider-map-overlay-error">
+          <p className="provider-map-overlay-title">Map unavailable</p>
+          {address && <p className="provider-map-overlay-address">{address}</p>}
+          <p className="provider-map-overlay-detail">{errorDetail}</p>
+        </div>
+      )}
+      {status === 'ready' && withLocationCount === 0 && (
+        <div className="provider-map-overlay">
+          <p className="provider-map-overlay-title">
+            {providers.length <= 1 ? 'Location unavailable on map' : 'No providers with a location to show'}
+          </p>
+          {address && <p className="provider-map-overlay-address">{address}</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function buildMarkerElement(p: MapProviderMarker, isSelected: boolean, onMarkerClick?: (id: string) => void): HTMLDivElement {
+  const el = document.createElement('div');
+  el.className = `provider-map-marker${isSelected ? ' provider-map-marker-selected' : ''}`;
+  el.setAttribute('role', 'button');
+  el.setAttribute('tabindex', '0');
+  el.setAttribute('aria-label', `${p.name} — view on map`);
+  el.addEventListener('click', () => onMarkerClick?.(p.id));
+  el.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onMarkerClick?.(p.id);
+    }
+  });
+  return el;
+}
+
+function buildPopup(p: MapProviderMarker): mapboxgl.Popup {
+  const popup = new mapboxgl.Popup({ offset: 28, closeButton: true, maxWidth: '260px' });
+  const root = document.createElement('div');
+  root.className = 'provider-map-popup';
+
+  const name = document.createElement('strong');
+  name.className = 'provider-map-popup-name';
+  name.textContent = p.name;
+  root.appendChild(name);
+
+  if (p.category) {
+    const category = document.createElement('span');
+    category.className = 'provider-map-popup-category';
+    category.textContent = p.category;
+    root.appendChild(category);
+  }
+  if (p.suburb) {
+    const suburb = document.createElement('span');
+    suburb.className = 'provider-map-popup-suburb';
+    suburb.textContent = p.suburb;
+    root.appendChild(suburb);
+  }
+  if (p.href) {
+    const link = document.createElement('a');
+    link.className = 'provider-map-popup-link';
+    link.href = p.href;
+    link.textContent = 'View profile →';
+    root.appendChild(link);
+  }
+
+  popup.setDOMContent(root);
+  return popup;
 }

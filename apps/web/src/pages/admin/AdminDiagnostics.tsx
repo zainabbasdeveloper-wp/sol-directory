@@ -72,8 +72,16 @@ export default function AdminDiagnostics() {
       }
 
       // --- Map ---
-      const mapsKey = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY;
-      results.push({ label: 'Map configuration (frontend key)', status: mapsKey ? 'ok' : 'unconfigured', detail: mapsKey ? 'VITE_GOOGLE_MAPS_API_KEY is set' : 'VITE_GOOGLE_MAPS_API_KEY is not set' });
+      const mapsToken = (import.meta as any).env?.VITE_MAPBOX_ACCESS_TOKEN;
+      results.push({
+        label: 'Map configuration (frontend token)',
+        status: mapsToken ? (mapsToken.startsWith('pk.') ? 'ok' : 'error') : 'unconfigured',
+        detail: !mapsToken
+          ? 'VITE_MAPBOX_ACCESS_TOKEN is not set'
+          : mapsToken.startsWith('pk.')
+            ? 'VITE_MAPBOX_ACCESS_TOKEN is set'
+            : 'VITE_MAPBOX_ACCESS_TOKEN is set but is not a public (pk.*) token — a secret token must never ship to the browser',
+      });
 
       // --- Backend-only checks (geocoding, email) — can't be read
       // from the browser directly, hence the API call. ---
@@ -81,7 +89,7 @@ export default function AdminDiagnostics() {
         const res = await fetch(`${API_URL}/admin/diagnostics`, { headers: authHeaders() });
         if (res.ok) {
           const data = await res.json();
-          results.push({ label: 'Geocoding configuration (backend)', status: data.geocoding.configured ? 'ok' : 'unconfigured', detail: data.geocoding.configured ? 'GOOGLE_MAPS_API_KEY is set' : 'GOOGLE_MAPS_API_KEY is not set on the API server' });
+          results.push({ label: 'Geocoding configuration (backend)', status: data.geocoding.configured ? 'ok' : 'unconfigured', detail: data.geocoding.configured ? 'MAPBOX_ACCESS_TOKEN is set' : 'MAPBOX_ACCESS_TOKEN is not set on the API server' });
           results.push({ label: 'Email/SMTP configuration', status: data.email.configured ? 'ok' : 'unconfigured', detail: data.email.configured ? 'SMTP fully configured' : 'One or more SMTP_* env vars missing' });
         } else {
           const err = await res.json().catch(() => ({}));

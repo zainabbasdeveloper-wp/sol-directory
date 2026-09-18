@@ -9,7 +9,7 @@ import EmailLog from '../models/EmailLog.js';
 export async function getDiagnostics(req: AuthedRequest, res: Response) {
   res.json({
     geocoding: {
-      configured: !!process.env.GOOGLE_MAPS_API_KEY,
+      configured: !!process.env.MAPBOX_ACCESS_TOKEN,
     },
     email: {
       configured: !!(process.env.SMTP_HOST && process.env.SMTP_PORT && process.env.SMTP_USER && process.env.SMTP_PASSWORD),

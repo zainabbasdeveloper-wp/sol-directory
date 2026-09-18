@@ -1,0 +1,153 @@
+.provider-map {
+  position: relative;
+  width: 100%;
+  height: 440px;
+  border-radius: var(--radius-card, 8px);
+  overflow: hidden;
+  border: 1px solid var(--color-border, #E8EEF7);
+  background: var(--color-page-bg, #F5F8FC);
+}
+
+@media (max-width: 640px) {
+  .provider-map {
+    height: 320px;
+  }
+}
+
+.provider-map-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+/* Hides Mapbox's own injected controls (zoom, attribution) while
+   loading/errored — without this, they render (and remain clickable)
+   through the overlay below, since mapbox-gl.css gives them their own
+   z-index that beats plain DOM order. */
+.provider-map-canvas-hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Loading / error / no-location states sit on top of the canvas so a
+   blank white rectangle is never the only thing rendered. */
+.provider-map-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+  padding: 20px;
+  background: var(--color-page-bg, #F5F8FC);
+  color: var(--color-text-muted, #5A6B84);
+  font-size: 13.5px;
+}
+
+.provider-map-overlay-error {
+  background: var(--color-bad-bg, #FDF3F1);
+  color: var(--color-bad-fg, #8C2F1E);
+}
+
+.provider-map-overlay-title {
+  margin: 0;
+  font-weight: 600;
+  font-size: 14.5px;
+  color: inherit;
+}
+
+.provider-map-overlay-address {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--color-text, #10233F);
+}
+
+.provider-map-overlay-detail {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.provider-map-spinner {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2.5px solid var(--color-border-strong, #DDE4EF);
+  border-top-color: var(--color-primary, #1769E0);
+  animation: provider-map-spin 800ms linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .provider-map-spinner {
+    animation: none;
+  }
+}
+
+@keyframes provider-map-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Marker */
+.provider-map-marker {
+  width: 26px;
+  height: 26px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  background: var(--color-primary, #1769E0);
+  border: 2px solid var(--color-surface, #FFFFFF);
+  box-shadow: var(--shadow-card, 0 1px 2px rgba(11,45,92,0.04)), 0 2px 6px rgba(11,45,92,0.25);
+  cursor: pointer;
+}
+
+.provider-map-marker:focus-visible {
+  outline: 2px solid var(--color-primary-bright, #2F80ED);
+  outline-offset: 2px;
+}
+
+.provider-map-marker-selected {
+  width: 32px;
+  height: 32px;
+  background: var(--color-navy, #0B2D5C);
+  z-index: 1;
+}
+
+/* Popup */
+.provider-map-popup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-family: var(--font-family, 'Barlow', system-ui, sans-serif);
+  font-size: 13px;
+  color: var(--color-text, #10233F);
+}
+
+.provider-map-popup-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.provider-map-popup-category,
+.provider-map-popup-suburb {
+  color: var(--color-text-muted, #5A6B84);
+}
+
+.provider-map-popup-link {
+  margin-top: 6px;
+  color: var(--color-primary, #1769E0);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.provider-map-popup-link:hover,
+.provider-map-popup-link:focus-visible {
+  text-decoration: underline;
+}
+
+/* Mapbox's own popup chrome, restyled to match the design system
+   instead of the library default. */
+.mapboxgl-popup-content {
+  border-radius: var(--radius-card, 8px);
+  box-shadow: var(--shadow-hover-lift, 0 12px 30px rgba(11,45,92,0.12));
+  padding: 12px 14px;
+}

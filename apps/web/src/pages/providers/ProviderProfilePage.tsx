@@ -10,6 +10,12 @@ import ProviderMap from '../../components/ProviderMap';
 import NotFound from '../wordpress/NotFound';
 import './ProviderProfilePage.css';
 
+function formatAddress(addr: FullProviderProfile['businessAddress']): string | null {
+  if (!addr) return null;
+  const parts = [addr.address, addr.suburb, addr.state, addr.postcode].filter(Boolean);
+  return parts.length ? parts.join(', ') : null;
+}
+
 /**
  * Full provider profile at /providers/{slug} — a real page, not a
  * modal, per the spec's explicit ask. Every section here corresponds
@@ -151,10 +157,20 @@ export default function ProviderProfilePage() {
         </section>
       )}
 
-      {provider.location && (
+      {(provider.location || provider.businessAddress) && (
         <section className="pp-section">
           <h2>Where we operate</h2>
-          <ProviderMap providers={[{ id: provider.id, name: provider.name, location: provider.location }]} />
+          {formatAddress(provider.businessAddress) && <p className="pp-muted">{formatAddress(provider.businessAddress)}</p>}
+          <ProviderMap
+            providers={[{
+              id: provider.id,
+              name: provider.name,
+              location: provider.location,
+              category: provider.registrationGroups[0] ?? null,
+              suburb: provider.serviceSuburbs[0] ?? null,
+            }]}
+            address={formatAddress(provider.businessAddress)}
+          />
         </section>
       )}
 
