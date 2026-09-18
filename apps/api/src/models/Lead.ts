@@ -35,13 +35,27 @@ export interface LeadDoc extends Document {
   contactPhone: string;
   budget: string;
   note: string;
-  status: 'matched' | 'unlocked' | 'closed';
+  // 'draft' is a wizard-in-progress enquiry (developer brief: "Save
+  // at every step, not only on submit") — never matched against
+  // providers or emailed to anyone. Transitions to 'matched' on real
+  // submission (matchRequests.controller.ts), same document, not a
+  // second record, so a completed enquiry that started as a draft
+  // isn't duplicated.
+  status: 'draft' | 'matched' | 'unlocked' | 'closed';
+  // TTL — only set while status is 'draft' (cleared on submit), so an
+  // abandoned mid-wizard draft is auto-deleted after 30 days instead
+  // of accumulating forever, without needing a cron job for cleanup.
+  draftExpiresAt?: Date;
   createdAt: Date;
 }
 
 const leadSchema = new Schema<LeadDoc>(
   {
-    need: { type: String, required: true },
+    // NOT required at the schema level — a draft can legitimately be
+    // saved before the service step is reached. Real validation for a
+    // genuine submission happens in matchRequests.controller.ts, which
+    // already checks every field explicitly before matching/emailing.
+    need: String,
     conditions: [String],
     location: {
       type: { type: String, enum: ['Point'], default: 'Point' },
@@ -61,7 +75,8 @@ const leadSchema = new Schema<LeadDoc>(
     contactPhone: String,
     budget: String,
     note: String,
-    status: { type: String, enum: ['matched', 'unlocked', 'closed'], default: 'matched' },
+    status: { type: String, enum: ['draft', 'matched', 'unlocked', 'closed'], default: 'matched' },
+    draftExpiresAt: { type: Date, expires: 0 }, // TTL: delete once draftExpiresAt is in the past
   },
   { timestamps: true }
 );

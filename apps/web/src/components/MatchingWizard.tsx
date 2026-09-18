@@ -22,6 +22,8 @@ const EMPTY_FORM: MatchFormData = {
   email: '', phone: '', name: '', additionalDetails: '',
 };
 
+const DRAFT_STORAGE_KEY = 'mw_draft';
+
 type StepId = 'location' | 'service' | 'careFor' | 'timeframe' | 'funding' | 'planManagement' | 'email' | 'phone' | 'name' | 'additionalDetails';
 type Phase = 'wizard' | 'review' | 'success';
 
@@ -76,11 +78,56 @@ export default function MatchingWizard() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [serviceOptions, setServiceOptions] = useState<ActiveService[]>([]);
+  // Backend Lead._id for this in-progress enquiry, once autosaved at
+  // least once (developer brief: "Save at every step, not only on
+  // submit"). Persisted to localStorage below so a page refresh mid-
+  // wizard doesn't lose progress, and sent with the final submit so
+  // it finalizes this SAME document rather than creating a second one.
+  const [draftId, setDraftId] = useState<string | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     listActiveServices().then((res) => setServiceOptions(res.items)).catch(() => {});
   }, []);
+
+  // Restore a resumable draft when the modal opens — only runs when
+  // isOpen flips false->true, so it never clobbers live typing.
+  useEffect(() => {
+    if (!isOpen) return;
+    try {
+      const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (!saved) return;
+      const parsed = JSON.parse(saved);
+      if (parsed.form) setForm(parsed.form);
+      if (parsed.draftId) setDraftId(parsed.draftId);
+      if (typeof parsed.stepIndex === 'number') setStepIndex(parsed.stepIndex);
+    } catch { /* corrupt/old localStorage value — just start fresh */ }
+  }, [isOpen]);
+
+  // Keeps localStorage in sync with the in-progress wizard so a
+  // refresh restores instantly with no network round-trip, independent
+  // of the (fire-and-forget) server autosave below.
+  useEffect(() => {
+    if (phase === 'success') return;
+    try {
+      localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({ form, draftId, stepIndex }));
+    } catch { /* private browsing / storage full — resuming just won't work, not fatal */ }
+  }, [form, draftId, stepIndex, phase]);
+
+  async function saveDraftToServer(currentForm: MatchFormData) {
+    try {
+      const API_URL = (import.meta as any).env?.VITE_API_URL ?? '/api';
+      const res = await fetch(`${API_URL}/match-requests/draft`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ draftId, ...currentForm }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDraftId(data.draftId);
+      }
+    } catch { /* autosave is best-effort — never blocks the wizard */ }
+  }
 
   const steps = getSteps(form.funding);
   const currentStepId = steps[stepIndex];
@@ -114,6 +161,9 @@ export default function MatchingWizard() {
     }
   }
 
+  // Closes/resets the in-memory UI only — deliberately does NOT touch
+  // the persisted draft (localStorage + server), so "Leave" really can
+  // be resumed later, matching the confirm dialog's own copy below.
   function reset() {
     setForm(EMPTY_FORM);
     setStepIndex(0);
@@ -121,6 +171,13 @@ export default function MatchingWizard() {
     setError('');
     setConfirmClose(false);
     closeMatchModal();
+  }
+
+  // Called once a real enquiry has actually been submitted — from
+  // this point the draft is a finished Lead, not something to resume.
+  function clearPersistedDraft() {
+    setDraftId(null);
+    try { localStorage.removeItem(DRAFT_STORAGE_KEY); } catch { /* ignore */ }
   }
 
   function validateStep(id: StepId): string {
@@ -144,6 +201,7 @@ export default function MatchingWizard() {
     }
     setError('');
     setDirection('forward');
+    saveDraftToServer(form); // fire-and-forget — never blocks moving to the next step
     if (stepIndex === steps.length - 1) {
       setPhase('review');
     } else {
@@ -183,12 +241,13 @@ export default function MatchingWizard() {
       const res = await fetch(`${API_URL}/match-requests`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ draftId, ...form }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new ApiError(body.error ?? 'Something went wrong sending your request.', res.status);
       }
+      clearPersistedDraft();
       setPhase('success');
     } catch (err) {
       setSubmitError(err instanceof ApiError ? err.message : 'Something went wrong sending your request. Please try again.');
@@ -312,7 +371,7 @@ export default function MatchingWizard() {
           <div className="mw-confirm-overlay">
             <div className="mw-confirm-card">
               <p className="mw-confirm-title">Leave your matching request?</p>
-              <p className="mw-confirm-body">Your progress will be lost.</p>
+              <p className="mw-confirm-body">Your progress is saved — reopen "Get matched" any time to pick up where you left off.</p>
               <div className="mw-confirm-actions">
                 <button className="mw-back-btn" onClick={() => setConfirmClose(false)}>Keep going</button>
                 <button className="mw-leave-btn" onClick={reset}>Leave</button>
