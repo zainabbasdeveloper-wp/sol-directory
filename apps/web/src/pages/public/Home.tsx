@@ -5,6 +5,7 @@ import Counter from '../../components/Counter';
 import PhotoSlot from '../../components/PhotoSlot';
 import { LOCATION_GROUPS } from '../../data/providers';
 import './Home.css';
+import { useMatchModal } from '../../context/MatchModalContext';
 
 const SERVICE_ICONS: Record<string, JSX.Element> = {
   'Personal care': <path d="M12 20.5S4 15.5 4 9.8A4.3 4.3 0 0 1 12 7.4 4.3 4.3 0 0 1 20 9.8c0 5.7-8 10.7-8 10.7Z" />,
@@ -34,6 +35,7 @@ const SERVICE_ICONS: Record<string, JSX.Element> = {
 
 export default function Home() {
   const navigate = useNavigate();
+  const { openMatchModal } = useMatchModal();
 
   return (
     <>
@@ -49,18 +51,17 @@ export default function Home() {
             <span className="eyebrow-rule" />
             NDIS &amp; aged care · Australia wide
           </span>
-          <h1 className="hero-heading">Find care providers who are actually taking clients</h1>
+          <h1 className="hero-heading">Find NDIS &amp; Aged Care Providers Near You</h1>
           <p className="hero-copy">
-            Search 6,400 registered NDIS and aged care providers by service, suburb and
-            funding type. Availability is confirmed every Monday, so the list you see is
-            the list that can help this month.
+            Tell us what you need and we will do the searching for you, free.
+            A new connection every 5 minutes during business hours.
           </p>
           <div className="hero-actions">
-            <button className="btn-gradient btn-lg" onClick={() => navigate('/directory')}>
-              Search the directory
+            <button className="btn-gradient btn-lg" onClick={openMatchModal}>
+              Get matched free <span aria-hidden="true">→</span>
             </button>
-            <button className="btn-outline-light btn-lg" onClick={() => navigate('/signup?type=provider')}>
-              List your business
+            <button className="btn-outline-light btn-lg" onClick={() => navigate('/directory')}>
+              Find support
             </button>
           </div>
         </div>
