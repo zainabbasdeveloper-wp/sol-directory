@@ -49,7 +49,7 @@
   border: 0;
   border-radius: var(--radius-md);
   box-shadow: 0 6px 18px color-mix(in srgb, var(--color-accent) 30%, transparent);
-  padding: 15px 28px;
+  padding: 0px 30px;
   font: inherit;
   font-size: 15px;
   font-weight: 600;
