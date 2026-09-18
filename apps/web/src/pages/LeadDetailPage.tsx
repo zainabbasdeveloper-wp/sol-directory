@@ -6,9 +6,13 @@ import './Dashboard.css';
 
 interface LeadDetail {
   id: string; need: string; conditions: string[]; suburb: string; distanceKm: number;
-  hoursPerWeek: string; funding: string; status: string; createdAt: string;
-  contactName: string; contactPhone: string; budget: string; note: string;
-  location: { lat: number; lng: number } | null;
+  hoursPerWeek: string; funding: string; fundingType: string; careFor: string; timeframe: string;
+  planManagement?: string; status: string; createdAt: string;
+  // Present only once this provider has actually unlocked the lead —
+  // see leads.controller.ts's getLeadDetail, which masks these
+  // entirely otherwise rather than trusting the frontend to hide them.
+  contactName?: string; contactPhone?: string; budget?: string; note?: string;
+  location?: { lat: number; lng: number } | null;
 }
 
 const API_URL = (import.meta as any).env?.VITE_API_URL ?? '/api';
@@ -77,18 +81,32 @@ export default function LeadDetailPage() {
       </div>
 
       <div className="dashboard-card" style={{ marginTop: 16 }}>
-        <h2 className="dashboard-card-title" style={{ marginBottom: 14 }}>Contact details</h2>
-        <p style={{ fontSize: 14, margin: '0 0 6px' }}><strong>{lead.contactName}</strong></p>
-        <p style={{ fontSize: 14, margin: '0 0 6px' }}>{lead.contactPhone}</p>
-        <p style={{ fontSize: 14, margin: '0 0 6px' }}>Budget: {lead.budget}</p>
-        {lead.note && <p style={{ fontSize: 14, margin: '10px 0 0', color: 'var(--color-text-muted, #5A6B84)' }}>{lead.note}</p>}
+        <h2 className="dashboard-card-title" style={{ marginBottom: 14 }}>Request details</h2>
+        <p style={{ fontSize: 14, margin: '0 0 6px' }}>Who this is for: <strong>{lead.careFor}</strong></p>
+        <p style={{ fontSize: 14, margin: '0 0 6px' }}>Timeframe: <strong>{lead.timeframe}</strong></p>
+        <p style={{ fontSize: 14, margin: '0 0 6px' }}>Funding: <strong>{lead.fundingType}{lead.planManagement ? ` · ${lead.planManagement}` : ''}</strong></p>
+        <p style={{ fontSize: 14, margin: '0 0 6px' }}>Status: <strong style={{ textTransform: 'capitalize' }}>{lead.status}</strong></p>
+        {lead.distanceKm != null && <p style={{ fontSize: 14, margin: '0 0 6px' }}>Distance: {lead.distanceKm}km</p>}
+        <p style={{ fontSize: 14, margin: 0 }}>Received: {new Date(lead.createdAt).toLocaleDateString()}</p>
       </div>
 
       <div className="dashboard-card" style={{ marginTop: 16 }}>
-        <h2 className="dashboard-card-title" style={{ marginBottom: 14 }}>Request details</h2>
-        <p style={{ fontSize: 14, margin: '0 0 6px' }}>Status: <strong style={{ textTransform: 'capitalize' }}>{lead.status}</strong></p>
-        <p style={{ fontSize: 14, margin: '0 0 6px' }}>Distance: {lead.distanceKm}km</p>
-        <p style={{ fontSize: 14, margin: 0 }}>Received: {new Date(lead.createdAt).toLocaleDateString()}</p>
+        <h2 className="dashboard-card-title" style={{ marginBottom: 14 }}>Contact details</h2>
+        {lead.contactName ? (
+          <>
+            <p style={{ fontSize: 14, margin: '0 0 6px' }}><strong>{lead.contactName}</strong></p>
+            <p style={{ fontSize: 14, margin: '0 0 6px' }}>{lead.contactPhone}</p>
+            {lead.budget && <p style={{ fontSize: 14, margin: '0 0 6px' }}>Budget: {lead.budget}</p>}
+            {lead.note && <p style={{ fontSize: 14, margin: '10px 0 0', color: 'var(--color-text-muted, #5A6B84)' }}>{lead.note}</p>}
+          </>
+        ) : (
+          <>
+            <p style={{ fontSize: 14, margin: '0 0 10px', color: 'var(--color-text-muted, #5A6B84)' }}>
+              Unlock this lead to see the requester's name, phone number, and any additional notes.
+            </p>
+            <Link to="/leads" className="dashboard-card-link">Go to leads →</Link>
+          </>
+        )}
       </div>
     </div>
   );

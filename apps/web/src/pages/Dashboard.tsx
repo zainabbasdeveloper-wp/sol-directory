@@ -162,7 +162,7 @@ function ProviderDashboard() {
                 {lead.viewed && <span style={{ marginLeft: 10, fontSize: 12, fontWeight: 700, color: '#177C4B' }}>Viewed ✓</span>}
               </p>
               <p className="latest-lead-meta">
-                {lead.suburb} · {lead.hoursPerWeek} · {lead.funding}
+                {lead.suburb} · {lead.careFor} · {lead.fundingType}
                 {!lead.viewed && (
                   <button
                     onClick={() => handleViewLead(lead.id)}

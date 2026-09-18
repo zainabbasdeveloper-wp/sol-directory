@@ -66,7 +66,13 @@ const leadSchema = new Schema<LeadDoc>(
   { timestamps: true }
 );
 
-export const MASKED_PROJECTION = 'need conditions suburb distanceKm hoursPerWeek funding status createdAt';
+// fundingType/careFor/timeframe/planManagement are every wizard field
+// that ISN'T personally identifying — same masking philosophy as the
+// rest of this projection (category/context info visible before
+// unlock, contact-adjacent info like name/phone/note gated behind it).
+// These were captured by matchRequests.controller.ts from day one but
+// never actually surfaced to providers anywhere in the frontend.
+export const MASKED_PROJECTION = 'need conditions suburb distanceKm hoursPerWeek funding fundingType careFor timeframe planManagement status createdAt';
 export const UNLOCKED_PROJECTION = `${MASKED_PROJECTION} contactName contactPhone budget note`;
 
 export function toMaskedShape(l: any): LeadMasked {
@@ -78,6 +84,10 @@ export function toMaskedShape(l: any): LeadMasked {
     distanceKm: l.distanceKm,
     hoursPerWeek: l.hoursPerWeek,
     funding: l.funding,
+    fundingType: l.fundingType,
+    careFor: l.careFor,
+    timeframe: l.timeframe,
+    planManagement: l.planManagement,
     status: l.status,
     createdAt: l.createdAt?.toISOString?.() ?? l.createdAt,
   };

@@ -81,7 +81,12 @@ export default function Leads() {
               <span className={`pill ${unlocked ? 'pill-ok' : 'pill-flat'}`}>{unlocked ? 'Unlocked' : 'Locked'}</span>
               <h3 className="lead-need">{lead.need}</h3>
               <p className="lead-meta">
-                {lead.suburb} · {lead.hoursPerWeek} · {lead.funding}
+                {lead.suburb}
+                {lead.hoursPerWeek ? ` · ${lead.hoursPerWeek}` : ''}
+                {' · '}{lead.fundingType}{lead.funding ? ` (${lead.funding})` : ''}
+              </p>
+              <p className="lead-meta">
+                {lead.careFor}{lead.timeframe ? ` · ${lead.timeframe}` : ''}{lead.planManagement ? ` · ${lead.planManagement}` : ''}
               </p>
 
               <div className="lead-gated-block">
@@ -89,7 +94,8 @@ export default function Leads() {
                   <div className="lead-detail-panel">
                     <div className="lead-detail-row"><span>Contact</span><span>{lead.contactName}</span></div>
                     <div className="lead-detail-row"><span>Phone</span><span>{lead.contactPhone}</span></div>
-                    <div className="lead-detail-row"><span>Budget</span><span>{lead.budget}</span></div>
+                    {lead.budget && <div className="lead-detail-row"><span>Budget</span><span>{lead.budget}</span></div>}
+                    {lead.note && <div className="lead-detail-row"><span>Notes</span><span>{lead.note}</span></div>}
                   </div>
                 ) : (
                   <div className="lead-detail-panel">

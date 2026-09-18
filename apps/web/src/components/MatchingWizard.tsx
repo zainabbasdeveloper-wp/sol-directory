@@ -337,6 +337,104 @@ function ReviewRow({ label, value, onEdit }: { label: string; value: string; onE
   );
 }
 
+interface SuburbSuggestion { id: string; label: string }
+
+const MAPBOX_TOKEN = (import.meta as any).env?.VITE_MAPBOX_ACCESS_TOKEN as string | undefined;
+
+// Live suburb/postcode search — previously a plain text field with no
+// suggestions at all. Debounced, cancels stale requests, and degrades
+// silently to a plain text input (no dropdown, no error shown) if the
+// public Mapbox token isn't configured, same reliability principle as
+// ProviderMap's own missing-token handling.
+function LocationInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [suggestions, setSuggestions] = useState<SuburbSuggestion[]>([]);
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!MAPBOX_TOKEN || value.trim().length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      const url = `https://api.mapbox.com/search/geocode/v6/forward?q=${encodeURIComponent(value)}&country=au&types=place,postcode,locality,neighborhood&autocomplete=true&limit=6&access_token=${MAPBOX_TOKEN}`;
+      fetch(url)
+        .then((r) => r.json())
+        .then((data) => {
+          if (cancelled) return;
+          const items: SuburbSuggestion[] = (data.features ?? [])
+            .map((f: any) => ({
+              id: f.properties?.mapbox_id ?? f.id ?? f.properties?.full_address,
+              label: f.properties?.full_address ?? f.properties?.name ?? '',
+            }))
+            .filter((s: SuburbSuggestion) => s.label);
+          setSuggestions(items);
+          setActiveIndex(-1);
+        })
+        .catch(() => { if (!cancelled) setSuggestions([]); });
+    }, 250);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [value]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  function select(s: SuburbSuggestion) {
+    onChange(s.label);
+    setSuggestions([]);
+    setOpen(false);
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (!open || suggestions.length === 0) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIndex((i) => Math.min(i + 1, suggestions.length - 1)); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIndex((i) => Math.max(i - 1, 0)); }
+    else if (e.key === 'Enter' && activeIndex >= 0) { e.preventDefault(); select(suggestions[activeIndex]); }
+    else if (e.key === 'Escape') setOpen(false);
+  }
+
+  return (
+    <div className="mw-input-icon-wrap" ref={wrapRef}>
+      <IconMapPin />
+      <input
+        className="mw-input mw-input-icon"
+        value={value}
+        onChange={(e) => { onChange(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        onKeyDown={handleKeyDown}
+        placeholder="Search suburb or postcode"
+        autoFocus
+        role="combobox"
+        aria-expanded={open && suggestions.length > 0}
+        aria-autocomplete="list"
+        aria-controls="mw-location-suggestions"
+      />
+      {open && suggestions.length > 0 && (
+        <ul id="mw-location-suggestions" role="listbox" className="mw-suggestions">
+          {suggestions.map((s, i) => (
+            <li
+              key={s.id}
+              role="option"
+              aria-selected={i === activeIndex}
+              className={`mw-suggestion${i === activeIndex ? ' mw-suggestion-active' : ''}`}
+              onMouseDown={(e) => { e.preventDefault(); select(s); }}
+            >
+              {s.label}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function WizardStep({
   stepId, form, set, headingRef, error, serviceOptions,
 }: {
@@ -352,16 +450,7 @@ function WizardStep({
       <>
         <h2 ref={headingRef} tabIndex={-1} className="mw-question">Where do you need care?</h2>
         <p className="mw-supporting">We'll match you with providers in your area.</p>
-        <div className="mw-input-icon-wrap">
-          <IconMapPin />
-          <input
-            className="mw-input mw-input-icon"
-            value={form.location}
-            onChange={(e) => set('location', e.target.value)}
-            placeholder="Search suburb or postcode"
-            autoFocus
-          />
-        </div>
+        <LocationInput value={form.location} onChange={(v) => set('location', v)} />
         {error && <p className="mw-error" role="alert">{error}</p>}
       </>
     );
