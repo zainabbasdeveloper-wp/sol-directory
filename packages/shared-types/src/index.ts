@@ -71,6 +71,13 @@ export interface LeadMasked {
   distanceKm: number;
   hoursPerWeek: string;
   funding: 'Plan-managed' | 'Self-managed' | 'NDIA-managed';
+  // Broad funding category (NDIS/Aged Care/Private/DVA/etc.) — always
+  // set; distinct from `funding` above, which is NDIS-specific
+  // plan-management style and only ever set when fundingType is NDIS.
+  fundingType: string;
+  careFor: string;
+  timeframe: string;
+  planManagement?: string;
   status: 'matched' | 'unlocked' | 'closed';
   createdAt: string;
 }

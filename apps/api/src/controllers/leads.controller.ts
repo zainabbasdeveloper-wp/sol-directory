@@ -118,17 +118,23 @@ export async function unlockLead(req: AuthedRequest, res: Response) {
   res.json(toUnlockedShape(lead));
 }
 
-// Full detail for a lead this provider has actually unlocked —
-// powers the lead detail page. Ownership check is the same
-// UnlockLedger lookup unlockLead already uses; never trust a role
-// check alone to gate contact-level detail.
+// Full detail for a lead — powers the lead detail page. SECURITY:
+// contact-level detail (name/phone/budget/note/location) must only
+// ever be returned for a lead THIS provider has actually unlocked via
+// UnlockLedger — the comment above this function used to claim that
+// check already happened here, but it never did, meaning any
+// authenticated provider could read any other provider's unlocked
+// lead's full contact details just by guessing/enumerating an ID,
+// completely bypassing the paid-unlock quota system. Mirrors the same
+// UnlockLedger lookup unlockLead/listLeads already use.
 export async function getLeadDetail(req: AuthedRequest, res: Response) {
   const provider = await getActiveProviderForUser(req.user!.id);
   if (!provider) return res.status(403).json({ error: 'No active provider profile for this account' });
   const lead = await Lead.findById(req.params.id).lean();
   if (!lead) return res.status(404).json({ error: 'Lead not found' });
 
-  res.json(toUnlockedShape(lead));
+  const unlocked = await UnlockLedger.exists({ providerId: provider._id, leadId: lead._id });
+  res.json(unlocked ? toUnlockedShape(lead) : toMaskedShape(lead));
 }
 
 // A real, previously-missing capability: a provider can explicitly

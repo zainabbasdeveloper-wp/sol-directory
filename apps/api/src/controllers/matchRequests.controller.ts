@@ -85,10 +85,17 @@ export async function submitMatchRequest(req: Request, res: Response) {
 
   // Fire-and-forget — a slow/failed email must never fail the
   // request itself, same reliability principle as every other
-  // EmailService call in this codebase.
+  // EmailService call in this codebase. Every matched provider gets
+  // this email regardless of plan — a paying (non-'starter') provider
+  // ALSO sees the lead live on their dashboard (Dashboard.tsx's
+  // existing 30s poll already does this for every provider, since
+  // listLeads was never plan-gated to begin with), but that's
+  // additive, not a replacement for the email.
+  const frontendOrigin = process.env.CLIENT_ORIGIN ?? 'http://localhost:5173';
   for (const { provider, result } of matchedProviders) {
     if (provider.intakeEmail) {
-      EmailService.sendProviderLeadNotification(provider.intakeEmail, lead.need, lead.suburb).catch(() => {});
+      const dashboardUrl = `${frontendOrigin}/leads/${lead._id}`;
+      EmailService.sendProviderLeadNotification(provider.intakeEmail, lead.need, lead.suburb, dashboardUrl).catch(() => {});
     }
     Notification.create({
       userId: provider.userId,
