@@ -7,7 +7,6 @@ interface Props {
   loading: boolean;
   error: string;
   content: WPContentBase | null;
-  hideDefaultTitle?: boolean;
   /** Extra content rendered above the main body — e.g. LocationTemplate's provider list, ServiceTemplate's related services. */
   children?: React.ReactNode;
   /**
