@@ -108,6 +108,15 @@ export async function markLeadViewed(req: AuthedRequest, res: Response) {
     { upsert: true }
   );
 
+  // Feeds the audit trail + the public "median first reply" stat
+  // (stats.controller.ts). Only ever advances 'notified' -> 'viewed'
+  // and only the first time, so it never overwrites a later
+  // 'contacted'/'declined' state. Best-effort — never blocks the view.
+  LeadMatch.updateOne(
+    { leadId: lead._id, providerId: provider._id, status: 'notified' },
+    { $set: { status: 'viewed', viewedAt: new Date() } }
+  ).catch(() => {});
+
   res.json({ viewed: true });
 }
 
@@ -149,6 +158,16 @@ export async function unlockLead(req: AuthedRequest, res: Response) {
 
   provider.leadUnlocksUsedThisPeriod += 1;
   await provider.save();
+
+  // Unlocking is the provider actually acting on the enquiry (they now
+  // hold the contact details) — record it as the reply moment. Only
+  // sets respondedAt once; a lead unlocked via "browse nearby" (no
+  // LeadMatch row) simply matches nothing, which is correct: that
+  // wasn't a response to a notification.
+  LeadMatch.updateOne(
+    { leadId: lead._id, providerId: provider._id, respondedAt: { $exists: false } },
+    { $set: { status: 'contacted', respondedAt: new Date() } }
+  ).catch(() => {});
 
   // Geocode once, lazily, on first real unlock — there's no lead
   // creation endpoint in this codebase to do this at submission

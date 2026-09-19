@@ -3,10 +3,11 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import DOMPurify from 'dompurify';
 import { PublicHeader, PublicFooter } from './PublicLayout';
 import { runAction } from '../../lib/runAction';
+import { useSiteStats } from '../../hooks/useSiteStats';
+import { providerCountLabel, stateGroupCount } from '../../lib/statsCounts';
 import PhotoSlot from '../../components/PhotoSlot';
 import {
-  FUNDING_OPTIONS, LANGUAGE_OPTIONS, COMPARE, DEMAND, METHOD,
-  SUBURB_FACTS, LANGUAGES, GLANCE, SERVICE_COUNTS, REQUESTED, REGULATORS, POLICIES, FAQ,
+  COMPARE, METHOD, REGULATORS, POLICIES, FAQ,
 } from '../../data/servicePageFixtures';
 import { unslugify, stateForSuburb, STATE_ABBR } from '../../data/slugHelpers';
 import { SERVICES } from '../../data/providers';
@@ -51,30 +52,22 @@ const OTHER_SERVICES = [
   'Community Access Support',
 ];
 
+// Capitals only used for links; the provider COUNT shown on each card
+// comes from real data (stats.providersByState), never from this list.
 const STATE_COVERAGE = [
-  { abbr: 'NSW', citySlug: 'sydney', count: 1840 },
-  { abbr: 'VIC', citySlug: 'melbourne', count: 1510 },
-  { abbr: 'QLD', citySlug: 'brisbane', count: 1120 },
-  { abbr: 'WA', citySlug: 'perth', count: 640 },
-  { abbr: 'SA', citySlug: 'adelaide', count: 480 },
-  { abbr: 'TAS', citySlug: 'hobart', count: 210 },
-  { abbr: 'ACT', citySlug: 'canberra', count: 190 },
-  { abbr: 'NT', citySlug: 'darwin', count: 140 },
-];
-
-const RESPONSE_BY_STATE = [
-  { abbr: 'NSW', minutes: 12 },
-  { abbr: 'VIC', minutes: 9 },
-  { abbr: 'QLD', minutes: 15 },
-  { abbr: 'WA', minutes: 18 },
-  { abbr: 'SA', minutes: 14 },
-  { abbr: 'TAS', minutes: 22 },
-  { abbr: 'ACT', minutes: 8 },
-  { abbr: 'NT', minutes: 27 },
+  { abbr: 'NSW', citySlug: 'sydney' },
+  { abbr: 'VIC', citySlug: 'melbourne' },
+  { abbr: 'QLD', citySlug: 'brisbane' },
+  { abbr: 'WA', citySlug: 'perth' },
+  { abbr: 'SA', citySlug: 'adelaide' },
+  { abbr: 'TAS', citySlug: 'hobart' },
+  { abbr: 'ACT', citySlug: 'canberra' },
+  { abbr: 'NT', citySlug: 'darwin' },
 ];
 
 export default function ServiceLocationPage() {
   const navigate = useNavigate();
+  const stats = useSiteStats();
   const { openMatchModal } = useMatchModal();
   const { serviceSlug = 'nursing', suburb: suburbSlug = 'bankstown' } = useParams<{ serviceSlug: string; suburb: string }>();
 
@@ -111,30 +104,6 @@ export default function ServiceLocationPage() {
       .finally(() => setProvidersLoading(false));
   }, [serviceSlug, suburbSlug, serviceName, suburbName]);
 
-  // The ToC only lists sections that actually render — "Costs" and
-  // "What to expect" used to be listed unconditionally although no such
-  // sections existed (dead anchors). They're now real sections that
-  // appear only when an editor has filled in their ACF group.
-  const toc = wp?.toc?.length ? wp.toc : [
-    { label: 'Top providers', href: '#providers' },
-    { label: `About ${serviceLower}`, href: '#about-service' },
-    { label: 'What to compare', href: '#compare' },
-    { label: "Who's asking", href: '#asking' },
-    { label: 'Our methodology', href: '#method' },
-    { label: 'Where to find providers', href: '#where-to-find' },
-    { label: 'Checking credentials', href: '#credentials' },
-    { label: `About ${suburbName}`, href: '#suburb' },
-    { label: 'Language support', href: '#language' },
-    { label: `${serviceName} at a glance`, href: '#glance' },
-    ...(wp?.cost ? [{ label: wp.cost.heading || 'Costs and how to pay', href: '#costs' }] : []),
-    ...(wp?.expect ? [{ label: wp.expect.heading || 'What to expect', href: '#expect' }] : []),
-    { label: 'Services in this suburb', href: '#services' },
-    { label: 'Most requested support', href: '#requested' },
-    { label: 'Regulations & compliance', href: '#rules' },
-    { label: 'Find providers near you', href: '#find-near-you' },
-    { label: 'FAQ', href: '#faq' },
-  ];
-
   const act = (value: string | undefined) => runAction(value, { openMatchModal, navigate });
 
   // Regulator cards, response times and related services: editor-authored
@@ -143,9 +112,7 @@ export default function ServiceLocationPage() {
   const regulatorItems = wp?.regulations?.cards?.length
     ? wp.regulations.cards.map((c) => ({ name: c.title, phone: c.phone, site: c.website, description: c.description }))
     : REGULATORS.map((r) => ({ name: r.name, phone: r.phone, site: r.site, description: '' }));
-  const responseTimeItems = wp?.responseTimes?.length
-    ? wp.responseTimes.map((r) => ({ abbr: r.state, minutes: r.minutes }))
-    : RESPONSE_BY_STATE;
+  const responseTimeItems = (wp?.responseTimes ?? []).map((r) => ({ abbr: r.state, minutes: r.minutes }));
   const relatedLinks = wp?.relatedServices?.length
     ? wp.relatedServices.map((r) => ({ name: r.title, to: `/services/${r.slug}/${suburbSlug}` }))
     : OTHER_SERVICES.map((name) => ({ name, to: `/services/${slugify(name)}/${suburbSlug}` }));
@@ -161,13 +128,37 @@ export default function ServiceLocationPage() {
 
   const introParagraph = wp?.introParagraph || `This guide compares in-home ${serviceLower} providers covering ${suburbName}, ranked on registration, clinical credentials and service range. The providers listed service ${suburbName} and the surrounding area, and deliver registered and enrolled care for NDIS participants, aged care clients and private patients.`;
   const compareItems = wp?.compare?.length ? wp.compare : COMPARE;
-  const demandItems = wp?.demand?.length ? wp.demand : DEMAND;
-  const suburbFactsItems = wp?.suburbFacts?.length ? wp.suburbFacts : SUBURB_FACTS;
-  const languageItems = wp?.languages?.length ? wp.languages : LANGUAGES;
-  const glanceItems = wp?.glance?.length ? wp.glance : GLANCE;
-  const serviceCountsItems = wp?.serviceCounts?.length ? wp.serviceCounts : SERVICE_COUNTS;
-  const requestedItems = wp?.requested?.length ? wp.requested : REQUESTED;
+  const demandItems = wp?.demand ?? [];
+  const suburbFactsItems = wp?.suburbFacts ?? [];
+  const languageItems = wp?.languages ?? [];
+  const glanceItems = wp?.glance ?? [];
+  const serviceCountsItems = wp?.serviceCounts ?? [];
+  const requestedItems = wp?.requested ?? [];
   const faqItems = wp?.faq?.length ? wp.faq : FAQ;
+
+  // The ToC only lists sections that actually render — "Costs" and
+  // "What to expect" used to be listed unconditionally although no such
+  // sections existed (dead anchors). They're now real sections that
+  // appear only when an editor has filled in their ACF group.
+  const toc = wp?.toc?.length ? wp.toc : [
+    { label: 'Top providers', href: '#providers' },
+    { label: `About ${serviceLower}`, href: '#about-service' },
+    { label: 'What to compare', href: '#compare' },
+    ...(demandItems.length > 0 ? [{ label: "Who's asking", href: '#asking' }] : []),
+    { label: 'Our methodology', href: '#method' },
+    { label: 'Where to find providers', href: '#where-to-find' },
+    { label: 'Checking credentials', href: '#credentials' },
+    ...(suburbFactsItems.length > 0 || localFacts.length > 0 ? [{ label: `About ${suburbName}`, href: '#suburb' }] : []),
+    ...(languageItems.length > 0 ? [{ label: 'Language support', href: '#language' }] : []),
+    ...(glanceItems.length > 0 ? [{ label: `${serviceName} at a glance`, href: '#glance' }] : []),
+    ...(wp?.cost ? [{ label: wp.cost.heading || 'Costs and how to pay', href: '#costs' }] : []),
+    ...(wp?.expect ? [{ label: wp.expect.heading || 'What to expect', href: '#expect' }] : []),
+    ...(serviceCountsItems.length > 0 ? [{ label: 'Services in this suburb', href: '#services' }] : []),
+    ...(requestedItems.length > 0 ? [{ label: 'Most requested support', href: '#requested' }] : []),
+    { label: 'Regulations & compliance', href: '#rules' },
+    { label: 'Find providers near you', href: '#find-near-you' },
+    { label: 'FAQ', href: '#faq' },
+  ];
 
   const HERO_CHECKS = [
     `${providersLoading ? '…' : providersTotal} providers in ${suburbName}`,
@@ -358,6 +349,7 @@ export default function ServiceLocationPage() {
             </div>
           </section>
 
+          {demandItems.length > 0 && (
           <section id="asking">
             <h2 className="svc-h2-sm">Who is asking for home {serviceLower}</h2>
             <div className="svc-demand-grid">
@@ -379,6 +371,7 @@ export default function ServiceLocationPage() {
               ))}
             </div>
           </section>
+          )}
 
           <section id="method">
             <h2 className="svc-h2-sm">How we rank providers</h2>
@@ -399,7 +392,9 @@ export default function ServiceLocationPage() {
               {STATE_COVERAGE.map((s) => (
                 <Link key={s.abbr} to={`/services/${serviceSlug}/${s.citySlug}`} className="svc-state-card">
                   <span className="svc-state-abbr">{s.abbr}</span>
-                  <span className="svc-state-count">{s.count}+ providers</span>
+                  {providerCountLabel(stateGroupCount(stats, [s.abbr])) && (
+                    <span className="svc-state-count">{providerCountLabel(stateGroupCount(stats, [s.abbr]))}</span>
+                  )}
                 </Link>
               ))}
             </div>
@@ -417,6 +412,7 @@ export default function ServiceLocationPage() {
             </ol>
           </section>
 
+          {(suburbFactsItems.length > 0 || localFacts.length > 0) && (
           <section id="suburb">
             <h2 className="svc-h2-sm">About {suburbName}</h2>
             <div className="svc-facts-grid">
@@ -437,7 +433,9 @@ export default function ServiceLocationPage() {
             {wp?.local?.communityInfo && <p className="svc-p" style={{ marginTop: 16 }}>{wp.local.communityInfo}</p>}
             {wp?.local?.dataDate && <p className="svc-fact-note" style={{ marginTop: 8 }}>Source: {wp.local.dataDate}</p>}
           </section>
+          )}
 
+          {languageItems.length > 0 && (
           <section id="language">
             <h2 className="svc-h2-sm">Language support in {suburbName}</h2>
             <div className="svc-language-grid">
@@ -455,7 +453,9 @@ export default function ServiceLocationPage() {
               ))}
             </div>
           </section>
+          )}
 
+          {glanceItems.length > 0 && (
           <section id="glance">
             <h2 className="svc-h2-sm">Home {serviceLower} at a glance</h2>
             <div className="svc-glance-table">
@@ -467,6 +467,7 @@ export default function ServiceLocationPage() {
               ))}
             </div>
           </section>
+          )}
 
           {wp?.cost && (
             <section id="costs">
@@ -512,6 +513,7 @@ export default function ServiceLocationPage() {
             </section>
           )}
 
+          {serviceCountsItems.length > 0 && (
           <section id="services">
             <h2 className="svc-h2-sm">Care services available in {suburbName}</h2>
             <div className="svc-bar-list">
@@ -529,7 +531,9 @@ export default function ServiceLocationPage() {
               <Link to="/services" className="svc-link-strong">View all services →</Link>
             </div>
           </section>
+          )}
 
+          {requestedItems.length > 0 && (
           <section id="requested">
             <h2 className="svc-h2-sm">Most requested support in {suburbName}</h2>
             <div className="svc-bar-list">
@@ -547,6 +551,7 @@ export default function ServiceLocationPage() {
               })()}
             </div>
           </section>
+          )}
 
           <section id="rules">
             <h2 className="svc-h2-sm">{wp?.regulations?.heading || `${stateName} regulations and compliance`}</h2>
@@ -599,6 +604,7 @@ export default function ServiceLocationPage() {
             </div>
           </section>
 
+          {responseTimeItems.length > 0 && (
           <section id="response-by-state">
             <h2 className="svc-h2-sm">Response time by state</h2>
             <div className="svc-bar-list">
@@ -613,6 +619,7 @@ export default function ServiceLocationPage() {
               })()}
             </div>
           </section>
+          )}
         </main>
       </div>
 
