@@ -9,6 +9,15 @@ const PRIMARY = '#1769E0';
 const BG = '#F5F8FC';
 const TEXT_MUTED = '#5A6B84';
 
+function escapeHtml(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 export function renderEmailLayout(opts: {
   preheader: string; // hidden preview text shown in inbox lists
   heading: string;
@@ -105,6 +114,49 @@ export function providerLeadNotificationTemplate(input: { need: string; suburb: 
     ctaUrl: input.dashboardUrl,
   });
   return { subject: 'New care opportunity available', html };
+}
+
+export function providerLeadTeaserTemplate(input: { need: string; suburb: string; dashboardUrl?: string }): { subject: string; html: string } {
+  const html = renderEmailLayout({
+    preheader: `A new ${escapeHtml(input.need)} lead is available in ${escapeHtml(input.suburb)}`,
+    heading: 'New lead in your service area',
+    bodyHtml: `<p>A new request for <strong>${escapeHtml(input.need)}</strong> in <strong>${escapeHtml(input.suburb)}</strong> may suit your organisation.</p><p>Upgrade your plan to unlock the full brief and contact details. The requester's email and phone number are hidden until the lead is unlocked.</p>`,
+    ctaLabel: input.dashboardUrl ? 'View lead opportunity' : undefined,
+    ctaUrl: input.dashboardUrl,
+  });
+  return { subject: `New ${input.need} lead in ${input.suburb}`, html };
+}
+
+export function providerLeadFullTemplate(input: {
+  need: string;
+  suburb: string;
+  requesterName: string;
+  requesterEmail: string;
+  requesterPhone?: string;
+  careFor: string;
+  timeframe: string;
+  fundingType: string;
+  planManagement?: string;
+  additionalDetails?: string;
+  dashboardUrl?: string;
+}): { subject: string; html: string } {
+  const html = renderEmailLayout({
+    preheader: `New ${escapeHtml(input.need)} lead in ${escapeHtml(input.suburb)} with contact details`,
+    heading: 'New matched lead',
+    bodyHtml: `
+      <p>A new request for <strong>${escapeHtml(input.need)}</strong> in <strong>${escapeHtml(input.suburb)}</strong> has been matched to your organisation.</p>
+      <p><strong>Requester:</strong> ${escapeHtml(input.requesterName)}<br />
+      <strong>Email:</strong> ${escapeHtml(input.requesterEmail)}<br />
+      <strong>Phone:</strong> ${escapeHtml(input.requesterPhone || 'Not provided')}</p>
+      <p><strong>Support for:</strong> ${escapeHtml(input.careFor)}<br />
+      <strong>Timeframe:</strong> ${escapeHtml(input.timeframe)}<br />
+      <strong>Funding:</strong> ${escapeHtml(input.fundingType)}${input.planManagement ? ` (${escapeHtml(input.planManagement)})` : ''}</p>
+      ${input.additionalDetails ? `<p><strong>Additional details:</strong><br />${escapeHtml(input.additionalDetails)}</p>` : ''}
+    `,
+    ctaLabel: input.dashboardUrl ? 'Open lead in dashboard' : undefined,
+    ctaUrl: input.dashboardUrl,
+  });
+  return { subject: `New matched ${input.need} lead in ${input.suburb}`, html };
 }
 
 export function adminNotificationTemplate(input: { title: string; message: string; dashboardUrl?: string }): { subject: string; html: string } {
