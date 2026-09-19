@@ -34,30 +34,18 @@ export const SERVICES = ['All services', 'Support coordination', 'Personal care'
 export const REGIONS = ['All states', 'NSW', 'VIC', 'QLD', 'SA', 'WA', 'TAS', 'NT', 'ACT'];
 export const FUNDINGS = ['Any funding', 'Agency managed', 'Plan managed', 'Self managed', 'Aged care (HCP)'];
 
-export interface Quote {
-  text: string;
-  name: string;
-  role: string;
-  initials: string;
-}
-
-export const QUOTES: Quote[] = [
-  { text: 'We rang four providers off other lists and none had a place. The three on SolDirectory all called back the same day.', name: 'Marisa T.', role: 'Support coordinator, Western Sydney', initials: 'MT' },
-  { text: 'Mum needed personal care within a fortnight. I found two providers covering her suburb, spoke to both, and had a roster started the next week.', name: 'Daniel O.', role: 'Family carer, Brisbane north', initials: 'DO' },
-  { text: 'The response times are the part I trust. If a profile says it replies in ten minutes, it has replied in ten minutes every time.', name: 'Priya S.', role: 'Plan manager, Adelaide', initials: 'PS' },
-];
-
 export interface LocationGroup {
   state: string;
-  count: string;
+  /** State abbreviations this group covers — used to sum REAL provider counts (stats.providersByState). */
+  states: string[];
   places: string[];
 }
 
 // From the design's rendered output (locationGroups) — same figures
 // shown in the live Claude Design preview.
 export const LOCATION_GROUPS: LocationGroup[] = [
-  { state: 'New South Wales', count: '1,840 providers', places: ['Sydney', 'Newcastle', 'Wollongong', 'Parramatta'] },
-  { state: 'Victoria', count: '1,510 providers', places: ['Melbourne', 'Geelong', 'Ballarat', 'Dandenong'] },
-  { state: 'Queensland', count: '1,120 providers', places: ['Brisbane', 'Gold Coast', 'Townsville', 'Cairns'] },
-  { state: 'Rest of Australia', count: '1,942 providers', places: ['Perth', 'Adelaide', 'Hobart', 'Canberra', 'Darwin'] },
+  { state: 'New South Wales', states: ['NSW'], places: ['Sydney', 'Newcastle', 'Wollongong', 'Parramatta'] },
+  { state: 'Victoria', states: ['VIC'], places: ['Melbourne', 'Geelong', 'Ballarat', 'Dandenong'] },
+  { state: 'Queensland', states: ['QLD'], places: ['Brisbane', 'Gold Coast', 'Townsville', 'Cairns'] },
+  { state: 'Rest of Australia', states: ['SA', 'WA', 'TAS', 'NT', 'ACT'], places: ['Perth', 'Adelaide', 'Hobart', 'Canberra', 'Darwin'] },
 ];

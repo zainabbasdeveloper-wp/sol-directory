@@ -28,6 +28,8 @@ import adminConditionsRoutes from './routes/admin.conditions.routes.js';
 import adminDiagnosticsRoutes from './routes/admin.diagnostics.routes.js';
 import adminLeadsRoutes from './routes/admin.leads.routes.js';
 import adminEmailLogsRoutes from './routes/admin.emailLogs.routes.js';
+import capacityRoutes from './routes/capacity.routes.js';
+import statsRoutes from './routes/stats.routes.js';
 
 const app = express();
 
@@ -62,6 +64,8 @@ app.use('/api/admin/conditions', adminConditionsRoutes);
 app.use('/api/admin/diagnostics', adminDiagnosticsRoutes);
 app.use('/api/admin/leads', adminLeadsRoutes);
 app.use('/api/admin/email-logs', adminEmailLogsRoutes);
+app.use('/api/capacity', capacityRoutes);
+app.use('/api/stats', statsRoutes);
 app.use('/sitemap.xml', sitemapRoutes);
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

@@ -105,6 +105,17 @@ export function providerResponseTemplate(input: { providerName: string; tracking
   return { subject: 'A provider has responded to your request', html };
 }
 
+export function capacityConfirmationTemplate(input: { providerName: string; confirmUrl: string }): { subject: string; html: string } {
+  const html = renderEmailLayout({
+    preheader: 'Confirm you can still take new referrals this week',
+    heading: 'Weekly capacity check-in',
+    bodyHtml: `<p>Hi ${input.providerName},</p><p>Please confirm you're still able to take new referrals this week. If we don't hear from you within 7 days, your listing is paused and dropped from search results until you confirm again.</p>`,
+    ctaLabel: 'Confirm capacity',
+    ctaUrl: input.confirmUrl,
+  });
+  return { subject: 'Confirm your capacity — SolDirectory', html };
+}
+
 export function providerLeadNotificationTemplate(input: { need: string; suburb: string; dashboardUrl?: string }): { subject: string; html: string } {
   const html = renderEmailLayout({
     preheader: 'A new care opportunity is available',

@@ -32,6 +32,9 @@ export async function getOnboarding(req: AuthedRequest, res: Response) {
       afterHoursCover: provider.afterHoursCover,
       incidentPolicyEscalation: provider.incidentPolicyEscalation,
       plan: provider.plan,
+      lastCapacityConfirmedAt: provider.lastCapacityConfirmedAt ?? null,
+      listingPaused: provider.listingPaused,
+      smsNotifications: !!provider.smsNotifications,
     },
   });
 }

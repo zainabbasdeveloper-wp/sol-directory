@@ -5,9 +5,15 @@ import Provider from '../models/Provider.js';
 import UnlockLedger from '../models/UnlockLedger.js';
 import PlanConfig from '../models/PlanConfig.js';
 import { geocodeAddress } from '../services/geocoding.service.js';
+import { scoreMatch } from '../services/matching.service.js';
 import LeadView from '../models/LeadView.js';
 import LeadMatch from '../models/LeadMatch.js';
 import { getActiveProviderForUser } from '../utils/getActiveProvider.js';
+
+// Same threshold matchRequests.controller.ts uses to decide a match is
+// genuine — kept in sync so "notified" and "browsable" mean the same
+// thing, just with the notify-side cap removed here.
+const NEARBY_THRESHOLD = 40;
 
 // getActiveProviderForUser is now imported from ../utils/getActiveProvider.js
 // — see that file for why this was extracted during a security audit.
@@ -23,7 +29,20 @@ export async function listLeads(req: AuthedRequest, res: Response) {
   // fields only for the specific leads this provider has actually
   // unlocked — never trust an in-memory flag to decide what to
   // serialize for a lead the query didn't already scope to.
-  const leads = await Lead.find({}).select(MASKED_PROJECTION).lean();
+  // Scoped to leads THIS provider was actually matched to (LeadMatch,
+  // written by submitMatchRequest) plus any they've unlocked — this used
+  // to be every non-draft lead in the database for every provider, so a
+  // provider saw (masked) enquiries in suburbs/services nothing to do
+  // with them. Leads they declined drop out unless already unlocked.
+  // Broader discovery is the separate, paid-only "browse nearby" list
+  // (listNearbyLeads). status != draft — a wizard-in-progress enquiry
+  // is private, incomplete user data, never a real lead for providers.
+  const matchedIds = (await LeadMatch.find({ providerId: provider._id, status: { $ne: 'declined' } }).select('leadId').lean())
+    .map((m) => String(m.leadId));
+  const visibleIds = [...new Set([...matchedIds, ...unlockedIds])];
+  const leads = visibleIds.length
+    ? await Lead.find({ _id: { $in: visibleIds }, status: { $ne: 'draft' } }).select(MASKED_PROJECTION).sort({ createdAt: -1 }).lean()
+    : [];
   const unlockedFull = unlockedIds.size
     ? await Lead.find({ _id: { $in: [...unlockedIds] } }).lean()
     : [];
@@ -44,6 +63,51 @@ export async function listLeads(req: AuthedRequest, res: Response) {
   );
 }
 
+// "Browse nearby requests" (developer brief / architecture doc's
+// Referral Marketplace "Browse Requests" screen, Nearby tab) — a paid-
+// only feature distinct from listLeads above. listLeads only ever
+// shows leads this provider was actually auto-notified about (capped
+// at MAX_NOTIFIED_PER_LEAD in matchRequests.controller.ts); this
+// surfaces every OTHER open lead the provider would still score as a
+// genuine match for, so a good-fit lead that missed the notify cap
+// isn't invisible to a paying provider willing to look for it
+// themselves. Free ('starter') providers get nothing here — matches
+// the plan comparison table's "Browse nearby open requests: No/Yes".
+export async function listNearbyLeads(req: AuthedRequest, res: Response) {
+  const provider = await getActiveProviderForUser(req.user!.id);
+  if (!provider) return res.status(403).json({ error: 'No active provider profile for this account' });
+
+  if (provider.plan === 'starter') {
+    return res.status(402).json({ error: 'Browsing nearby requests requires a paid plan', code: 'PLAN_REQUIRED' });
+  }
+  // A paused (unconfirmed capacity) provider shouldn't be discovering
+  // and claiming new work either — they can still see/manage leads
+  // already matched or unlocked (listLeads above), just not browse for
+  // more until they confirm again.
+  if (provider.listingPaused) {
+    return res.status(403).json({ error: 'Confirm your capacity to browse new requests.', code: 'CAPACITY_UNCONFIRMED' });
+  }
+
+  // "Other" leads only: anything already in this provider's own list
+  // (matched to them, declined, or unlocked) is excluded so a lead never
+  // appears in both tabs. Only open leads (matched, not yet closed) —
+  // dead/closed enquiries shouldn't show up as something new to browse.
+  const [ownMatches, ownUnlocks] = await Promise.all([
+    LeadMatch.find({ providerId: provider._id }).select('leadId').lean(),
+    UnlockLedger.find({ providerId: provider._id }).select('leadId').lean(),
+  ]);
+  const alreadySeen = [...ownMatches, ...ownUnlocks].map((m) => m.leadId);
+  const openLeads = await Lead.find({ status: 'matched', _id: { $nin: alreadySeen } }).lean();
+
+  const nearby = openLeads
+    .map((l) => ({ lead: l, result: scoreMatch(l as any, provider as any) }))
+    .filter(({ result }) => result.score >= NEARBY_THRESHOLD)
+    .sort((a, b) => b.result.score - a.result.score)
+    .map(({ lead }) => toMaskedShape(lead));
+
+  res.json(nearby);
+}
+
 // Records a meaningful view — the frontend calls this when a
 // provider actually opens a lead's details, not on every list
 // render. The unique index on (leadId, providerId) means this is
@@ -60,6 +124,15 @@ export async function markLeadViewed(req: AuthedRequest, res: Response) {
     { $set: { lastViewedAt: new Date() }, $setOnInsert: { firstViewedAt: new Date() } },
     { upsert: true }
   );
+
+  // Feeds the audit trail + the public "median first reply" stat
+  // (stats.controller.ts). Only ever advances 'notified' -> 'viewed'
+  // and only the first time, so it never overwrites a later
+  // 'contacted'/'declined' state. Best-effort — never blocks the view.
+  LeadMatch.updateOne(
+    { leadId: lead._id, providerId: provider._id, status: 'notified' },
+    { $set: { status: 'viewed', viewedAt: new Date() } }
+  ).catch(() => {});
 
   res.json({ viewed: true });
 }
@@ -102,6 +175,16 @@ export async function unlockLead(req: AuthedRequest, res: Response) {
 
   provider.leadUnlocksUsedThisPeriod += 1;
   await provider.save();
+
+  // Unlocking is the provider actually acting on the enquiry (they now
+  // hold the contact details) — record it as the reply moment. Only
+  // sets respondedAt once; a lead unlocked via "browse nearby" (no
+  // LeadMatch row) simply matches nothing, which is correct: that
+  // wasn't a response to a notification.
+  LeadMatch.updateOne(
+    { leadId: lead._id, providerId: provider._id, respondedAt: { $exists: false } },
+    { $set: { status: 'contacted', respondedAt: new Date() } }
+  ).catch(() => {});
 
   // Geocode once, lazily, on first real unlock — there's no lead
   // creation endpoint in this codebase to do this at submission

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { listLeads, getPlans } from '../api/resources';
+import { listLeads, getPlans, getOnboarding, confirmCapacityNow, setSmsPreference } from '../api/resources';
 import { getMyReferrals, type ReferralInfo } from '../api/providerResources';
 import { ApiError } from '../api/client';
 import { useToast } from '../components/ui/Toast';
@@ -73,6 +73,10 @@ function ProviderDashboard() {
   const [loading, setLoading] = useState(true);
   const [referral, setReferral] = useState<ReferralInfo | null>(null);
   const [copied, setCopied] = useState(false);
+  const [capacity, setCapacity] = useState<{ lastCapacityConfirmedAt: string | null; listingPaused: boolean } | null>(null);
+  const [confirmingCapacity, setConfirmingCapacity] = useState(false);
+  const [smsOn, setSmsOn] = useState<boolean | null>(null);
+  const [savingSms, setSavingSms] = useState(false);
   const showToast = useToast();
   const knownLeadIds = useRef<Set<string> | null>(null);
 
@@ -81,7 +85,39 @@ function ProviderDashboard() {
       .then(([l, p]) => { setLeads(l); setPlans(p); knownLeadIds.current = new Set(l.map((x) => x.id)); })
       .finally(() => setLoading(false));
     getMyReferrals().then(setReferral).catch(() => {});
+    (getOnboarding() as Promise<any>)
+      .then((res) => {
+        setCapacity({ lastCapacityConfirmedAt: res.provider?.lastCapacityConfirmedAt ?? null, listingPaused: !!res.provider?.listingPaused });
+        setSmsOn(!!res.provider?.smsNotifications);
+      })
+      .catch(() => {});
   }, []);
+
+  async function handleSmsToggle(next: boolean) {
+    setSavingSms(true);
+    try {
+      const res = await setSmsPreference(next);
+      setSmsOn(res.smsNotifications);
+      showToast(res.smsNotifications ? 'Text alerts on.' : 'Text alerts off.');
+    } catch {
+      showToast('Could not update your text-alert setting.');
+    } finally {
+      setSavingSms(false);
+    }
+  }
+
+  async function handleConfirmCapacity() {
+    setConfirmingCapacity(true);
+    try {
+      const res = await confirmCapacityNow();
+      setCapacity({ lastCapacityConfirmedAt: res.lastCapacityConfirmedAt, listingPaused: res.listingPaused });
+      showToast('Capacity confirmed — your listing stays live this week.');
+    } catch {
+      showToast('Could not confirm capacity right now.');
+    } finally {
+      setConfirmingCapacity(false);
+    }
+  }
 
   // Real-time updates via short polling (spec item 21's own stated
   // fallback) — no WebSocket/SSE infrastructure exists anywhere in
@@ -131,6 +167,39 @@ function ProviderDashboard() {
         <h1 className="page-title">Dashboard</h1>
         <p className="dashboard-summary">Here's what's come in and what you're paying for.</p>
       </div>
+
+      {capacity?.listingPaused && (
+        <div style={{ background: '#FDF3F1', border: '1px solid #E3B7B0', borderRadius: 12, padding: '16px 20px', marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+          <div>
+            <p style={{ margin: '0 0 4px', fontWeight: 700, color: '#8C2F1E' }}>Your listing is paused</p>
+            <p style={{ margin: 0, fontSize: 13.5, color: '#8C2F1E' }}>You haven't confirmed capacity this week, so you're hidden from search and new matches. Confirm to go live again.</p>
+          </div>
+          <button
+            onClick={handleConfirmCapacity}
+            disabled={confirmingCapacity}
+            style={{ background: '#B4232F', color: '#fff', border: 0, borderRadius: 8, padding: '10px 20px', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
+          >
+            {confirmingCapacity ? 'Confirming…' : 'Confirm capacity now'}
+          </button>
+        </div>
+      )}
+      {capacity && !capacity.listingPaused && (
+        <p style={{ fontSize: 12.5, color: 'var(--color-text-muted, #5A6B84)', margin: '0 0 20px' }}>
+          {capacity.lastCapacityConfirmedAt
+            ? `Capacity last confirmed ${new Date(capacity.lastCapacityConfirmedAt).toLocaleDateString()}.`
+            : 'Capacity not yet confirmed.'}{' '}
+          <button onClick={handleConfirmCapacity} disabled={confirmingCapacity} style={{ background: 'none', border: 0, color: '#1769E0', fontWeight: 600, cursor: 'pointer', padding: 0, fontSize: 12.5 }}>
+            {confirmingCapacity ? 'Confirming…' : 'Confirm now'}
+          </button>
+        </p>
+      )}
+
+      {smsOn !== null && (
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--color-text-muted, #5A6B84)', margin: '0 0 20px', cursor: 'pointer' }}>
+          <input type="checkbox" checked={smsOn} disabled={savingSms} onChange={(e) => handleSmsToggle(e.target.checked)} />
+          Text me new enquiries and the weekly capacity check-in (sent to the mobile on your account).
+        </label>
+      )}
 
       <div className="kpi-row">
         <div className="kpi-card" style={{ borderTopColor: '#1769E0' }}>

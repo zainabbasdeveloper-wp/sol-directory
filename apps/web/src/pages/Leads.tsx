@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { listLeads, unlockLead } from '../api/resources';
+import { listLeads, listNearbyLeads, unlockLead } from '../api/resources';
 import { ApiError } from '../api/client';
 import { useToast } from '../components/ui/Toast';
 import { isLeadUnlocked, type Lead } from '@soldirectory/shared-types';
 import './Leads.css';
 
+type Tab = 'all' | 'unlocked' | 'locked' | 'nearby';
+
 export default function Leads() {
   const [leads, setLeads] = useState<Lead[]>([]);
-  const [tab, setTab] = useState<'all' | 'unlocked' | 'locked'>('all');
+  const [nearbyLeads, setNearbyLeads] = useState<Lead[]>([]);
+  const [nearbyState, setNearbyState] = useState<'idle' | 'loading' | 'loaded' | 'plan-required' | 'error'>('idle');
+  const [tab, setTab] = useState<Tab>('all');
   const [loading, setLoading] = useState(true);
   const [unlockingId, setUnlockingId] = useState<string | null>(null);
   const [quotaError, setQuotaError] = useState<{ id: string; message: string; code?: string } | null>(null);
@@ -21,7 +25,19 @@ export default function Leads() {
       .finally(() => setLoading(false));
   }, []);
 
-  const filtered = leads.filter((l) => {
+  // Lazy — a free-tier provider clicking "Nearby" shouldn't trigger a
+  // 402 on every page load, only when they actually look at that tab.
+  useEffect(() => {
+    if (tab !== 'nearby' || nearbyState !== 'idle') return;
+    setNearbyState('loading');
+    listNearbyLeads()
+      .then((items) => { setNearbyLeads(items); setNearbyState('loaded'); })
+      .catch((err) => {
+        setNearbyState(err instanceof ApiError && err.code === 'PLAN_REQUIRED' ? 'plan-required' : 'error');
+      });
+  }, [tab, nearbyState]);
+
+  const filtered = tab === 'nearby' ? nearbyLeads : leads.filter((l) => {
     if (tab === 'unlocked') return isLeadUnlocked(l);
     if (tab === 'locked') return !isLeadUnlocked(l);
     return true;
@@ -33,6 +49,7 @@ export default function Leads() {
     try {
       const updated = await unlockLead(lead.id);
       setLeads((prev) => prev.map((l) => (l.id === lead.id ? updated : l)));
+      setNearbyLeads((prev) => prev.map((l) => (l.id === lead.id ? updated : l)));
       showToast('Lead unlocked. Contact details are now visible.');
     } catch (err) {
       if (err instanceof ApiError && err.code === 'PLAN_REQUIRED') {
@@ -57,7 +74,7 @@ export default function Leads() {
         <h1 className="page-title">Participant leads</h1>
         <div className="leads-filter-row">
           <div className="leads-tabs" role="tablist">
-            {(['all', 'unlocked', 'locked'] as const).map((t) => (
+            {(['all', 'unlocked', 'locked', 'nearby'] as const).map((t) => (
               <button
                 key={t}
                 role="tab"
@@ -65,15 +82,27 @@ export default function Leads() {
                 className={`leads-tab ${tab === t ? 'leads-tab-active' : ''}`}
                 onClick={() => setTab(t)}
               >
-                {t === 'all' ? 'All leads' : t === 'unlocked' ? 'Unlocked' : 'Not yet unlocked'}
+                {t === 'all' ? 'All leads' : t === 'unlocked' ? 'Unlocked' : t === 'locked' ? 'Not yet unlocked' : 'Browse nearby'}
               </button>
             ))}
           </div>
         </div>
       </div>
 
+      {tab === 'nearby' && nearbyState === 'loading' && <p>Loading nearby requests…</p>}
+      {tab === 'nearby' && nearbyState === 'plan-required' && (
+        <div className="leads-empty-state">
+          <p>Browsing nearby open requests is a Growth-plan feature — beyond the leads matched straight to you, you can find and claim other genuine matches yourself.</p>
+          <button className="lead-unlock-btn" onClick={() => navigate('/plans')}>View plans</button>
+        </div>
+      )}
+      {tab === 'nearby' && nearbyState === 'error' && <p className="lead-veil-error">Could not load nearby requests. Try again shortly.</p>}
+      {tab === 'nearby' && nearbyState === 'loaded' && nearbyLeads.length === 0 && (
+        <p>No other open requests match your services and areas right now.</p>
+      )}
+
       <div className="leads-grid">
-        {filtered.map((lead) => {
+        {(tab !== 'nearby' || nearbyState === 'loaded') && filtered.map((lead) => {
           const unlocked = isLeadUnlocked(lead);
           const err = quotaError?.id === lead.id ? quotaError : null;
           return (

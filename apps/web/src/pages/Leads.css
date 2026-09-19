@@ -13,6 +13,20 @@
   margin-top: 16px;
 }
 
+.leads-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 24px;
+  background: var(--color-primary-tint, #F2F7FF);
+  border: 1px solid var(--color-border, #E8EEF7);
+  border-radius: var(--radius-card, 12px);
+  margin-bottom: 20px;
+  font-size: 14px;
+  color: var(--color-text, #10233F);
+}
+
 .leads-tabs { display: flex; gap: 8px; }
 .leads-tab {
   font-size: 13.5px;

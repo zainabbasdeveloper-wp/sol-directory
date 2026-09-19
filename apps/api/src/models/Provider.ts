@@ -99,6 +99,23 @@ export interface ProviderDoc extends Document {
   // the WP webhook pushes the resulting URL back here.
   wpPostId?: number;
   logoUrl?: string;
+  // Weekly capacity confirmation (developer brief, Phase 3: "SMS/email
+  // every Monday, one-tap confirm. Unconfirmed after 7 days = listing
+  // marked paused and dropped from results" — the specific mechanism
+  // that makes a "checked, not scraped" claim actually true). Token
+  // fields mirror User.passwordResetTokenHash's pattern exactly: a
+  // random token is emailed, only its SHA-256 hash is stored, and it's
+  // single-use (cleared on confirm). listingPaused is intentionally
+  // separate from accountStatus (an admin-only lock) and intakeStatus
+  // (the provider's own self-described referral capacity) — this is
+  // neither; it's "did they respond to the weekly check-in at all."
+  lastCapacityConfirmedAt?: Date;
+  listingPaused: boolean;
+  // Explicit opt-in to SMS alerts (new enquiries + the weekly capacity
+  // prompt). Off by default — see services/sms.service.ts.
+  smsNotifications?: boolean;
+  capacityConfirmTokenHash?: string;
+  capacityConfirmExpiresAt?: Date;
 }
 
 const onboardingStepSchema = new Schema<OnboardingStepSub>(
@@ -164,6 +181,11 @@ const providerSchema = new Schema<ProviderDoc>(
     periodResetsAt: Date,
     wpPostId: { type: Number, index: true },
     logoUrl: String,
+    lastCapacityConfirmedAt: Date,
+    listingPaused: { type: Boolean, default: false },
+    smsNotifications: { type: Boolean, default: false },
+    capacityConfirmTokenHash: { type: String, index: true },
+    capacityConfirmExpiresAt: Date,
   },
   { timestamps: true }
 );

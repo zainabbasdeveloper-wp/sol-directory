@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { listProvidersAdmin, setProviderAccountStatus } from '../../api/adminResources';
+import { listProvidersAdmin, setProviderAccountStatus, setProviderListingPaused } from '../../api/adminResources';
 import { ApiError } from '../../api/client';
 import { useToast } from '../../components/ui/Toast';
 import './AdminProviders.css';
@@ -13,13 +13,15 @@ interface AdminProviderRow {
   plan: string;
   intakeStatus: string;
   accountStatus: 'active' | 'suspended';
+  listingPaused: boolean;
+  lastCapacityConfirmedAt: string | null;
   ownerName: string | null;
   ownerEmail: string | null;
 }
 
 export default function AdminProviders() {
   const [items, setItems] = useState<AdminProviderRow[]>([]);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'suspended'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'suspended' | 'paused'>('all');
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const showToast = useToast();
@@ -46,18 +48,35 @@ export default function AdminProviders() {
     }
   }
 
+  async function toggleListing(row: AdminProviderRow) {
+    const nextPaused = !row.listingPaused;
+    setUpdatingId(row.id);
+    try {
+      await setProviderListingPaused(row.id, nextPaused);
+      // On the "Paused" tab a resumed provider no longer belongs in the list.
+      setItems((prev) => statusFilter === 'paused' && !nextPaused
+        ? prev.filter((p) => p.id !== row.id)
+        : prev.map((p) => (p.id === row.id ? { ...p, listingPaused: nextPaused } : p)));
+      showToast(nextPaused ? `${row.tradingName || row.legalEntityName}'s listing paused.` : `${row.tradingName || row.legalEntityName}'s listing resumed.`);
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not update this listing.');
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
   return (
     <div className="admin-providers-page">
       <div className="admin-providers-header">
         <h1 className="page-title">Providers</h1>
         <div className="admin-providers-filter">
-          {(['all', 'active', 'suspended'] as const).map((s) => (
+          {(['all', 'active', 'paused', 'suspended'] as const).map((s) => (
             <button
               key={s}
               className={`admin-filter-pill ${statusFilter === s ? 'admin-filter-pill-active' : ''}`}
               onClick={() => setStatusFilter(s)}
             >
-              {s === 'all' ? 'All' : s === 'active' ? 'Active' : 'Suspended'}
+              {s === 'all' ? 'All' : s === 'active' ? 'Active' : s === 'paused' ? 'Paused' : 'Suspended'}
             </button>
           ))}
         </div>
@@ -89,8 +108,26 @@ export default function AdminProviders() {
               <span className="admin-providers-plan">{p.plan}</span>
               <span>
                 <span className={`admin-status-pill admin-status-pill-${p.accountStatus}`}>{p.accountStatus}</span>
+                {p.accountStatus === 'active' && p.listingPaused && (
+                  <span
+                    className="admin-status-pill admin-status-pill-paused"
+                    title={p.lastCapacityConfirmedAt ? `Last confirmed ${new Date(p.lastCapacityConfirmedAt).toLocaleDateString('en-AU')}` : 'Never confirmed capacity'}
+                  >
+                    paused
+                  </span>
+                )}
               </span>
               <span>
+                {p.accountStatus === 'active' && p.listingPaused && (
+                  <button
+                    className="admin-toggle-btn admin-toggle-btn-activate"
+                    disabled={updatingId === p.id}
+                    onClick={() => toggleListing(p)}
+                    style={{ marginRight: 8 }}
+                  >
+                    Resume listing
+                  </button>
+                )}
                 <button
                   className={`admin-toggle-btn ${p.accountStatus === 'active' ? 'admin-toggle-btn-suspend' : 'admin-toggle-btn-activate'}`}
                   disabled={updatingId === p.id}
