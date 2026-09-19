@@ -27,6 +27,10 @@
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+.accessibility-toolbar.is-closed .accessibility-toolbar__toggle {
+  animation: accessibility-pulse 3.2s ease-in-out 2;
+}
+
 .accessibility-toolbar__toggle:hover,
 .accessibility-toolbar__toggle:focus-visible {
   transform: translateY(-1px);
@@ -35,12 +39,54 @@
 
 .accessibility-toolbar__panel {
   width: min(285px, calc(100vw - 26px));
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
   background: rgba(255, 255, 255, 0.97);
   border: 1px solid rgba(16, 35, 63, 0.08);
   border-radius: 18px;
   box-shadow: 0 18px 44px rgba(15, 30, 58, 0.18);
   padding: 16px 14px 12px;
   backdrop-filter: blur(8px);
+}
+
+@media (min-width: 641px) and (max-height: 820px) {
+  .accessibility-toolbar {
+    right: 14px;
+    bottom: 12px;
+    gap: 7px;
+  }
+
+  .accessibility-toolbar__panel {
+    width: min(260px, calc(100vw - 28px));
+    padding: 12px 11px 10px;
+    border-radius: 14px;
+  }
+
+  .accessibility-toolbar__panel h2 {
+    margin-bottom: 6px;
+    font-size: 18px;
+  }
+
+  .accessibility-toolbar__item {
+    gap: 10px;
+    padding: 7px 6px;
+    font-size: 14px;
+  }
+
+  .accessibility-toolbar__item span:first-child {
+    font-size: 17px;
+  }
+
+  .accessibility-toolbar__item--read {
+    margin-top: 5px;
+    padding-top: 10px;
+  }
+
+  .accessibility-toolbar__reset {
+    margin-top: 8px;
+    padding: 9px 12px;
+    font-size: 14px;
+  }
 }
 
 .accessibility-toolbar__panel h2 {
@@ -117,6 +163,21 @@
 .accessibility-toolbar__reset:focus-visible {
   filter: brightness(0.96);
   transform: translateY(-1px);
+}
+
+@keyframes accessibility-pulse {
+  0%, 72%, 100% {
+    box-shadow: 0 10px 24px rgba(11, 36, 74, 0.22);
+  }
+  80% {
+    box-shadow: 0 0 0 7px rgba(23, 105, 224, 0.14), 0 14px 30px rgba(11, 36, 74, 0.3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .accessibility-toolbar.is-closed .accessibility-toolbar__toggle {
+    animation: none;
+  }
 }
 
 html {

@@ -26,7 +26,7 @@ function clampFontScale(value: number) {
 }
 
 export default function AccessibilityToolbar() {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const [settings, setSettings] = useState<Settings>(defaultSettings);
 
   const actionLabels = [
