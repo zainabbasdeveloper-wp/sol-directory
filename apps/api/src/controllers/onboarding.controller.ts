@@ -34,6 +34,7 @@ export async function getOnboarding(req: AuthedRequest, res: Response) {
       plan: provider.plan,
       lastCapacityConfirmedAt: provider.lastCapacityConfirmedAt ?? null,
       listingPaused: provider.listingPaused,
+      smsNotifications: !!provider.smsNotifications,
     },
   });
 }

@@ -35,6 +35,22 @@ export async function confirmCapacityByToken(req: Request, res: Response) {
 }
 
 /**
+ * Authenticated — opt in/out of SMS alerts. Explicit and reversible: SMS
+ * is never on by default (services/sms.service.ts).
+ */
+export async function setSmsPreference(req: AuthedRequest, res: Response) {
+  const { enabled } = req.body ?? {};
+  if (typeof enabled !== 'boolean') return res.status(400).json({ error: 'enabled must be true or false' });
+
+  const provider = await getActiveProviderForUser(req.user!.id);
+  if (!provider) return res.status(403).json({ error: 'No active provider profile for this account' });
+
+  provider.smsNotifications = enabled;
+  await provider.save();
+  res.json({ smsNotifications: provider.smsNotifications });
+}
+
+/**
  * Authenticated — the dashboard's own "Confirm now" button, for a
  * provider who's already logged in rather than clicking an email
  * link. Same effect as confirmCapacityByToken, no token needed since

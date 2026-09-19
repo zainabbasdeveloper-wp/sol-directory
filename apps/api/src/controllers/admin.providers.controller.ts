@@ -17,12 +17,17 @@ export async function listProvidersAdmin(req: AuthedRequest, res: Response) {
   const filter: Record<string, unknown> = {};
   if (req.query.status === 'active' || req.query.status === 'suspended') {
     filter.accountStatus = req.query.status;
+  } else if (req.query.status === 'paused') {
+    // Providers dropped from search/matching for not confirming their
+    // weekly capacity (distinct from an admin suspension).
+    filter.accountStatus = 'active';
+    filter.listingPaused = true;
   }
 
   const [docs, total] = await Promise.all([
     Provider.find(filter)
       .populate('userId', 'name email')
-      .select('legalEntityName tradingName abn plan intakeStatus accountStatus createdAt userId')
+      .select('legalEntityName tradingName abn plan intakeStatus accountStatus listingPaused lastCapacityConfirmedAt createdAt userId')
       .skip((page - 1) * limit)
       .limit(limit)
       .sort({ createdAt: -1 })
@@ -39,6 +44,8 @@ export async function listProvidersAdmin(req: AuthedRequest, res: Response) {
       plan: p.plan,
       intakeStatus: p.intakeStatus,
       accountStatus: p.accountStatus,
+      listingPaused: !!p.listingPaused,
+      lastCapacityConfirmedAt: p.lastCapacityConfirmedAt ?? null,
       createdAt: p.createdAt,
       ownerName: p.userId?.name ?? null,
       ownerEmail: p.userId?.email ?? null,
@@ -74,4 +81,28 @@ export async function setProviderAccountStatus(req: AuthedRequest, res: Response
   syncProviderToWordPress(String(provider._id)).catch(() => {});
 
   res.json({ id: String(provider._id), accountStatus: provider.accountStatus });
+}
+
+/**
+ * Admin override for the weekly-capacity pause (scripts/
+ * weeklyCapacityCheck.ts). Unpausing does NOT fabricate a confirmation
+ * (lastCapacityConfirmedAt is left alone) — it clears the outstanding
+ * confirmation window instead, so the next weekly run sends a fresh
+ * prompt rather than immediately re-pausing over the old, expired one.
+ */
+export async function setProviderListingPaused(req: AuthedRequest, res: Response) {
+  const { paused } = req.body as { paused: unknown };
+  if (typeof paused !== 'boolean') return res.status(400).json({ error: 'paused must be true or false' });
+
+  const update = paused
+    ? { $set: { listingPaused: true } }
+    : { $set: { listingPaused: false }, $unset: { capacityConfirmTokenHash: 1, capacityConfirmExpiresAt: 1 } };
+
+  const provider = await Provider.findByIdAndUpdate(req.params.id, update, { new: true }).lean();
+  if (!provider) return res.status(404).json({ error: 'Provider not found' });
+
+  const name = provider.tradingName || provider.legalEntityName || 'A provider';
+  await logActivity('provider_status_changed', `${name}'s listing was ${paused ? 'paused' : 'resumed'} by an admin`);
+
+  res.json({ id: String(provider._id), listingPaused: !!provider.listingPaused });
 }

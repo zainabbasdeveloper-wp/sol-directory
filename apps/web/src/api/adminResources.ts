@@ -28,11 +28,13 @@ async function adminPatch<T>(path: string, body: unknown): Promise<T> {
 export interface AdminProviderRow {
   id: string; legalEntityName: string; tradingName: string; abn: string; plan: string;
   intakeStatus: string; accountStatus: 'active' | 'suspended';
+  /** Dropped from search/matching for not confirming weekly capacity. */
+  listingPaused: boolean; lastCapacityConfirmedAt: string | null;
   ownerName: string | null; ownerEmail: string | null;
 }
 interface AdminProviderListResult { items: AdminProviderRow[]; page: number; limit: number; total: number; hasMore: boolean; }
 
-export function listProvidersAdmin(status?: 'active' | 'suspended'): Promise<AdminProviderListResult> {
+export function listProvidersAdmin(status?: 'active' | 'suspended' | 'paused'): Promise<AdminProviderListResult> {
   return adminGet(`/admin/providers${status ? `?status=${status}` : ''}`);
 }
 export function getProviderAdmin(id: string): Promise<Record<string, any>> {
@@ -40,6 +42,9 @@ export function getProviderAdmin(id: string): Promise<Record<string, any>> {
 }
 export function setProviderAccountStatus(id: string, status: 'active' | 'suspended') {
   return adminPatch(`/admin/providers/${id}/status`, { status });
+}
+export function setProviderListingPaused(id: string, paused: boolean) {
+  return adminPatch(`/admin/providers/${id}/listing`, { paused });
 }
 
 // --- Workers ---

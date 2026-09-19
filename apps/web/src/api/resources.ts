@@ -1,4 +1,4 @@
-import { ApiError, api, setToken } from './client';
+import { ApiError, api, apiFetch, setToken } from './client';
 import type {
   WorkerMasked,
   WorkerProfile,
@@ -87,6 +87,11 @@ export function confirmCapacityByToken(token: string): Promise<{ confirmed: bool
 
 export function confirmCapacityNow(): Promise<{ confirmed: boolean; lastCapacityConfirmedAt: string; listingPaused: boolean }> {
   return api.post('/capacity/confirm-now');
+}
+
+// Explicit, reversible opt-in to SMS alerts (never on by default).
+export function setSmsPreference(enabled: boolean): Promise<{ smsNotifications: boolean }> {
+  return apiFetch('/capacity/sms-preference', { method: 'PATCH', body: JSON.stringify({ enabled }) });
 }
 
 // --- Plans ---
