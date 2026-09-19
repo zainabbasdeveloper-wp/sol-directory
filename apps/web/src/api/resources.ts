@@ -1,4 +1,4 @@
-import { ApiError, api, setToken } from './client';
+import { ApiError, api, apiFetch, setToken } from './client';
 import type {
   WorkerMasked,
   WorkerProfile,
@@ -89,6 +89,11 @@ export function confirmCapacityNow(): Promise<{ confirmed: boolean; lastCapacity
   return api.post('/capacity/confirm-now');
 }
 
+// Explicit, reversible opt-in to SMS alerts (never on by default).
+export function setSmsPreference(enabled: boolean): Promise<{ smsNotifications: boolean }> {
+  return apiFetch('/capacity/sms-preference', { method: 'PATCH', body: JSON.stringify({ enabled }) });
+}
+
 // --- Plans ---
 
 export function getPlans(): Promise<PlanConfig[]> {
@@ -165,4 +170,31 @@ export async function setProviderAccountStatus(id: string, status: 'active' | 's
   });
   if (!res.ok) throw new ApiError((await res.json()).error ?? 'Request failed', res.status);
   return res.json();
+}
+
+// --- Public site stats (real aggregates; see api stats.controller.ts) ---
+
+export interface PublicStats {
+  providersListed: number;
+  suburbsCovered: number;
+  enquiriesLast30Days: number;
+  /** null until enough real replies exist to publish an honest median */
+  medianFirstReplyMinutes: number | null;
+  providersByState: Record<string, number>;
+  providersByService: Record<string, number>;
+  generatedAt: string;
+}
+
+export function getPublicStats(): Promise<PublicStats> {
+  return api.get<PublicStats>('/stats/public');
+}
+
+// --- Password recovery (api auth.controller.ts forgotPassword / resetPassword) ---
+
+export function forgotPassword(email: string): Promise<{ message: string }> {
+  return api.post<{ message: string }>('/auth/forgot-password', { email });
+}
+
+export function resetPassword(input: { email: string; token: string; newPassword: string }): Promise<{ message: string }> {
+  return api.post<{ message: string }>('/auth/reset-password', input);
 }

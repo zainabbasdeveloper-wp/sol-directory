@@ -18,6 +18,105 @@
 
 if (!defined('ABSPATH')) exit;
 
+/**
+ * Admin-UX layer shared by every field group below. Field DEFINITIONS
+ * (names/keys/types — what the frontend and REST output depend on) are
+ * untouched; this only decorates how they're presented in wp-admin:
+ *
+ *  - repeater rows collapse to a one-line summary (the sub-field named
+ *    in the map) instead of every row of a 40-item FAQ being expanded
+ *    at once;
+ *  - short related fields sit side by side (wrapper width) instead of
+ *    one long single column;
+ *  - every group gets explicit, consistent layout settings so it
+ *    doesn't depend on ACF/SCF version defaults.
+ *
+ * Keys are FIELD KEYS (field_xxx), not names, because names like
+ * 'title' / 'heading' repeat across groups.
+ */
+function soldirectory_acf_collapsed_map(): array {
+    return [
+        'field_mmt_columns'       => 'field_mmt_col_title',
+        'field_mmt_col_links'     => 'field_mmt_link_label',
+        'field_service_faq'       => 'field_faq_q',
+        'field_reg_cards'         => 'field_reg_card_title',
+        'field_cred_items'        => 'field_cred_title',
+        'field_sap_faq'           => 'field_sap_faq_q',
+        'field_sap_compare'       => 'field_sap_compare_title',
+        'field_sap_demand'        => 'field_sap_demand_title',
+        'field_expect_steps'      => 'field_expect_step_title',
+        'field_regs_cards'        => 'field_regs_card_title',
+    ];
+}
+
+function soldirectory_acf_width_map(): array {
+    return [
+        // Service Area Page basics
+        'field_sap_service_name' => 34, 'field_sap_suburb' => 33, 'field_sap_state' => 33,
+        // Hero stats / local information (three short values per row)
+        'field_sap_hero_provider_count' => 34, 'field_sap_hero_response_minutes' => 33, 'field_sap_hero_hourly_rate' => 33,
+        'field_local_population' => 34, 'field_local_income' => 33, 'field_local_postcode' => 33,
+        'field_local_hospital' => 50, 'field_local_transport' => 50,
+        // Provider finder toggles
+        'field_pf_count' => 34, 'field_pf_sort' => 33, 'field_pf_show_filters' => 33, 'field_pf_show_map' => 34, 'field_pf_show_count' => 33,
+        'field_finder_count' => 50, 'field_finder_sort' => 50,
+        'field_finder_show_filters' => 34, 'field_finder_show_map' => 33, 'field_finder_show_count' => 33,
+        // CTA pairs
+        'field_cta_primary_label' => 50, 'field_cta_primary_action' => 50,
+        'field_cta_secondary_label' => 50, 'field_cta_secondary_action' => 50,
+        'field_sap_cta_primary_label' => 50, 'field_sap_cta_primary_action' => 50,
+        'field_sap_cta_secondary_label' => 50, 'field_sap_cta_secondary_action' => 50,
+        'field_sap_cta_primary_url' => 50, 'field_sap_cta_secondary_url' => 50,
+        'field_sh_cta_label' => 50, 'field_sh_cta_url' => 50,
+        // Mega menu tab header row
+        'field_mmt_icon' => 50, 'field_mmt_active' => 50,
+        // Provider mirror (read-only) — compact identity/address block
+        'field_provider_mongo_id' => 50, 'field_provider_mongo_slug' => 50,
+        'field_provider_legal_name' => 50, 'field_provider_abn' => 50,
+        'field_provider_address' => 50, 'field_provider_suburb' => 25, 'field_provider_state' => 12, 'field_provider_postcode' => 13,
+        'field_provider_latitude' => 50, 'field_provider_longitude' => 50,
+        'field_provider_travel_radius' => 25, 'field_provider_weekly_capacity' => 25, 'field_provider_roster_size' => 25, 'field_provider_after_hours' => 25,
+    ];
+}
+
+function soldirectory_acf_decorate_fields(array $fields): array {
+    $collapsed = soldirectory_acf_collapsed_map();
+    $widths = soldirectory_acf_width_map();
+    foreach ($fields as $i => $field) {
+        $key = $field['key'] ?? '';
+        if ($key !== '' && isset($widths[$key]) && empty($field['wrapper'])) {
+            $field['wrapper'] = ['width' => (string) $widths[$key], 'class' => '', 'id' => ''];
+        }
+        if (($field['type'] ?? '') === 'repeater') {
+            if ($key !== '' && isset($collapsed[$key])) $field['collapsed'] = $collapsed[$key];
+            if (empty($field['button_label'])) $field['button_label'] = 'Add row';
+        }
+        if (!empty($field['sub_fields']) && is_array($field['sub_fields'])) {
+            $field['sub_fields'] = soldirectory_acf_decorate_fields($field['sub_fields']);
+        }
+        $fields[$i] = $field;
+    }
+    return $fields;
+}
+
+/** Single entry point for registering a field group (see block above). */
+function soldirectory_add_group(array $group): void {
+    $group = array_merge([
+        'position'              => 'normal',
+        'style'                 => 'default',
+        'label_placement'       => 'top',
+        'instruction_placement' => 'label',
+        'active'                => true,
+    ], $group);
+    $group['fields'] = soldirectory_acf_decorate_fields($group['fields'] ?? []);
+    acf_add_local_field_group($group);
+}
+
+/** A tab divider — stores nothing, purely organises a long group. */
+function soldirectory_tab(string $key, string $label): array {
+    return ['key' => $key, 'label' => $label, 'name' => '', 'type' => 'tab', 'placement' => 'top', 'endpoint' => 0];
+}
+
 add_action('acf/init', function () {
     // SCF/ACF may load after this plugin. Check here, after its init hook,
     // rather than during plugin file loading when the API may not exist yet.
@@ -30,7 +129,7 @@ add_action('acf/init', function () {
     // couldn't offer: a stable key for the frontend to map against,
     // icon, description, active toggle, and the full Column -> Link
     // hierarchy.
-    acf_add_local_field_group([
+    soldirectory_add_group([
         'key' => 'group_mega_menu_tab_fields',
         'title' => 'Mega Menu Tab Details',
         'fields' => [
@@ -82,7 +181,7 @@ add_action('acf/init', function () {
     ]);
 
     // --- Service ---
-    acf_add_local_field_group([
+    soldirectory_add_group([
         'key' => 'group_service_fields',
         'title' => 'Service Information',
         'fields' => [
@@ -111,7 +210,7 @@ add_action('acf/init', function () {
     ]);
 
     // --- Service Hero ---
-    acf_add_local_field_group([
+    soldirectory_add_group([
         'key' => 'group_service_hero_fields',
         'title' => 'Service Hero',
         'fields' => [
@@ -152,7 +251,7 @@ add_action('acf/init', function () {
     // which is a one-way display MIRROR of that same database, kept in
     // sync by apps/api's wordpressSync.service.ts — WP is still never
     // the thing the finder queries against.) ---
-    acf_add_local_field_group([
+    soldirectory_add_group([
         'key' => 'group_service_finder_fields',
         'title' => 'Provider Finder Configuration',
         'fields' => [
@@ -171,7 +270,7 @@ add_action('acf/init', function () {
 
     // --- CTA (reusable pattern: action key takes priority over a
     // plain URL, so the frontend can open an app flow/modal) ---
-    acf_add_local_field_group([
+    soldirectory_add_group([
         'key' => 'group_service_cta_fields',
         'title' => 'CTA Section',
         'fields' => [
@@ -186,7 +285,7 @@ add_action('acf/init', function () {
     ]);
 
     // --- Related Services (real relationship field, not typed URLs) ---
-    acf_add_local_field_group([
+    soldirectory_add_group([
         'key' => 'group_service_related_fields',
         'title' => 'Related Services',
         'fields' => [
@@ -200,7 +299,7 @@ add_action('acf/init', function () {
     ]);
 
     // --- Regulations & Compliance ---
-    acf_add_local_field_group([
+    soldirectory_add_group([
         'key' => 'group_service_regulations_fields',
         'title' => 'Regulations & Compliance',
         'fields' => [
@@ -223,7 +322,7 @@ add_action('acf/init', function () {
     // --- Credentials / Verification (editorial explanation of what
     // to check — the actual verification STATUS of any provider must
     // still come from the application, never asserted here) ---
-    acf_add_local_field_group([
+    soldirectory_add_group([
         'key' => 'group_service_credentials_fields',
         'title' => 'Credentials / Verification Guidance',
         'fields' => [
@@ -243,7 +342,7 @@ add_action('acf/init', function () {
     // below is overwritten on the provider's next sync from Mongo;
     // only the post's featured image (the logo) is actually meant to
     // be edited here, and flows back to Mongo via the webhook) ---
-    acf_add_local_field_group([
+    soldirectory_add_group([
         'key' => 'group_provider_fields',
         'title' => 'Provider Details (synced from the application database)',
         'fields' => [
@@ -269,7 +368,7 @@ add_action('acf/init', function () {
     ]);
 
     // --- Location ---
-    acf_add_local_field_group([
+    soldirectory_add_group([
         'key' => 'group_location_fields',
         'title' => 'Location Details',
         'fields' => [
@@ -281,7 +380,7 @@ add_action('acf/init', function () {
     ]);
 
     // --- Guide ---
-    acf_add_local_field_group([
+    soldirectory_add_group([
         'key' => 'group_guide_fields',
         'title' => 'Guide Details',
         'fields' => [
@@ -291,14 +390,16 @@ add_action('acf/init', function () {
     ]);
 
     // --- Service Area Page (the big service×suburb combo page) ---
-    acf_add_local_field_group([
+    soldirectory_add_group([
         'key' => 'group_service_area_page_fields',
         'title' => 'Service Area Page Details',
         'fields' => [
+            soldirectory_tab('field_sap_tab_basics', 'Basics'),
             ['key' => 'field_sap_service_name', 'label' => 'Service Name', 'name' => 'service_name', 'type' => 'text'],
             ['key' => 'field_sap_suburb', 'label' => 'Suburb', 'name' => 'suburb', 'type' => 'text'],
             ['key' => 'field_sap_state', 'label' => 'State', 'name' => 'state', 'type' => 'text'],
             ['key' => 'field_sap_intro', 'label' => 'Intro Paragraph', 'name' => 'intro_paragraph', 'type' => 'textarea', 'rows' => 4],
+            soldirectory_tab('field_sap_tab_faq', 'FAQ & Suburb Facts'),
             [
                 'key' => 'field_sap_faq', 'label' => 'FAQ', 'name' => 'faq_repeater', 'type' => 'repeater', 'layout' => 'block',
                 'sub_fields' => [
@@ -321,6 +422,7 @@ add_action('acf/init', function () {
                     ['key' => 'field_sap_fact_note', 'label' => 'Note', 'name' => 'note', 'type' => 'text'],
                 ],
             ],
+            soldirectory_tab('field_sap_tab_compare', 'Compare & Contents'),
             [
                 'key' => 'field_sap_compare', 'label' => 'Compare Cards', 'name' => 'compare_repeater', 'type' => 'repeater', 'layout' => 'block',
                 'sub_fields' => [
@@ -336,6 +438,7 @@ add_action('acf/init', function () {
                     ['key' => 'field_sap_toc_href', 'label' => 'Anchor (e.g. #compare)', 'name' => 'href', 'type' => 'text'],
                 ],
             ],
+            soldirectory_tab('field_sap_tab_demand', 'Demand & Stats'),
             [
                 // Nested repeater — each "Who is asking" panel (e.g.
                 // "Also asked for in the same request") has its own
@@ -378,6 +481,7 @@ add_action('acf/init', function () {
                     ['key' => 'field_sap_req_on', 'label' => 'Highlighted?', 'name' => 'on', 'type' => 'true_false'],
                 ],
             ],
+            soldirectory_tab('field_sap_tab_languages', 'Languages & Hero Stats'),
             [
                 'key' => 'field_sap_languages', 'label' => 'Language Support Stats', 'name' => 'languages_repeater', 'type' => 'repeater', 'layout' => 'table',
                 'sub_fields' => [
@@ -407,7 +511,7 @@ add_action('acf/init', function () {
     // Compliance, Response Times, Local Information, CTA, and
     // Related Services. Kept logically grouped per the document's
     // own explicit instruction not to build one giant flat list.
-    acf_add_local_field_group([
+    soldirectory_add_group([
         'key' => 'group_service_area_page_extended',
         'title' => 'Service Area Page — Extended Details',
         'fields' => [
@@ -416,6 +520,7 @@ add_action('acf/init', function () {
             // application database via listProviders(), never from
             // WordPress. These fields only control how that real
             // finder displays.
+            soldirectory_tab('field_sapx_tab_finder', 'Provider Finder'),
             [
                 'key' => 'field_sap_finder', 'label' => 'Provider Finder', 'name' => 'finder_group', 'type' => 'group',
                 'sub_fields' => [
@@ -430,6 +535,7 @@ add_action('acf/init', function () {
             ],
 
             // --- Cost & Payment (Part 17) ---
+            soldirectory_tab('field_sapx_tab_cost', 'Costs'),
             [
                 'key' => 'field_sap_cost', 'label' => 'Cost & Payment', 'name' => 'cost_group', 'type' => 'group',
                 'sub_fields' => [
@@ -445,6 +551,7 @@ add_action('acf/init', function () {
             ],
 
             // --- What To Expect (Part 18) ---
+            soldirectory_tab('field_sapx_tab_expect', 'What To Expect'),
             [
                 'key' => 'field_sap_expect', 'label' => 'What To Expect', 'name' => 'expect_group', 'type' => 'group',
                 'sub_fields' => [
@@ -462,6 +569,7 @@ add_action('acf/init', function () {
             ],
 
             // --- Regulations & Compliance (Part 21) ---
+            soldirectory_tab('field_sapx_tab_compliance', 'Compliance & Response Times'),
             [
                 'key' => 'field_sap_regs', 'label' => 'Regulations & Compliance', 'name' => 'regulations_group', 'type' => 'group',
                 'sub_fields' => [
@@ -493,6 +601,7 @@ add_action('acf/init', function () {
             // --- Local Information (Part 22) — NOT hardcoded to
             // Sydney; this is per-page, so a Melbourne/Brisbane/etc.
             // Service Area Page fills in its own values here.
+            soldirectory_tab('field_sapx_tab_local', 'Local Information'),
             [
                 'key' => 'field_sap_local', 'label' => 'Local Information', 'name' => 'local_group', 'type' => 'group',
                 'sub_fields' => [
@@ -509,6 +618,7 @@ add_action('acf/init', function () {
             // --- CTA (Part 27) — same action-key pattern already
             // proven on the Mega Menu Tab CTA, so 'get_matched' opens
             // the real app modal instead of needing a hardcoded URL.
+            soldirectory_tab('field_sapx_tab_cta', 'Call To Action & Related'),
             [
                 'key' => 'field_sap_cta', 'label' => 'Page CTA', 'name' => 'cta_group', 'type' => 'group',
                 'sub_fields' => [
@@ -631,12 +741,17 @@ function soldirectory_inject_acf_meta(array $response_data, WP_Post $post): arra
     // has to make a second request or risk a stale link if a related
     // service is later renamed — matches the document's explicit
     // spec for this field.
-    if ($post->post_type === 'service') {
+    // Both 'service' (post_object) and 'service_area_page' (relationship)
+    // carry a related_services field — the resolver used to run for
+    // 'service' only, so the Service Area Page's Related Services field
+    // was editable in wp-admin but never reached the frontend.
+    if (in_array($post->post_type, ['service', 'service_area_page'], true)) {
         $relatedIds = get_field('related_services', $post->ID);
         if ($relatedIds) {
             $resolved = array_map(function ($id) {
+                $id = is_object($id) ? $id->ID : $id; // tolerate return_format changes
                 $p = get_post($id);
-                if (!$p) return null;
+                if (!$p || $p->post_status !== 'publish') return null; // never expose drafts/trash
                 $thumbId = get_post_thumbnail_id($id);
                 return [
                     'id' => $p->ID,
@@ -645,7 +760,7 @@ function soldirectory_inject_acf_meta(array $response_data, WP_Post $post): arra
                     'featuredImage' => $thumbId ? wp_get_attachment_url($thumbId) : null,
                     'url' => '/services/' . $p->post_name,
                 ];
-            }, $relatedIds);
+            }, (array) $relatedIds);
             $response_data['meta']['related_services'] = array_values(array_filter($resolved));
         }
     }
@@ -680,6 +795,23 @@ function soldirectory_inject_acf_meta(array $response_data, WP_Post $post): arra
         $hero = get_field('hero_stats_group', $post->ID);
         if ($hero) {
             $response_data['meta']['hero_stats_json'] = wp_json_encode($hero);
+        }
+
+        // Extended field group (group_service_area_page_extended). These
+        // were editable in wp-admin but never included in the REST
+        // response, so filling them in had no visible effect. Groups pass
+        // through as objects (sub-field names already match what
+        // wordpressApi.ts's mapServiceAreaPage reads); response_times is
+        // a plain repeater of {state, minutes, description}.
+        foreach (['finder_group', 'cost_group', 'expect_group', 'regulations_group', 'local_group', 'cta_group'] as $group_name) {
+            $group_value = get_field($group_name, $post->ID);
+            if (is_array($group_value) && $group_value) {
+                $response_data['meta'][$group_name] = $group_value;
+            }
+        }
+        $response_times = get_field('response_times', $post->ID);
+        if (is_array($response_times) && $response_times) {
+            $response_data['meta']['response_times'] = array_values($response_times);
         }
     }
 

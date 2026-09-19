@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import MegaMenu from '../../components/MegaMenu';
 import { useMatchModal } from '../../context/MatchModalContext';
+import { siteConfig, phoneHref } from '../../config/siteConfig';
 import './PublicLayout.css';
 
 export function PublicHeader() {
@@ -9,19 +10,23 @@ export function PublicHeader() {
     <>
       <div className="utility-bar">
         <div className="utility-bar-inner">
-          <span className="utility-item">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z" />
-            </svg>
-            1800 765 000
-          </span>
-          <span className="utility-item">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="2.5" y="4.5" width="19" height="15" rx="2" />
-              <path d="m3 6.5 9 6 9-6" />
-            </svg>
-            hello@soldirectory.com.au
-          </span>
+          {siteConfig.contactPhone && (
+            <a className="utility-item" href={phoneHref(siteConfig.contactPhone)}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z" />
+              </svg>
+              {siteConfig.contactPhone}
+            </a>
+          )}
+          {siteConfig.contactEmail && (
+            <a className="utility-item" href={`mailto:${siteConfig.contactEmail}`}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect x="2.5" y="4.5" width="19" height="15" rx="2" />
+                <path d="m3 6.5 9 6 9-6" />
+              </svg>
+              {siteConfig.contactEmail}
+            </a>
+          )}
           <span className="utility-right">
             <Link to="/login">Login</Link>
             <Link to="/directory">For support coordinators</Link>
@@ -66,13 +71,15 @@ export function PublicFooter() {
             A Sol Consultancy service connecting Australians with NDIS and aged
             care providers across every state and territory.
           </p>
-          <p className="public-footer-contact">
-            1800 765 000
-            <br />
-            hello@soldirectory.com.au
-            <br />
-            Level 4, 118 King St, Sydney NSW 2000
-          </p>
+          {(siteConfig.contactPhone || siteConfig.contactEmail || siteConfig.contactAddress) && (
+            <p className="public-footer-contact">
+              {siteConfig.contactPhone && <a href={phoneHref(siteConfig.contactPhone)}>{siteConfig.contactPhone}</a>}
+              {siteConfig.contactPhone && (siteConfig.contactEmail || siteConfig.contactAddress) && <br />}
+              {siteConfig.contactEmail && <a href={`mailto:${siteConfig.contactEmail}`}>{siteConfig.contactEmail}</a>}
+              {siteConfig.contactEmail && siteConfig.contactAddress && <br />}
+              {siteConfig.contactAddress}
+            </p>
+          )}
         </div>
         <div className="public-footer-col">
           <span className="public-footer-heading">Discover</span>
@@ -91,14 +98,17 @@ export function PublicFooter() {
         <div className="public-footer-col">
           <span className="public-footer-heading">Company</span>
           <Link to="/providers">List your business</Link>
-          <Link to="/">About Sol Consultancy</Link>
-          <Link to="/">Contact</Link>
-          <Link to="/">Privacy</Link>
+          {siteConfig.contactEmail && <a href={`mailto:${siteConfig.contactEmail}`}>Contact</a>}
+          <Link to="/privacy">Privacy policy</Link>
+          <Link to="/terms">Terms of use</Link>
+          <Link to="/provider-agreement">Provider agreement</Link>
+          <Link to="/lead-disclaimer">Enquiry disclaimer</Link>
         </div>
       </div>
       <div className="public-footer-legal">
-        © 2026 Sol Consultancy Pty Ltd. Provider details are supplied by
-        providers and checked against the NDIS Commission register.
+        © {new Date().getFullYear()}{siteConfig.legalEntity ? ` ${siteConfig.legalEntity}.` : ' SolDirectory.'} Provider details are
+        supplied by providers. SolDirectory is a directory and referral
+        service; it does not provide care and does not recommend any provider.
       </div>
     </footer>
   );

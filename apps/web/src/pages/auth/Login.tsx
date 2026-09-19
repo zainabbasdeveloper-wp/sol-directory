@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { ApiError } from '../../api/client';
 import Button from '../../components/ui/Button';
 import Counter from '../../components/Counter';
+import { useSiteStats } from '../../hooks/useSiteStats';
 import PhotoSlot from '../../components/PhotoSlot';
 import type { Role } from '@soldirectory/shared-types';
 import './Login.css';
@@ -74,6 +75,7 @@ const ROLE_DESTINATION: Record<Role, string> = {
 const EMAIL_RE = /.+@.+\..+/;
 
 export default function Login() {
+  const stats = useSiteStats();
   const [searchParams] = useSearchParams();
   const initialRole = (searchParams.get('role') as Role) || 'worker';
   const [role, setRole] = useState<Role>(ROLES.some((r) => r.key === initialRole) ? initialRole : 'worker');
@@ -140,20 +142,30 @@ export default function Login() {
             </div>
             <h2 className="login-aside-heading">{content.asideHeading}</h2>
             <p className="login-aside-paragraph">{content.asideParagraph}</p>
-            <div className="login-stats">
-              <div className="login-stat">
-                <span className="login-stat-value"><Counter value={2140} /></span>
-                <span className="login-stat-label">workers listed</span>
+            {/* Real figures only (api /stats/public); any stat without
+                real data behind it is simply not shown. */}
+            {stats && (stats.providersListed > 0 || stats.suburbsCovered > 0 || stats.medianFirstReplyMinutes !== null) && (
+              <div className="login-stats">
+                {stats.providersListed > 0 && (
+                  <div className="login-stat">
+                    <span className="login-stat-value"><Counter value={stats.providersListed} /></span>
+                    <span className="login-stat-label">providers listed</span>
+                  </div>
+                )}
+                {stats.suburbsCovered > 0 && (
+                  <div className="login-stat">
+                    <span className="login-stat-value"><Counter value={stats.suburbsCovered} /></span>
+                    <span className="login-stat-label">suburbs covered</span>
+                  </div>
+                )}
+                {stats.medianFirstReplyMinutes !== null && (
+                  <div className="login-stat">
+                    <span className="login-stat-value"><Counter value={stats.medianFirstReplyMinutes} suffix=" min" /></span>
+                    <span className="login-stat-label">median first reply</span>
+                  </div>
+                )}
               </div>
-              <div className="login-stat">
-                <span className="login-stat-value"><Counter value={100} suffix="%" /></span>
-                <span className="login-stat-label">Worker Check verified</span>
-              </div>
-              <div className="login-stat">
-                <span className="login-stat-value"><Counter value={6} suffix=" min" /></span>
-                <span className="login-stat-label">median reply</span>
-              </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -200,7 +212,7 @@ export default function Login() {
               />
 
               <div className="login-password-row">
-                <a href="#forgot" className="login-link">Forgot password</a>
+                <Link to="/forgot-password" className="login-link">Forgot password</Link>
               </div>
 
               {error && (

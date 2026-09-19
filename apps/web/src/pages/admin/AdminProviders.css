@@ -38,3 +38,6 @@
 .admin-detail-card p { margin: 0 0 6px; font-size: 14px; }
 .admin-onboarding-list { margin: 0; padding-left: 18px; font-size: 13.5px; }
 .admin-onboarding-list li { margin-bottom: 4px; text-transform: capitalize; }
+
+/* Listing paused for not confirming weekly capacity — distinct from suspended. */
+.admin-status-pill-paused { background: #FFF6E5; color: #8A5A00; margin-left: 6px; }

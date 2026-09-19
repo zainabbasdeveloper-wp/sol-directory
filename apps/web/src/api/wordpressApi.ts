@@ -25,7 +25,28 @@ export interface ServiceAreaPage {
   requested: { label: string; requests: string; providers: string; v: number; on: boolean }[];
   languages: { name: string; native: string; count: string; share: string }[];
   heroStats: { providerCount?: number; medianResponseMinutes?: number; hourlyRate?: number } | null;
+
+  // --- Extended ACF groups (group_service_area_page_extended). All
+  // optional: an editor may not have filled a group in, and the page
+  // falls back to its built-in content per section when so.
+  finder: { heading: string; description: string; displayCount: number; sort: string; showFilters: boolean; showMap: boolean; showCount: boolean } | null;
+  cost: { heading: string; intro: string; pricingInfoHtml: string; ndis: string; privatePay: string; agedCare: string; dva: string; notes: string } | null;
+  expect: { heading: string; intro: string; steps: { number: number; title: string; description: string }[] } | null;
+  regulations: { heading: string; intro: string; cards: { title: string; description: string; phone: string; website: string; ctaLabel: string }[] } | null;
+  responseTimes: { state: string; minutes: number; description: string }[];
+  local: { population: string; medianIncome: string; nearestHospital: string; publicTransport: string; communityInfo: string; postcode: string; dataDate: string } | null;
+  cta: { heading: string; description: string; primaryLabel: string; primaryAction: string; primaryUrl: string; secondaryLabel: string; secondaryAction: string; secondaryUrl: string } | null;
+  relatedServices: { id: number; title: string; slug: string; featuredImage: string | null; url: string }[];
 }
+
+const s = (v: unknown): string => (typeof v === 'string' ? v : v == null ? '' : String(v));
+const bool = (v: unknown, dflt = true): boolean => (v === undefined || v === null || v === '' ? dflt : v === true || v === 1 || v === '1' || v === 'true');
+const obj = (v: unknown): Record<string, any> | null => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, any>) : null);
+// ACF hands back an object with every sub-field present-but-empty for
+// an untouched group — treat that as "not authored" so fallbacks run.
+const hasContent = (o: Record<string, any> | null): o is Record<string, any> =>
+  !!o && Object.values(o).some((v) => (Array.isArray(v) ? v.length > 0 : typeof v === 'number' ? true : typeof v === 'boolean' ? false : s(v).trim() !== ''));
+const arr = (v: unknown): any[] => (Array.isArray(v) ? v : []);
 
 function safeParseJson<T>(raw: unknown, fallback: T): T {
   if (typeof raw !== 'string' || !raw.trim()) return fallback;
@@ -56,6 +77,60 @@ function mapServiceAreaPage(raw: any): ServiceAreaPage {
     requested: safeParseJson(meta.requested_json, []),
     languages: safeParseJson(meta.languages_json, []),
     heroStats: safeParseJson(meta.hero_stats_json, null),
+
+    finder: (() => {
+      const g = obj(meta.finder_group);
+      if (!g) return null;
+      return {
+        heading: s(g.heading), description: s(g.description),
+        displayCount: Number(g.display_count) > 0 ? Number(g.display_count) : 6,
+        sort: s(g.sort) || 'relevance',
+        showFilters: bool(g.show_filters), showMap: bool(g.show_map), showCount: bool(g.show_count),
+      };
+    })(),
+    cost: (() => {
+      const g = obj(meta.cost_group);
+      if (!hasContent(g)) return null;
+      return {
+        heading: s(g.heading), intro: s(g.intro), pricingInfoHtml: s(g.pricing_info),
+        ndis: s(g.ndis_info), privatePay: s(g.private_info), agedCare: s(g.aged_care_info), dva: s(g.dva_info), notes: s(g.notes),
+      };
+    })(),
+    expect: (() => {
+      const g = obj(meta.expect_group);
+      if (!hasContent(g)) return null;
+      return {
+        heading: s(g.heading), intro: s(g.intro),
+        steps: arr(g.steps).map((st, i) => ({ number: Number(st?.number) || i + 1, title: s(st?.title), description: s(st?.description) })).filter((st) => st.title || st.description),
+      };
+    })(),
+    regulations: (() => {
+      const g = obj(meta.regulations_group);
+      if (!hasContent(g)) return null;
+      return {
+        heading: s(g.heading), intro: s(g.intro),
+        cards: arr(g.cards).map((c) => ({ title: s(c?.title), description: s(c?.description), phone: s(c?.phone), website: s(c?.website), ctaLabel: s(c?.cta_label) })).filter((c) => c.title),
+      };
+    })(),
+    responseTimes: arr(meta.response_times).map((r) => ({ state: s(r?.state), minutes: Number(r?.minutes) || 0, description: s(r?.description) })).filter((r) => r.state && r.minutes > 0),
+    local: (() => {
+      const g = obj(meta.local_group);
+      if (!hasContent(g)) return null;
+      return {
+        population: s(g.population), medianIncome: s(g.median_income), nearestHospital: s(g.nearest_hospital),
+        publicTransport: s(g.public_transport), communityInfo: s(g.community_info), postcode: s(g.postcode), dataDate: s(g.data_date),
+      };
+    })(),
+    cta: (() => {
+      const g = obj(meta.cta_group);
+      if (!hasContent(g)) return null;
+      return {
+        heading: s(g.heading), description: s(g.description),
+        primaryLabel: s(g.primary_label), primaryAction: s(g.primary_action), primaryUrl: s(g.primary_url),
+        secondaryLabel: s(g.secondary_label), secondaryAction: s(g.secondary_action), secondaryUrl: s(g.secondary_url),
+      };
+    })(),
+    relatedServices: arr(meta.related_services).filter((r) => r && r.slug),
   };
 }
 

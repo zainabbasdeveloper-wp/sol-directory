@@ -4,6 +4,7 @@ import Provider from '../models/Provider.js';
 import { geocodeAddress } from '../services/geocoding.service.js';
 import { scoreMatch } from '../services/matching.service.js';
 import { EmailService } from '../services/email.service.js';
+import { SmsService } from '../services/sms.service.js';
 import Notification from '../models/Notification.js';
 import LeadMatch from '../models/LeadMatch.js';
 
@@ -157,6 +158,12 @@ export async function submitMatchRequest(req: Request, res: Response) {
       const dashboardUrl = `${frontendOrigin}/leads/${lead._id}`;
       EmailService.sendProviderLeadNotification(provider.intakeEmail, lead.need, lead.suburb, dashboardUrl).catch(() => {});
     }
+    // Opt-in text alert (no-op unless Twilio is configured AND the
+    // provider switched SMS on). Same fire-and-forget contract as email.
+    SmsService.sendToProvider(
+      provider as any,
+      `SolDirectory: new ${lead.need} enquiry in ${lead.suburb}. View and respond: ${frontendOrigin}/leads/${lead._id}`
+    ).catch(() => {});
     Notification.create({
       userId: provider.userId,
       type: 'new_lead',

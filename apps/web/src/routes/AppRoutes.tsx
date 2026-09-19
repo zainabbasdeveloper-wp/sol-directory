@@ -9,6 +9,8 @@ import ForProviders from '../pages/public/ForProviders';
 import Login from '../pages/auth/Login';
 import Signup from '../pages/auth/Signup';
 import ConfirmCapacity from '../pages/ConfirmCapacity';
+import { ForgotPassword, ResetPassword } from '../pages/auth/AccountRecovery';
+import LegalPage from '../pages/public/LegalPage';
 import Dashboard from '../pages/Dashboard';
 import WorkerDirectory from '../pages/workers/WorkerDirectory';
 import WorkerProfile from '../pages/workers/WorkerProfile';
@@ -114,6 +116,12 @@ export default function AppRoutes() {
 
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/privacy" element={<LegalPage slug="privacy" />} />
+      <Route path="/terms" element={<LegalPage slug="terms" />} />
+      <Route path="/provider-agreement" element={<LegalPage slug="provider-agreement" />} />
+      <Route path="/lead-disclaimer" element={<LegalPage slug="lead-disclaimer" />} />
       {/* Public — the weekly capacity confirmation email link's token
           IS the credential, same principle as password-reset links. */}
       <Route path="/confirm-capacity" element={<ConfirmCapacity />} />

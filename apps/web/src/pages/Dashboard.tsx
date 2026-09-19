@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { listLeads, getPlans, getOnboarding, confirmCapacityNow } from '../api/resources';
+import { listLeads, getPlans, getOnboarding, confirmCapacityNow, setSmsPreference } from '../api/resources';
 import { getMyReferrals, type ReferralInfo } from '../api/providerResources';
 import { ApiError } from '../api/client';
 import { useToast } from '../components/ui/Toast';
@@ -75,6 +75,8 @@ function ProviderDashboard() {
   const [copied, setCopied] = useState(false);
   const [capacity, setCapacity] = useState<{ lastCapacityConfirmedAt: string | null; listingPaused: boolean } | null>(null);
   const [confirmingCapacity, setConfirmingCapacity] = useState(false);
+  const [smsOn, setSmsOn] = useState<boolean | null>(null);
+  const [savingSms, setSavingSms] = useState(false);
   const showToast = useToast();
   const knownLeadIds = useRef<Set<string> | null>(null);
 
@@ -84,9 +86,25 @@ function ProviderDashboard() {
       .finally(() => setLoading(false));
     getMyReferrals().then(setReferral).catch(() => {});
     (getOnboarding() as Promise<any>)
-      .then((res) => setCapacity({ lastCapacityConfirmedAt: res.provider?.lastCapacityConfirmedAt ?? null, listingPaused: !!res.provider?.listingPaused }))
+      .then((res) => {
+        setCapacity({ lastCapacityConfirmedAt: res.provider?.lastCapacityConfirmedAt ?? null, listingPaused: !!res.provider?.listingPaused });
+        setSmsOn(!!res.provider?.smsNotifications);
+      })
       .catch(() => {});
   }, []);
+
+  async function handleSmsToggle(next: boolean) {
+    setSavingSms(true);
+    try {
+      const res = await setSmsPreference(next);
+      setSmsOn(res.smsNotifications);
+      showToast(res.smsNotifications ? 'Text alerts on.' : 'Text alerts off.');
+    } catch {
+      showToast('Could not update your text-alert setting.');
+    } finally {
+      setSavingSms(false);
+    }
+  }
 
   async function handleConfirmCapacity() {
     setConfirmingCapacity(true);
@@ -174,6 +192,13 @@ function ProviderDashboard() {
             {confirmingCapacity ? 'Confirming…' : 'Confirm now'}
           </button>
         </p>
+      )}
+
+      {smsOn !== null && (
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--color-text-muted, #5A6B84)', margin: '0 0 20px', cursor: 'pointer' }}>
+          <input type="checkbox" checked={smsOn} disabled={savingSms} onChange={(e) => handleSmsToggle(e.target.checked)} />
+          Text me new enquiries and the weekly capacity check-in (sent to the mobile on your account).
+        </label>
       )}
 
       <div className="kpi-row">

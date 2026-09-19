@@ -111,6 +111,9 @@ export interface ProviderDoc extends Document {
   // neither; it's "did they respond to the weekly check-in at all."
   lastCapacityConfirmedAt?: Date;
   listingPaused: boolean;
+  // Explicit opt-in to SMS alerts (new enquiries + the weekly capacity
+  // prompt). Off by default — see services/sms.service.ts.
+  smsNotifications?: boolean;
   capacityConfirmTokenHash?: string;
   capacityConfirmExpiresAt?: Date;
 }
@@ -180,6 +183,7 @@ const providerSchema = new Schema<ProviderDoc>(
     logoUrl: String,
     lastCapacityConfirmedAt: Date,
     listingPaused: { type: Boolean, default: false },
+    smsNotifications: { type: Boolean, default: false },
     capacityConfirmTokenHash: { type: String, index: true },
     capacityConfirmExpiresAt: Date,
   },

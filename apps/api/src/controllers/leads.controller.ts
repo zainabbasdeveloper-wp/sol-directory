@@ -29,10 +29,20 @@ export async function listLeads(req: AuthedRequest, res: Response) {
   // fields only for the specific leads this provider has actually
   // unlocked — never trust an in-memory flag to decide what to
   // serialize for a lead the query didn't already scope to.
-  // status != draft — a wizard-in-progress enquiry (see the draft
-  // endpoints in matchRequests.controller.ts) is private, incomplete
-  // user data, never a real lead for providers to see.
-  const leads = await Lead.find({ status: { $ne: 'draft' } }).select(MASKED_PROJECTION).lean();
+  // Scoped to leads THIS provider was actually matched to (LeadMatch,
+  // written by submitMatchRequest) plus any they've unlocked — this used
+  // to be every non-draft lead in the database for every provider, so a
+  // provider saw (masked) enquiries in suburbs/services nothing to do
+  // with them. Leads they declined drop out unless already unlocked.
+  // Broader discovery is the separate, paid-only "browse nearby" list
+  // (listNearbyLeads). status != draft — a wizard-in-progress enquiry
+  // is private, incomplete user data, never a real lead for providers.
+  const matchedIds = (await LeadMatch.find({ providerId: provider._id, status: { $ne: 'declined' } }).select('leadId').lean())
+    .map((m) => String(m.leadId));
+  const visibleIds = [...new Set([...matchedIds, ...unlockedIds])];
+  const leads = visibleIds.length
+    ? await Lead.find({ _id: { $in: visibleIds }, status: { $ne: 'draft' } }).select(MASKED_PROJECTION).sort({ createdAt: -1 }).lean()
+    : [];
   const unlockedFull = unlockedIds.size
     ? await Lead.find({ _id: { $in: [...unlockedIds] } }).lean()
     : [];
@@ -78,9 +88,16 @@ export async function listNearbyLeads(req: AuthedRequest, res: Response) {
     return res.status(403).json({ error: 'Confirm your capacity to browse new requests.', code: 'CAPACITY_UNCONFIRMED' });
   }
 
-  // Only open leads (matched, not yet closed) — dead/closed enquiries
-  // shouldn't show up as something new to browse.
-  const openLeads = await Lead.find({ status: 'matched' }).lean();
+  // "Other" leads only: anything already in this provider's own list
+  // (matched to them, declined, or unlocked) is excluded so a lead never
+  // appears in both tabs. Only open leads (matched, not yet closed) —
+  // dead/closed enquiries shouldn't show up as something new to browse.
+  const [ownMatches, ownUnlocks] = await Promise.all([
+    LeadMatch.find({ providerId: provider._id }).select('leadId').lean(),
+    UnlockLedger.find({ providerId: provider._id }).select('leadId').lean(),
+  ]);
+  const alreadySeen = [...ownMatches, ...ownUnlocks].map((m) => m.leadId);
+  const openLeads = await Lead.find({ status: 'matched', _id: { $nin: alreadySeen } }).lean();
 
   const nearby = openLeads
     .map((l) => ({ lead: l, result: scoreMatch(l as any, provider as any) }))
@@ -107,6 +124,15 @@ export async function markLeadViewed(req: AuthedRequest, res: Response) {
     { $set: { lastViewedAt: new Date() }, $setOnInsert: { firstViewedAt: new Date() } },
     { upsert: true }
   );
+
+  // Feeds the audit trail + the public "median first reply" stat
+  // (stats.controller.ts). Only ever advances 'notified' -> 'viewed'
+  // and only the first time, so it never overwrites a later
+  // 'contacted'/'declined' state. Best-effort — never blocks the view.
+  LeadMatch.updateOne(
+    { leadId: lead._id, providerId: provider._id, status: 'notified' },
+    { $set: { status: 'viewed', viewedAt: new Date() } }
+  ).catch(() => {});
 
   res.json({ viewed: true });
 }
@@ -149,6 +175,16 @@ export async function unlockLead(req: AuthedRequest, res: Response) {
 
   provider.leadUnlocksUsedThisPeriod += 1;
   await provider.save();
+
+  // Unlocking is the provider actually acting on the enquiry (they now
+  // hold the contact details) — record it as the reply moment. Only
+  // sets respondedAt once; a lead unlocked via "browse nearby" (no
+  // LeadMatch row) simply matches nothing, which is correct: that
+  // wasn't a response to a notification.
+  LeadMatch.updateOne(
+    { leadId: lead._id, providerId: provider._id, respondedAt: { $exists: false } },
+    { $set: { status: 'contacted', respondedAt: new Date() } }
+  ).catch(() => {});
 
   // Geocode once, lazily, on first real unlock — there's no lead
   // creation endpoint in this codebase to do this at submission

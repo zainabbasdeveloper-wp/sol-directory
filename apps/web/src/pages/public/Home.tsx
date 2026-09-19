@@ -1,8 +1,11 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { PublicHeader, PublicFooter } from './PublicLayout';
-import TestimonialCarousel from '../../components/TestimonialCarousel';
 import Counter from '../../components/Counter';
 import PhotoSlot from '../../components/PhotoSlot';
+import { useSiteStats } from '../../hooks/useSiteStats';
+import { siteConfig, phoneHref } from '../../config/siteConfig';
+import { providerCountLabel, serviceCount, stateGroupCount } from '../../lib/statsCounts';
+import { useMatchModal } from '../../context/MatchModalContext';
 import { LOCATION_GROUPS } from '../../data/providers';
 import './Home.css';
 
@@ -34,6 +37,12 @@ const SERVICE_ICONS: Record<string, JSX.Element> = {
 
 export default function Home() {
   const navigate = useNavigate();
+  // Real numbers from the database (api stats.controller.ts). null while
+  // loading, on failure, or — for the reply time — until there's enough
+  // real data to publish an honest median. Each stat below hides itself
+  // when it has nothing true to show.
+  const stats = useSiteStats();
+  const { openMatchModal } = useMatchModal();
 
   return (
     <>
@@ -51,8 +60,8 @@ export default function Home() {
           </span>
           <h1 className="hero-heading">Find care providers who are actually taking clients</h1>
           <p className="hero-copy">
-            Search 6,400 registered NDIS and aged care providers by service, suburb and
-            funding type. Availability is confirmed every Monday, so the list you see is
+            Search NDIS and aged care providers by service, suburb and funding type.
+            Providers confirm their availability every week, so the list you see is
             the list that can help this month.
           </p>
           <div className="hero-actions">
@@ -71,9 +80,21 @@ export default function Home() {
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="info-icon">
             <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z" />
           </svg>
-          <h3 className="info-title">Talk to a person</h3>
-          <p className="info-body info-body-light">We will shortlist providers for you over the phone, at no cost.</p>
-          <span className="info-phone">1800 765 000</span>
+          {siteConfig.contactPhone ? (
+            <>
+              <h3 className="info-title">Talk to a person</h3>
+              <p className="info-body info-body-light">We will shortlist providers for you over the phone, at no cost.</p>
+              <a className="info-phone" href={phoneHref(siteConfig.contactPhone)}>{siteConfig.contactPhone}</a>
+            </>
+          ) : (
+            <>
+              <h3 className="info-title">Tell us what you need</h3>
+              <p className="info-body info-body-light">Answer a few questions and we will match you with providers who have capacity — free.</p>
+              <button type="button" className="info-phone" style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer', color: 'inherit', textAlign: 'left', font: 'inherit' }} onClick={() => openMatchModal()}>
+                Get matched, free →
+              </button>
+            </>
+          )}
         </div>
 
         <div className="info-card">
@@ -82,7 +103,7 @@ export default function Home() {
             <path d="m9 12 2 2 4-4" />
           </svg>
           <h3 className="info-title">Checked, not scraped</h3>
-          <p className="info-body">Registration is verified against the NDIS Commission register every week.</p>
+          <p className="info-body">Providers confirm they are still taking referrals every week. Anyone who stops answering is taken off the list until they confirm again.</p>
           <Link to="/directory" className="link-btn">
             How listings are checked →
           </Link>
@@ -110,12 +131,14 @@ export default function Home() {
           <div className="about-photo">
             <PhotoSlot src="/images/why-sol-directory.jpg" alt="A family meeting a provider" variant="care" />
           </div>
-          <div className="about-stat-badge">
-            <span className="about-stat-value">
-              <Counter value={1240} />
-            </span>
-            <span className="about-stat-label">providers joined the directory in the last twelve months</span>
-          </div>
+          {stats && stats.providersListed > 0 && (
+            <div className="about-stat-badge">
+              <span className="about-stat-value">
+                <Counter value={stats.providersListed} />
+              </span>
+              <span className="about-stat-label">providers currently listed and accepting enquiries</span>
+            </div>
+          )}
         </div>
         <div>
           <span className="eyebrow">
@@ -133,7 +156,6 @@ export default function Home() {
               <CheckIcon /> Availability confirmed weekly, not at sign-up
             </li>
             <li>
-              <CheckIcon /> Registration checked against the NDIS Commission register
             </li>
             <li>
               <CheckIcon /> Providers cannot pay for a higher position
@@ -146,44 +168,60 @@ export default function Home() {
             <button className="btn-gradient" onClick={() => navigate('/directory')}>
               Start searching
             </button>
-            <div>
-              <span className="about-phone">1800 765 000</span>
-              <span className="about-hours">Weekdays 8am – 6pm AEST · interpreters available</span>
-            </div>
+            {siteConfig.contactPhone && (
+              <div>
+                <a className="about-phone" href={phoneHref(siteConfig.contactPhone)}>{siteConfig.contactPhone}</a>
+                {siteConfig.supportHours && <span className="about-hours">{siteConfig.supportHours}</span>}
+              </div>
+            )}
           </div>
         </div>
       </section>
 
       <section className="stats-section">
         <p className="stats-headline">
-          Six thousand providers is not the useful number.{' '}
-          <span className="stats-headline-accent">The useful number is how many can start this month</span> — so
-          that is the one we publish.
+          A long list is not the useful thing.{' '}
+          <span className="stats-headline-accent">What matters is who has room to start</span> — so we ask providers to
+          confirm their capacity every week and show the real numbers below.
         </p>
         <div className="stats-row">
-          <div>
-            <span className="stat-value">
-              <Counter value={6412} />
-            </span>
-            <span className="stat-label">Providers listed</span>
-          </div>
-          <div>
-            <span className="stat-value">
-              <Counter value={1890} />
-            </span>
-            <span className="stat-label">Suburbs covered</span>
-          </div>
-          <div>
-            <span className="stat-value stat-value-accent">
-              <Counter value={7} suffix=" min" format={false} />
-            </span>
-            <span className="stat-label">Median first reply</span>
-          </div>
+          {stats && stats.providersListed > 0 && (
+            <div>
+              <span className="stat-value">
+                <Counter value={stats.providersListed} />
+              </span>
+              <span className="stat-label">Providers listed</span>
+            </div>
+          )}
+          {stats && stats.suburbsCovered > 0 && (
+            <div>
+              <span className="stat-value">
+                <Counter value={stats.suburbsCovered} />
+              </span>
+              <span className="stat-label">Suburbs covered</span>
+            </div>
+          )}
+          {stats && stats.medianFirstReplyMinutes !== null && (
+            <div>
+              <span className="stat-value stat-value-accent">
+                <Counter value={stats.medianFirstReplyMinutes} suffix=" min" format={false} />
+              </span>
+              <span className="stat-label">Median first reply</span>
+            </div>
+          )}
+          {stats && stats.enquiriesLast30Days > 0 && (
+            <div>
+              <span className="stat-value">
+                <Counter value={stats.enquiriesLast30Days} />
+              </span>
+              <span className="stat-label">Enquiries in the last 30 days</span>
+            </div>
+          )}
           <div>
             <span className="stat-value">
               <Counter value={0} prefix="$" format={false} />
             </span>
-            <span className="stat-label">Cost to participants</span>
+            <span className="stat-label">Cost to families</span>
           </div>
         </div>
       </section>
@@ -220,14 +258,16 @@ export default function Home() {
                   everything moving between reviews.
                 </p>
               </div>
-              <span className="service-count-featured">412 providers →</span>
+              <span className="service-count-featured">
+                {providerCountLabel(serviceCount(stats, 'Support coordination')) ?? 'Browse providers'} →
+              </span>
             </button>
 
             {[
-              { name: 'Personal care', body: 'Bathing, dressing, medication prompts and daily routines.', count: '1,038 providers' },
-              { name: 'Therapy services', body: 'Occupational therapy, physio, speech and allied health.', count: '694 providers' },
-              { name: 'Domestic assistance', body: 'Cleaning, laundry, meals and everyday household help.', count: '876 providers' },
-              { name: 'Nursing', body: 'In-home clinical care, wound care and high-intensity supports.', count: '241 providers' },
+              { name: 'Personal care', body: 'Bathing, dressing, medication prompts and daily routines.' },
+              { name: 'Therapy services', body: 'Occupational therapy, physio, speech and allied health.' },
+              { name: 'Domestic assistance', body: 'Cleaning, laundry, meals and everyday household help.' },
+              { name: 'Nursing', body: 'In-home clinical care, wound care and high-intensity supports.' },
             ].map((s) => (
               <button key={s.name} className="service-card" onClick={() => navigate(`/directory?service=${encodeURIComponent(s.name)}`)}>
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="service-icon">
@@ -235,20 +275,20 @@ export default function Home() {
                 </svg>
                 <h3 className="service-title">{s.name}</h3>
                 <p className="service-body">{s.body}</p>
-                <span className="service-count">{s.count} →</span>
+                <span className="service-count">{providerCountLabel(serviceCount(stats, s.name)) ?? 'Browse providers'} →</span>
               </button>
             ))}
           </div>
 
           <div className="pill-row">
             <button className="pill-btn" onClick={() => navigate('/directory?service=Transport')}>
-              Transport <span className="pill-count">318</span>
+              Transport{serviceCount(stats, 'Transport') !== null && <span className="pill-count">{serviceCount(stats, 'Transport')}</span>}
             </button>
             <button className="pill-btn" onClick={() => navigate('/directory?service=Housing%20(SDA%20%26%20SIL)')}>
-              Housing, SDA &amp; SIL <span className="pill-count">207</span>
+              Housing, SDA &amp; SIL{serviceCount(stats, 'Housing (SDA & SIL)') !== null && <span className="pill-count">{serviceCount(stats, 'Housing (SDA & SIL)')}</span>}
             </button>
             <button className="pill-btn" onClick={() => navigate('/directory?service=Plan%20management')}>
-              Plan management <span className="pill-count">126</span>
+              Plan management{serviceCount(stats, 'Plan management') !== null && <span className="pill-count">{serviceCount(stats, 'Plan management')}</span>}
             </button>
           </div>
         </div>
@@ -285,7 +325,6 @@ export default function Home() {
         </div>
       </section>
 
-      <TestimonialCarousel />
 
       <section id="locations" className="locations-section">
         <div className="locations-inner">
@@ -299,7 +338,9 @@ export default function Home() {
             {LOCATION_GROUPS.slice(0, 4).map((g) => (
               <div key={g.state}>
                 <h3 className="location-state">{g.state}</h3>
-                <p className="location-count">{g.count}</p>
+                {providerCountLabel(stateGroupCount(stats, g.states)) && (
+                  <p className="location-count">{providerCountLabel(stateGroupCount(stats, g.states))}</p>
+                )}
                 <div className="location-places">
                   {g.places.slice(0, 4).map((place) => (
                     <button key={place} className="location-link" onClick={() => navigate('/directory')}>
