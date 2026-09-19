@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getCPTItem, type WPCPTItem } from '../../api/wordpressApi';
 import { listProviders, type ProviderRow } from '../../api/providerResources';
 import { useMatchModal } from '../../context/MatchModalContext';
@@ -8,6 +8,7 @@ import WordPressTemplate from '../../components/wordpress/WordPressTemplate';
 import ProviderMap from '../../components/ProviderMap';
 import NotFound from './NotFound';
 import type { CPTRouteConfig } from '../../lib/cptRouteConfig';
+import { runAction } from '../../lib/runAction';
 import './WordPressCPTPage.css';
 
 interface FAQItem { question: string; answer: string }
@@ -28,22 +29,14 @@ function str(v: unknown): string {
   return typeof v === 'string' ? v : '';
 }
 
-/**
- * Runs a WP-controlled action/URL: an action key (e.g. 'get_matched')
- * opens the real app flow; anything else is treated as a path/URL.
- * Same convention used across the mega menu CTA — kept consistent
- * rather than inventing a second pattern for this page.
- */
-function runAction(url: string | undefined, openMatchModal: () => void, navigate: (p: string) => void) {
-  if (!url) return;
-  if (url === 'get_matched' || url === 'find_providers') { openMatchModal(); return; }
-  if (/^https?:\/\//.test(url)) { window.location.href = url; return; }
-  navigate(url);
-}
-
 export default function WordPressCPTPage({ config }: { config: CPTRouteConfig }) {
   const { slug = '' } = useParams<{ slug: string }>();
   const { openMatchModal } = useMatchModal();
+  const navigate = useNavigate();
+  // Every WP-controlled button goes through the shared interpreter
+  // (lib/runAction.ts) with a REAL navigate — this page used to pass a
+  // no-op, so any button whose ACF URL was a path did nothing.
+  const act = (value: string | undefined) => runAction(value, { openMatchModal, navigate });
   const [content, setContent] = useState<WPCPTItem | null>(null);
   const [providers, setProviders] = useState<ProviderRow[]>([]);
   const [providersTotal, setProvidersTotal] = useState(0);
@@ -63,8 +56,16 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
         // real count wp-admin asked for (finder_count) — never more
         // than configured, never fabricated.
         if (config.showRelatedProviders || item.meta.finder_heading || item.meta.finder_show_map !== undefined) {
-          const count = typeof item.meta.finder_count === 'number' ? item.meta.finder_count : 6;
-          return listProviders({ suburb: item.title }).then((res) => {
+          const count = Number(item.meta.finder_count) > 0 ? Number(item.meta.finder_count) : 6;
+          // A Location page filters providers by that suburb; a Service
+          // page filters by the service itself (optionally narrowed by
+          // the editor's "Default Location"). Querying a service page by
+          // suburb=<service title> — as this did before — never matched.
+          const defaultLocation = typeof item.meta.finder_default_location === 'string' ? item.meta.finder_default_location.trim() : '';
+          const query = config.pathPrefix === 'services'
+            ? { service: item.title, ...(defaultLocation ? { suburb: defaultLocation } : {}) }
+            : { suburb: item.title };
+          return listProviders(query).then((res) => {
             setProviders(res.items.slice(0, count));
             setProvidersTotal(res.total);
           }).catch(() => {});
@@ -87,6 +88,10 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
   const heroCtaUrl = str(meta.hero_cta_url);
   const heroStats = safeParseJson<HeroStat[]>(meta.hero_stats_json, []);
   const heroCard = (typeof meta.hero_summary_card === 'object' && meta.hero_summary_card ? meta.hero_summary_card : null) as HeroSummaryCard | null;
+  // ACF returns a group with every sub-field present-but-empty when an
+  // editor hasn't filled it in — an empty panel would render as a blank
+  // white box, so only show it when something is actually authored.
+  const heroCardHasContent = !!heroCard && Object.values(heroCard).some((v) => typeof v === 'string' && v.trim() !== '');
 
   // --- Service Information ---
   const overviewHeading = str(meta.overview_heading);
@@ -163,55 +168,68 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
           </aside>
 
           <main className="wp-cpt-main">
-            <section
-              className="wp-cpt-hero"
-              style={heroBgImage ? { backgroundImage: `linear-gradient(135deg, rgba(11,45,92,0.88), rgba(23,66,128,0.82)), url(${heroBgImage})` } : undefined}
-            >
-              <nav className="wp-cpt-breadcrumb wp-cpt-breadcrumb-hero" aria-label="Breadcrumb">
-                <Link to="/">Home</Link>
-                <span aria-hidden="true"> / </span>
-                <Link to={`/${config.pathPrefix}`} style={{ textTransform: 'capitalize' }}>{config.pathPrefix}</Link>
-                <span aria-hidden="true"> / </span>
-                <span>{content.title}</span>
-              </nav>
-              {heroEyebrow && <p className="wp-cpt-hero-eyebrow">{heroEyebrow}</p>}
-              <h1 className="wp-cpt-hero-title">{heroHeadline}</h1>
-              {heroDescription && <p className="wp-cpt-hero-excerpt">{heroDescription}</p>}
+            <section className="wp-cpt-hero" aria-labelledby="wp-cpt-hero-title">
+              <div
+                className="wp-cpt-hero-photo"
+                style={heroBgImage ? { backgroundImage: `url(${heroBgImage})` } : undefined}
+                aria-hidden="true"
+              />
+              <div className="wp-cpt-hero-overlay" aria-hidden="true" />
+              <div className={`wp-cpt-hero-grid ${heroCardHasContent ? '' : 'wp-cpt-hero-grid-single'}`}>
+                <div className="wp-cpt-hero-copy">
+                  <nav className="wp-cpt-breadcrumb wp-cpt-breadcrumb-hero" aria-label="Breadcrumb">
+                    <Link to="/">Home</Link>
+                    <span aria-hidden="true"> / </span>
+                    <Link to={`/${config.pathPrefix}`} style={{ textTransform: 'capitalize' }}>{config.pathPrefix}</Link>
+                    <span aria-hidden="true"> / </span>
+                    <span>{content.title}</span>
+                  </nav>
+                  {heroEyebrow && <p className="wp-cpt-hero-eyebrow"><span className="wp-cpt-hero-rule" />{heroEyebrow}</p>}
+                  <h1 id="wp-cpt-hero-title" className="wp-cpt-hero-title">{heroHeadline}</h1>
+                  {heroDescription && <p className="wp-cpt-hero-excerpt">{heroDescription}</p>}
 
-              {heroStats.length > 0 && (
-                <div className="wp-cpt-hero-stats">
-                  {heroStats.map((s) => (
-                    <span key={s.label} className="wp-cpt-hero-stat">
-                      <strong>{s.value}</strong> {s.label}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              <button className="btn-gradient wp-cpt-hero-cta" onClick={() => runAction(heroCtaUrl || 'get_matched', openMatchModal, () => {})}>
-                {heroCtaLabel || 'Get matched, free →'}
-              </button>
-
-              {heroCard && (
-                <div className="wp-cpt-hero-card">
-                  {heroCard.title && <p className="wp-cpt-hero-card-title">{heroCard.title}</p>}
-                  {heroCard.funding_text && <p className="wp-cpt-hero-card-line">✓ {heroCard.funding_text}</p>}
-                  {heroCard.availability_text && <p className="wp-cpt-hero-card-line">✓ {heroCard.availability_text}</p>}
-                  {heroCard.response_text && <p className="wp-cpt-hero-card-line">✓ {heroCard.response_text}</p>}
-                  {heroCard.cta_label && (
-                    <button className="btn-gradient" onClick={() => runAction(heroCard.cta_url, openMatchModal, () => {})}>
-                      {heroCard.cta_label}
-                    </button>
+                  {heroStats.length > 0 && (
+                    <div className="wp-cpt-hero-stats">
+                      {heroStats.map((s, i) => (
+                        <span key={`${s.label}-${i}`} className="wp-cpt-hero-stat" title={s.description || undefined}>
+                          <strong>{s.value}</strong> {s.label}
+                        </span>
+                      ))}
+                    </div>
                   )}
+
+                  <button type="button" className="btn-gradient wp-cpt-hero-cta" onClick={() => act(heroCtaUrl || 'get_matched')}>
+                    {heroCtaLabel || 'Get matched, free →'}
+                  </button>
                 </div>
-              )}
+
+                {heroCardHasContent && heroCard && (
+                  <aside className="wp-cpt-hero-card">
+                    {heroCard.title && <h2 className="wp-cpt-hero-card-title">{heroCard.title}</h2>}
+                    <ul className="wp-cpt-hero-card-list">
+                      {heroCard.funding_text && <li>{heroCard.funding_text}</li>}
+                      {heroCard.availability_text && <li>{heroCard.availability_text}</li>}
+                      {heroCard.response_text && <li>{heroCard.response_text}</li>}
+                    </ul>
+                    {heroCard.cta_label && (
+                      <button type="button" className="btn-gradient wp-cpt-hero-card-cta" onClick={() => act(heroCard.cta_url || 'get_matched')}>
+                        {heroCard.cta_label}
+                      </button>
+                    )}
+                  </aside>
+                )}
+              </div>
             </section>
 
             {/* Native WordPress editor content — the bulk of unique
                 per-service educational writing belongs here as rich
                 text with natural headings, not broken into dozens of
-                separate structured fields. */}
-            <WordPressTemplate loading={false} error="" content={content} hideDefaultTitle />
+                separate structured fields. The wrapper carries the
+                #wp-cpt-overview anchor the "On this page" list links
+                to (it previously pointed at nothing). */}
+            <div id="wp-cpt-overview">
+              <WordPressTemplate loading={false} error="" content={content} hideDefaultTitle />
+            </div>
 
             {(overviewHeading || overviewContent || whoFor) && (
               <section id="wp-cpt-overview-extra" className="wp-cpt-section">
@@ -282,7 +300,7 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
                     </Link>
                   ))}
                 </div>
-                <button className="btn-gradient" style={{ marginTop: 16 }} onClick={openMatchModal}>{finderCtaLabel}</button>
+                <button type="button" className="btn-gradient" style={{ marginTop: 16 }} onClick={() => openMatchModal()}>{finderCtaLabel}</button>
               </section>
             )}
 
@@ -295,8 +313,14 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
                     <div key={r.title} className="wp-cpt-regulator-card">
                       <p className="wp-cpt-regulator-title">{r.title}</p>
                       {r.description && <p>{r.description}</p>}
-                      {r.phone && <p>Phone: {r.phone}</p>}
-                      {r.website && <p>Website: {r.website}</p>}
+                      {r.phone && <p>Phone: <a href={`tel:${r.phone.replace(/\s+/g, '')}`}>{r.phone}</a></p>}
+                      {r.website && (
+                        <p>
+                          <a href={/^https?:\/\//i.test(r.website) ? r.website : `https://${r.website}`} target="_blank" rel="noopener noreferrer">
+                            {r.cta || r.website}
+                          </a>
+                        </p>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -352,11 +376,11 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
               <h2>{ctaHeading || 'Ready to find the right support?'}</h2>
               <p>{ctaDescription || "Tell us what you need and we'll help connect you with suitable providers — free."}</p>
               <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-                <button className="btn-gradient" onClick={() => runAction(ctaPrimaryAction || 'get_matched', openMatchModal, () => {})}>
+                <button type="button" className="btn-gradient" onClick={() => act(ctaPrimaryAction || 'get_matched')}>
                   {ctaPrimaryLabel || 'Get matched, free →'}
                 </button>
                 {ctaSecondaryLabel && (
-                  <button className="wp-cpt-cta-secondary" onClick={() => runAction(ctaSecondaryAction, openMatchModal, () => {})}>
+                  <button type="button" className="wp-cpt-cta-secondary" onClick={() => act(ctaSecondaryAction || 'get_matched')}>
                     {ctaSecondaryLabel}
                   </button>
                 )}

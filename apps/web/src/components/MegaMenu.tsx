@@ -4,6 +4,7 @@ import { getMegaMenuTabs, type MegaMenuTab } from '../api/wordpressApi';
 import { STATIC_MEGA_MENU_FALLBACK } from '../data/staticMegaMenuFallback';
 import { useMatchModal } from '../context/MatchModalContext';
 import { decodeHtmlEntities } from '../lib/decodeHtmlEntities';
+import { runAction } from '../lib/runAction';
 import './MegaMenu.css';
 
 /**
@@ -47,17 +48,14 @@ export default function MegaMenu() {
 
   function handleLinkClick(url: string | undefined, openInNewTab: boolean | undefined) {
     setOpen(false);
-    if (!url) return;
-    if (openInNewTab) { window.open(url, '_blank', 'noopener,noreferrer'); return; }
-    if (/^https?:\/\//.test(url)) { window.location.href = url; return; }
-    navigate(url);
+    runAction(url, { openMatchModal, navigate }, { newTab: !!openInNewTab });
   }
 
   function handleCtaClick(cta: MegaMenuTab['cta']) {
     setOpen(false);
     if (!cta) return;
-    if (cta.action === 'get_matched' || cta.action === 'find_providers') { openMatchModal(); return; }
-    if (cta.url) navigate(cta.url);
+    // An action key wins over a plain URL (see the ACF field notes).
+    runAction(cta.action || cta.url, { openMatchModal, navigate });
   }
 
   const activeTab = tabs.find((t) => t.key === tab) ?? tabs[0];

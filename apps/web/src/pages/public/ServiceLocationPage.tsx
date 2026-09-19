@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import DOMPurify from 'dompurify';
 import { PublicHeader, PublicFooter } from './PublicLayout';
+import { runAction } from '../../lib/runAction';
 import PhotoSlot from '../../components/PhotoSlot';
 import {
   FUNDING_OPTIONS, LANGUAGE_OPTIONS, COMPARE, DEMAND, METHOD,
@@ -109,6 +111,10 @@ export default function ServiceLocationPage() {
       .finally(() => setProvidersLoading(false));
   }, [serviceSlug, suburbSlug, serviceName, suburbName]);
 
+  // The ToC only lists sections that actually render — "Costs" and
+  // "What to expect" used to be listed unconditionally although no such
+  // sections existed (dead anchors). They're now real sections that
+  // appear only when an editor has filled in their ACF group.
   const toc = wp?.toc?.length ? wp.toc : [
     { label: 'Top providers', href: '#providers' },
     { label: `About ${serviceLower}`, href: '#about-service' },
@@ -120,14 +126,38 @@ export default function ServiceLocationPage() {
     { label: `About ${suburbName}`, href: '#suburb' },
     { label: 'Language support', href: '#language' },
     { label: `${serviceName} at a glance`, href: '#glance' },
-    { label: 'Costs and how to pay', href: '#costs' },
-    { label: 'What to expect', href: '#expect' },
+    ...(wp?.cost ? [{ label: wp.cost.heading || 'Costs and how to pay', href: '#costs' }] : []),
+    ...(wp?.expect ? [{ label: wp.expect.heading || 'What to expect', href: '#expect' }] : []),
     { label: 'Services in this suburb', href: '#services' },
     { label: 'Most requested support', href: '#requested' },
     { label: 'Regulations & compliance', href: '#rules' },
     { label: 'Find providers near you', href: '#find-near-you' },
     { label: 'FAQ', href: '#faq' },
   ];
+
+  const act = (value: string | undefined) => runAction(value, { openMatchModal, navigate });
+
+  // Regulator cards, response times and related services: editor-authored
+  // values (extended ACF group) win; the built-in generic content is the
+  // per-section fallback, same rule as every other section on this page.
+  const regulatorItems = wp?.regulations?.cards?.length
+    ? wp.regulations.cards.map((c) => ({ name: c.title, phone: c.phone, site: c.website, description: c.description }))
+    : REGULATORS.map((r) => ({ name: r.name, phone: r.phone, site: r.site, description: '' }));
+  const responseTimeItems = wp?.responseTimes?.length
+    ? wp.responseTimes.map((r) => ({ abbr: r.state, minutes: r.minutes }))
+    : RESPONSE_BY_STATE;
+  const relatedLinks = wp?.relatedServices?.length
+    ? wp.relatedServices.map((r) => ({ name: r.title, to: `/services/${r.slug}/${suburbSlug}` }))
+    : OTHER_SERVICES.map((name) => ({ name, to: `/services/${slugify(name)}/${suburbSlug}` }));
+  const localFacts: [string, string][] = wp?.local
+    ? ([
+        ['Population', wp.local.population],
+        ['Median personal income', wp.local.medianIncome],
+        ['Nearest hospital', wp.local.nearestHospital],
+        ['Public transport', wp.local.publicTransport],
+        ['Postcode', wp.local.postcode],
+      ] as [string, string][]).filter(([, v]) => v)
+    : [];
 
   const introParagraph = wp?.introParagraph || `This guide compares in-home ${serviceLower} providers covering ${suburbName}, ranked on registration, clinical credentials and service range. The providers listed service ${suburbName} and the surrounding area, and deliver registered and enrolled care for NDIS participants, aged care clients and private patients.`;
   const compareItems = wp?.compare?.length ? wp.compare : COMPARE;
@@ -148,18 +178,11 @@ export default function ServiceLocationPage() {
 
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const [contact, setContact] = useState('');
-  const [sent, setSent] = useState(false);
   const [finderLocationInput, setFinderLocationInput] = useState(suburbName);
   const [finderServiceInput, setFinderServiceInput] = useState(SERVICES.includes(serviceName) ? serviceName : SERVICES[1]);
 
   function toggleBlurb(id: string) {
     setExpanded((e) => ({ ...e, [id]: !e[id] }));
-  }
-
-  function sendContact() {
-    if (!contact.trim()) return;
-    setSent(true);
   }
 
   return (
@@ -293,25 +316,18 @@ export default function ServiceLocationPage() {
               <div className="svc-match-header">Get matched directly</div>
               <div className="svc-match-body">
                 <h3>Not finding the right match?</h3>
-                <p>Leave your details and we will connect you with home {serviceLower} providers in {suburbName}. No wait list.</p>
-                {sent ? (
-                  <p className="svc-avail-ok" style={{ fontWeight: 600 }}>Thanks — we'll be in touch shortly.</p>
-                ) : (
-                  <div className="svc-match-form">
-                    <input
-                      type="text"
-                      value={contact}
-                      onChange={(e) => setContact(e.target.value)}
-                      placeholder="Your email or phone"
-                      aria-label="Your email or phone"
-                      className="svc-match-input"
-                    />
-                    <button className="btn-gradient" disabled={!contact.trim()} onClick={sendContact}>
-                      Send request →
-                    </button>
-                  </div>
-                )}
-                <p className="svc-match-footnote">No login, no spam. We text or email when a match is ready.</p>
+                <p>Tell us what you need and we will connect you with home {serviceLower} providers in {suburbName}. No wait list.</p>
+                {/* This used to be an inline "email or phone" box whose
+                    Send button only flipped a local flag to "Thanks —
+                    we'll be in touch" — nothing was ever sent, so a real
+                    enquiry was silently discarded. It now opens the real
+                    Get Matched wizard, which validates, saves and matches. */}
+                <div className="svc-match-form">
+                  <button type="button" className="btn-gradient" onClick={() => openMatchModal()}>
+                    Start your free request →
+                  </button>
+                </div>
+                <p className="svc-match-footnote">Free, no obligation. Providers respond directly to you.</p>
               </div>
             </div>
 
@@ -411,7 +427,15 @@ export default function ServiceLocationPage() {
                   {f.note && <p className="svc-fact-note">{f.note}</p>}
                 </div>
               ))}
+              {localFacts.map(([label, value]) => (
+                <div key={`local-${label}`} className="svc-fact-card">
+                  <p className="svc-fact-label">{label}</p>
+                  <p className="svc-fact-value">{value}</p>
+                </div>
+              ))}
             </div>
+            {wp?.local?.communityInfo && <p className="svc-p" style={{ marginTop: 16 }}>{wp.local.communityInfo}</p>}
+            {wp?.local?.dataDate && <p className="svc-fact-note" style={{ marginTop: 8 }}>Source: {wp.local.dataDate}</p>}
           </section>
 
           <section id="language">
@@ -443,6 +467,50 @@ export default function ServiceLocationPage() {
               ))}
             </div>
           </section>
+
+          {wp?.cost && (
+            <section id="costs">
+              <h2 className="svc-h2-sm">{wp.cost.heading || 'Costs and how to pay'}</h2>
+              {wp.cost.intro && <p className="svc-p svc-p-tight">{wp.cost.intro}</p>}
+              {wp.cost.pricingInfoHtml && (
+                <div className="svc-p svc-rich" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(wp.cost.pricingInfoHtml) }} />
+              )}
+              <div className="svc-facts-grid">
+                {([
+                  ['NDIS', wp.cost.ndis],
+                  ['Private payment', wp.cost.privatePay],
+                  ['Aged care', wp.cost.agedCare],
+                  ['DVA', wp.cost.dva],
+                ] as [string, string][]).filter(([, v]) => v).map(([label, value]) => (
+                  <div key={label} className="svc-fact-card">
+                    <p className="svc-fact-label">{label}</p>
+                    <p className="svc-fact-value svc-fact-value-body">{value}</p>
+                  </div>
+                ))}
+              </div>
+              {wp.cost.notes && <p className="svc-fact-note" style={{ marginTop: 12 }}>{wp.cost.notes}</p>}
+            </section>
+          )}
+
+          {wp?.expect && (
+            <section id="expect">
+              <h2 className="svc-h2-sm">{wp.expect.heading || 'What to expect'}</h2>
+              {wp.expect.intro && <p className="svc-p svc-p-tight">{wp.expect.intro}</p>}
+              {wp.expect.steps.length > 0 && (
+                <ol className="svc-credentials-list">
+                  {wp.expect.steps.map((st) => (
+                    <li key={`${st.number}-${st.title}`}>
+                      <span className="svc-credentials-num">{st.number}</span>
+                      <div>
+                        <p className="svc-credentials-title">{st.title}</p>
+                        {st.description && <p className="svc-credentials-body">{st.description}</p>}
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </section>
+          )}
 
           <section id="services">
             <h2 className="svc-h2-sm">Care services available in {suburbName}</h2>
@@ -481,13 +549,15 @@ export default function ServiceLocationPage() {
           </section>
 
           <section id="rules">
-            <h2 className="svc-h2-sm">{stateName} regulations and compliance</h2>
+            <h2 className="svc-h2-sm">{wp?.regulations?.heading || `${stateName} regulations and compliance`}</h2>
+            {wp?.regulations?.intro && <p className="svc-p svc-p-tight">{wp.regulations.intro}</p>}
             <div className="svc-regulators-grid">
-              {REGULATORS.map((r) => (
+              {regulatorItems.map((r) => (
                 <div key={r.name} className="svc-regulator-card">
                   <p className="svc-regulator-name">{r.name}</p>
-                  <p>Phone: {r.phone}</p>
-                  <p>Website: {r.site}</p>
+                  {r.description && <p>{r.description}</p>}
+                  {r.phone && <p>Phone: {r.phone}</p>}
+                  {r.site && <p>Website: {r.site}</p>}
                 </div>
               ))}
             </div>
@@ -497,7 +567,8 @@ export default function ServiceLocationPage() {
           </section>
 
           <section id="find-near-you" className="svc-finder">
-            <h2 className="svc-h2-sm">Find {serviceLower} providers near you</h2>
+            <h2 className="svc-h2-sm">{wp?.finder?.heading || `Find ${serviceLower} providers near you`}</h2>
+            {wp?.finder?.description && <p className="svc-p svc-p-tight">{wp.finder.description}</p>}
             <form className="svc-finder-form" onSubmit={(e) => { e.preventDefault(); navigate(`/services/${slugify(finderServiceInput)}/${slugify(finderLocationInput)}`); }}>
               <label className="svc-finder-field">
                 <span>Location</span>
@@ -532,8 +603,8 @@ export default function ServiceLocationPage() {
             <h2 className="svc-h2-sm">Response time by state</h2>
             <div className="svc-bar-list">
               {(() => {
-                const maxMin = Math.max(...RESPONSE_BY_STATE.map((r) => r.minutes));
-                return RESPONSE_BY_STATE.map((r) => (
+                const maxMin = Math.max(...responseTimeItems.map((r) => r.minutes));
+                return responseTimeItems.map((r) => (
                   <div key={r.abbr}>
                     <div className="svc-bar-row"><span>{r.abbr}</span><span className="svc-bar-pct">{r.minutes} min</span></div>
                     <div className="svc-bar-track"><div className="svc-bar-fill" style={{ width: `${(r.minutes / maxMin) * 100}%` }} /></div>
@@ -547,11 +618,15 @@ export default function ServiceLocationPage() {
 
       <section className="svc-cta-band">
         <div className="svc-cta-band-inner">
-          <h2>Need support at home?</h2>
-          <p>Not sure what service you need? We can help you find the right support.</p>
+          <h2>{wp?.cta?.heading || 'Need support at home?'}</h2>
+          <p>{wp?.cta?.description || 'Not sure what service you need? We can help you find the right support.'}</p>
           <div className="svc-cta-band-actions">
-            <button className="btn-gradient btn-lg" onClick={() => document.getElementById('providers')?.scrollIntoView({ behavior: 'smooth' })}>Find providers</button>
-            <button className="svc-cta-band-secondary" onClick={() => document.getElementById('match')?.scrollIntoView({ behavior: 'smooth' })}>Get matched</button>
+            <button type="button" className="btn-gradient btn-lg" onClick={() => act(wp?.cta?.primaryAction || wp?.cta?.primaryUrl || '#providers')}>
+              {wp?.cta?.primaryLabel || 'Find providers'}
+            </button>
+            <button type="button" className="svc-cta-band-secondary" onClick={() => act(wp?.cta?.secondaryAction || wp?.cta?.secondaryUrl || 'get_matched')}>
+              {wp?.cta?.secondaryLabel || 'Get matched'}
+            </button>
           </div>
         </div>
       </section>
@@ -560,8 +635,8 @@ export default function ServiceLocationPage() {
         <div className="svc-related-inner">
           <h2 className="svc-h2-sm">Other services</h2>
           <div className="svc-related-grid">
-            {OTHER_SERVICES.map((name) => (
-              <Link key={name} to={`/services/${slugify(name)}/${suburbSlug}`} className="svc-related-link">{name}</Link>
+            {relatedLinks.map((r) => (
+              <Link key={r.to} to={r.to} className="svc-related-link">{r.name}</Link>
             ))}
           </div>
         </div>

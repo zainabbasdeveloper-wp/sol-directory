@@ -9,6 +9,12 @@ interface Props {
   content: WPContentBase | null;
   /** Extra content rendered above the main body — e.g. LocationTemplate's provider list, ServiceTemplate's related services. */
   children?: React.ReactNode;
+  /**
+   * For pages that render their own hero (WordPressCPTPage): skips the
+   * template's featured image and <h1> so the title isn't shown twice
+   * and the page keeps exactly one <h1>. SEO meta tags still update.
+   */
+  hideDefaultTitle?: boolean;
 }
 
 /**
@@ -18,7 +24,7 @@ interface Props {
  * type's page component is a thin wrapper: fetch its own data, pass
  * it here.
  */
-export default function WordPressTemplate({ loading, error, content, children }: Props) {
+export default function WordPressTemplate({ loading, error, content, children, hideDefaultTitle }: Props) {
   // SEO (item 20) — updates document head directly since this app
   // has no SSR/meta-framework (plain Vite SPA) to hook a <Head>
   // component into. This only affects the current tab's title/meta,
@@ -90,9 +96,13 @@ export default function WordPressTemplate({ loading, error, content, children }:
 
   if (!content) return null; // caller renders NotFound instead
 
+  // Nothing authored in the editor body and the caller renders its own
+  // hero — don't emit an empty wrapper (it would just add stray margin).
+  if (hideDefaultTitle && !content.contentHtml.trim() && !children) return null;
+
   return (
     <div className="wp-template-page">
-      {content.featuredImage ? (
+      {!hideDefaultTitle && content.featuredImage ? (
         <img
           src={content.featuredImage.url}
           alt={content.featuredImage.alt}
@@ -100,7 +110,7 @@ export default function WordPressTemplate({ loading, error, content, children }:
           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
         />
       ) : null}
-      <h1 className="wp-template-title">{content.title}</h1>
+      {!hideDefaultTitle && <h1 className="wp-template-title">{content.title}</h1>}
       {children}
       {/*
         Sanitized with DOMPurify immediately before render — this is

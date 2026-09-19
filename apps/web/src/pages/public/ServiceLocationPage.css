@@ -263,3 +263,10 @@
   color: var(--color-text); transition: border-color 180ms ease, color 180ms ease, transform 180ms ease;
 }
 .svc-related-link:hover { border-color: var(--color-accent); color: var(--color-accent-700); transform: translateY(-2px); }
+
+/* Editor-authored rich text (ACF wysiwyg "Pricing Information") and
+   long-form values in the fact cards on the Costs section. */
+.svc-rich ul, .svc-rich ol { margin: 0 0 14px; padding-left: 20px; }
+.svc-rich p { margin: 0 0 12px; }
+.svc-rich a { color: var(--color-accent-700); text-decoration: underline; }
+.svc-fact-value-body { font-size: 13.5px; font-weight: 500; line-height: 1.55; }
