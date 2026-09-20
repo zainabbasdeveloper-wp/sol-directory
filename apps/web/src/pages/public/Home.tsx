@@ -38,14 +38,6 @@ const SERVICE_ICONS: Record<string, JSX.Element> = {
 
 export default function Home() {
   const navigate = useNavigate();
-<<<<<<< HEAD
-=======
-  // Real numbers from the database (api stats.controller.ts). null while
-  // loading, on failure, or — for the reply time — until there's enough
-  // real data to publish an honest median. Each stat below hides itself
-  // when it has nothing true to show.
-  const stats = useSiteStats();
->>>>>>> 170d22eb257a9407dbf8347bbfac91c0b4060aef
   const { openMatchModal } = useMatchModal();
 
   return (
@@ -64,14 +56,8 @@ export default function Home() {
           </span>
           <h1 className="hero-heading">Find NDIS &amp; Aged Care Providers Near You</h1>
           <p className="hero-copy">
-<<<<<<< HEAD
             Tell us what you need and we will do the searching for you, free.
             A new connection every 5 minutes during business hours.
-=======
-            Search NDIS and aged care providers by service, suburb and funding type.
-            Providers confirm their availability every week, so the list you see is
-            the list that can help this month.
->>>>>>> 170d22eb257a9407dbf8347bbfac91c0b4060aef
           </p>
           <div className="hero-actions">
             <button className="btn-gradient btn-lg" onClick={openMatchModal}>
