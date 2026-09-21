@@ -37,12 +37,11 @@ const SERVICE_ICONS: Record<string, JSX.Element> = {
 
 export default function Home() {
   const navigate = useNavigate();
+  const { openMatchModal } = useMatchModal();
   // Real numbers from the database (api stats.controller.ts). null while
   // loading, on failure, or — for the reply time — until there's enough
   // real data to publish an honest median. Each stat below hides itself
   // when it has nothing true to show.
-  const stats = useSiteStats();
-  const { openMatchModal } = useMatchModal();
   const stats = useSiteStats();
 
   return (
