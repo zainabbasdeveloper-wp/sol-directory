@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getCPTItem, type WPCPTItem } from '../../api/wordpressApi';
-import { listProviders, type ProviderRow } from '../../api/providerResources';
+import { listPublicProviders, type PublicProviderRow } from '../../api/providerResources';
 import { useMatchModal } from '../../context/MatchModalContext';
 import { PublicHeader, PublicFooter } from '../public/PublicLayout';
 import WordPressTemplate from '../../components/wordpress/WordPressTemplate';
@@ -38,7 +38,7 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
   // no-op, so any button whose ACF URL was a path did nothing.
   const act = (value: string | undefined) => runAction(value, { openMatchModal, navigate });
   const [content, setContent] = useState<WPCPTItem | null>(null);
-  const [providers, setProviders] = useState<ProviderRow[]>([]);
+  const [providers, setProviders] = useState<PublicProviderRow[]>([]);
   const [providersTotal, setProvidersTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -65,7 +65,7 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
           const query = config.pathPrefix === 'services'
             ? { service: item.title, ...(defaultLocation ? { suburb: defaultLocation } : {}) }
             : { suburb: item.title };
-          return listProviders(query).then((res) => {
+          return listPublicProviders(query).then((res) => {
             setProviders(res.items.slice(0, count));
             setProvidersTotal(res.total);
           }).catch(() => {});

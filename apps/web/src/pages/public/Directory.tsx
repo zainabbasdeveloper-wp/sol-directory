@@ -1,71 +1,171 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { PublicHeader, PublicFooter } from './PublicLayout';
-import { PROVIDERS, SERVICES, REGIONS, FUNDINGS, type Provider } from '../../data/providers';
-import '../public/Home.css';
+import Combobox, { type ComboItem } from '../../components/ui/Combobox';
+import { listPublicProviders, type PublicProviderRow } from '../../api/providerResources';
+import { listActiveServices } from '../../api/serviceCatalogue';
+import { searchPlaces, formatPlace, placeSearchEnabled, type PlaceSuggestion } from '../../lib/places';
+import { useMatchModal } from '../../context/MatchModalContext';
+import './Home.css';
 import './Directory.css';
 
-function ProviderDetailModal({ provider, onClose }: { provider: Provider; onClose: () => void }) {
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <span className="modal-code">{provider.code}</span>
-          <button className="modal-close" onClick={onClose}>
-            Close ✕
-          </button>
-        </div>
-        <h3 className="modal-title">{provider.name}</h3>
-        <p className="modal-detail">{provider.detail}</p>
-        <dl className="modal-dl">
-          <dt>Area</dt>
-          <dd>{provider.area}</dd>
-          <dt>Funding</dt>
-          <dd>{provider.funding}</dd>
-          <dt>Responds</dt>
-          <dd>{provider.response}</dd>
-          <dt>Languages</dt>
-          <dd>{provider.languages}</dd>
-          <dt>Status</dt>
-          <dd>{provider.status}</dd>
-        </dl>
-        <div className="modal-actions">
-          <button className="btn-gradient" onClick={onClose}>
-            Request a call back
-          </button>
-          <button className="btn-tint" onClick={onClose}>
-            Add to shortlist
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+const PAGE_SIZE = 12;
+// "Near a suburb" search radius. Wide enough to catch providers based in
+// neighbouring suburbs who travel to the area; providers that list the
+// suburb by name are always included regardless.
+const NEARBY_RADIUS_KM = 25;
+
+interface Place { label: string; suburb: string; lat: number | null; lng: number | null }
+
+const STATUS_STYLE: Record<string, { label: string; tone: 'ok' | 'limited' | 'wait' | 'closed' }> = {
+  'Open to referrals': { label: 'Accepting referrals', tone: 'ok' },
+  'Limited capacity': { label: 'Limited capacity', tone: 'limited' },
+  'Waitlist only': { label: 'Waitlist only', tone: 'wait' },
+  Closed: { label: 'Not accepting referrals', tone: 'closed' },
+};
+
+function initials(name: string): string {
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('') || '?';
 }
 
 export default function Directory() {
-  const [searchParams] = useSearchParams();
-  const [query, setQuery] = useState('');
-  const [service, setService] = useState(searchParams.get('service') ?? 'All services');
-  const [region, setRegion] = useState('All states');
-  const [funding, setFunding] = useState('Any funding');
-  const [selected, setSelected] = useState<Provider | null>(null);
+  const [params, setParams] = useSearchParams();
+  const { openMatchModal } = useMatchModal();
 
-  const results = useMemo(() => {
-    return PROVIDERS.filter((p) => {
-      if (query && !p.name.toLowerCase().includes(query.toLowerCase()) && !p.blurb.toLowerCase().includes(query.toLowerCase())) return false;
-      if (service !== 'All services' && !p.services.includes(service)) return false;
-      if (region !== 'All states' && p.state !== region) return false;
-      if (funding !== 'Any funding' && !p.funding.toLowerCase().includes(funding.toLowerCase().replace('agency managed', 'agency').replace('plan managed', 'plan').replace('self managed', 'self'))) return false;
-      return true;
-    });
-  }, [query, service, region, funding]);
+  // ---- Filters. "Committed" values drive the search; the *Text values are
+  // just what's typed in the box while choosing. ----
+  const [service, setService] = useState(params.get('service') ?? '');
+  const [serviceText, setServiceText] = useState(service);
+  const initialSuburb = params.get('suburb') ?? '';
+  const [place, setPlace] = useState<Place | null>(initialSuburb ? { label: initialSuburb, suburb: initialSuburb, lat: null, lng: null } : null);
+  const [placeText, setPlaceText] = useState(initialSuburb);
+  const [nameText, setNameText] = useState('');
+  const [nameQuery, setNameQuery] = useState('');
 
-  function reset() {
-    setQuery('');
-    setService('All services');
-    setRegion('All states');
-    setFunding('Any funding');
+  // ---- Reference data for the pickers ----
+  const [services, setServices] = useState<string[]>([]);
+  const [placeItems, setPlaceItems] = useState<PlaceSuggestion[]>([]);
+  const [placeLoading, setPlaceLoading] = useState(false);
+
+  // ---- Results ----
+  const [results, setResults] = useState<PublicProviderRow[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState('');
+  const requestId = useRef(0);
+  // Bumped by "Try again" so the search re-runs even though no filter changed.
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    document.title = 'Find a provider — SolDirectory';
+    listActiveServices().then((r) => setServices(r.items.map((s) => s.name))).catch(() => {});
+  }, []);
+
+  // Debounce the free-text provider-name search.
+  useEffect(() => {
+    const t = setTimeout(() => setNameQuery(nameText.trim()), 300);
+    return () => clearTimeout(t);
+  }, [nameText]);
+
+  // Live suburb / postcode suggestions — only while the person is typing,
+  // not after a suggestion has been chosen.
+  useEffect(() => {
+    if (!placeSearchEnabled || placeText.trim().length < 2 || placeText === place?.label) {
+      setPlaceItems([]);
+      setPlaceLoading(false);
+      return;
+    }
+    const controller = new AbortController();
+    setPlaceLoading(true);
+    const t = setTimeout(() => {
+      searchPlaces(placeText, controller.signal).then((items) => {
+        if (controller.signal.aborted) return;
+        setPlaceItems(items);
+        setPlaceLoading(false);
+      });
+    }, 220);
+    return () => { controller.abort(); clearTimeout(t); };
+  }, [placeText, place]);
+
+  // Keep the URL shareable / bookmarkable.
+  useEffect(() => {
+    const next = new URLSearchParams();
+    if (service) next.set('service', service);
+    if (place?.suburb) next.set('suburb', place.suburb);
+    setParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [service, place]);
+
+  function searchArgs(pageNumber: number) {
+    return {
+      service: service || undefined,
+      suburb: place?.suburb || undefined,
+      // With coordinates, providers based nearby count too, not only ones
+      // that list this exact suburb by name.
+      ...(place?.lat != null && place?.lng != null ? { lat: place.lat, lng: place.lng, radiusKm: NEARBY_RADIUS_KM } : {}),
+      q: nameQuery || undefined,
+      page: pageNumber,
+      limit: PAGE_SIZE,
+    };
   }
+
+  // New search whenever a committed filter changes.
+  useEffect(() => {
+    const id = ++requestId.current;
+    setLoading(true);
+    setError('');
+    listPublicProviders(searchArgs(1))
+      .then((res) => {
+        if (id !== requestId.current) return;
+        setResults(res.items);
+        setTotal(res.total);
+        setHasMore(res.hasMore);
+        setPage(1);
+      })
+      .catch(() => { if (id === requestId.current) setError('We couldn’t load providers just now. Please try again.'); })
+      .finally(() => { if (id === requestId.current) setLoading(false); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [service, place, nameQuery, reloadKey]);
+
+  function loadMore() {
+    const id = requestId.current;
+    setLoadingMore(true);
+    listPublicProviders(searchArgs(page + 1))
+      .then((res) => {
+        if (id !== requestId.current) return;
+        setResults((prev) => [...prev, ...res.items]);
+        setHasMore(res.hasMore);
+        setPage((p) => p + 1);
+      })
+      .catch(() => setError('We couldn’t load more providers. Please try again.'))
+      .finally(() => setLoadingMore(false));
+  }
+
+  const retry = () => setReloadKey((k) => k + 1);
+
+  const serviceItems: ComboItem[] = useMemo(() => {
+    // While the box holds the committed value, show the whole list;
+    // otherwise filter by what's being typed.
+    const q = serviceText === service ? '' : serviceText.trim().toLowerCase();
+    return services.filter((s) => !q || s.toLowerCase().includes(q)).map((s) => ({ key: s, label: s }));
+  }, [services, serviceText, service]);
+
+  const placeComboItems: ComboItem[] = placeItems.map((p) => ({
+    key: p.id,
+    label: `${p.suburb}${p.postcode && p.postcode !== p.suburb ? ` (${p.postcode})` : ''}`,
+    hint: p.state,
+  }));
+
+  function clearAll() {
+    setService(''); setServiceText('');
+    setPlace(null); setPlaceText('');
+    setNameText(''); setNameQuery('');
+  }
+
+  const anyFilter = !!(service || place || nameQuery);
 
   return (
     <>
@@ -75,114 +175,167 @@ export default function Directory() {
         <div className="directory-page-header-inner">
           <span className="eyebrow eyebrow-light">
             <span className="eyebrow-rule" />
-            The directory
+            Provider directory
           </span>
-          <h1 className="section-heading section-heading-light">Providers with capacity this month</h1>
+          <h1 className="section-heading section-heading-light">Find a provider</h1>
           <p className="directory-page-subtitle">
-            Filter the list, open a profile, then contact the provider directly. We take
-            no commission on any connection.
+            Search for the support you need and where you need it. Providers who have
+            confirmed their availability recently are shown.
           </p>
         </div>
       </div>
 
-      <section className="directory-section">
-        <div className="filter-card">
-          <div className="filter-grid">
-            <label className="filter-label-block">
-              <span className="filter-label-text">Keyword</span>
+      <section className="directory-section dir">
+        <div className="dir-search" role="search" aria-label="Search providers">
+          <div className="dir-search-grid">
+            <Combobox
+              label="What support do you need?"
+              value={serviceText}
+              placeholder="Search supports, e.g. personal care"
+              items={serviceItems}
+              emptyText="No supports match. Try a shorter word."
+              icon={<SearchIcon />}
+              onInputChange={(t) => { setServiceText(t); if (!t) setService(''); }}
+              onSelect={(item) => { setService(item.label); setServiceText(item.label); }}
+              onClose={() => setServiceText(service)}
+              onClear={() => { setService(''); setServiceText(''); }}
+            />
+            <Combobox
+              label="Where?"
+              value={placeText}
+              placeholder="Suburb or postcode"
+              items={placeComboItems}
+              loading={placeLoading}
+              emptyText="No matching suburb found. Check the spelling, or try a postcode."
+              openOnFocus={false}
+              icon={<PinIcon />}
+              onInputChange={(t) => { setPlaceText(t); if (!t) setPlace(null); }}
+              onSelect={(item) => {
+                const s = placeItems.find((p) => p.id === item.key);
+                if (!s) return;
+                const label = formatPlace(s);
+                setPlace({ label, suburb: s.suburb, lat: s.lat, lng: s.lng });
+                setPlaceText(label);
+              }}
+              // Enter on typed text (no suggestion chosen) searches that suburb by name.
+              onEnterText={(text) => { setPlace({ label: text, suburb: text, lat: null, lng: null }); setPlaceText(text); }}
+              onClose={() => setPlaceText(place?.label ?? '')}
+              onClear={() => { setPlace(null); setPlaceText(''); }}
+            />
+            <div className="cbx">
+              <label className="cbx-label" htmlFor="dir-name">Provider name <span className="dir-optional">(optional)</span></label>
               <input
+                id="dir-name"
                 type="search"
-                placeholder="Provider name or specialty"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="filter-input"
+                className="cbx-input"
+                placeholder="Search by name"
+                value={nameText}
+                autoComplete="off"
+                onChange={(e) => setNameText(e.target.value)}
               />
-            </label>
-            <label className="filter-label-block">
-              <span className="filter-label-text">Service</span>
-              <select value={service} onChange={(e) => setService(e.target.value)} className="filter-input">
-                {SERVICES.map((s) => (
-                  <option key={s}>{s}</option>
-                ))}
-              </select>
-            </label>
-            <label className="filter-label-block">
-              <span className="filter-label-text">State</span>
-              <select value={region} onChange={(e) => setRegion(e.target.value)} className="filter-input">
-                {REGIONS.map((r) => (
-                  <option key={r}>{r}</option>
-                ))}
-              </select>
-            </label>
-            <label className="filter-label-block">
-              <span className="filter-label-text">Funding</span>
-              <select value={funding} onChange={(e) => setFunding(e.target.value)} className="filter-input">
-                {FUNDINGS.map((f) => (
-                  <option key={f}>{f}</option>
-                ))}
-              </select>
-            </label>
-            <button className="btn-gradient" onClick={reset}>
-              Clear filters
-            </button>
+            </div>
           </div>
+
+          {anyFilter && (
+            <div className="dir-active">
+              <span className="dir-active-label">Showing:</span>
+              {service && <button type="button" className="dir-chip" onClick={() => { setService(''); setServiceText(''); }}>{service} <span aria-hidden="true">×</span><span className="sr-only">Remove filter</span></button>}
+              {place && <button type="button" className="dir-chip" onClick={() => { setPlace(null); setPlaceText(''); }}>{place.label} <span aria-hidden="true">×</span><span className="sr-only">Remove filter</span></button>}
+              {nameQuery && <button type="button" className="dir-chip" onClick={() => { setNameText(''); setNameQuery(''); }}>“{nameQuery}” <span aria-hidden="true">×</span><span className="sr-only">Remove filter</span></button>}
+              <button type="button" className="dir-clear" onClick={clearAll}>Clear all</button>
+            </div>
+          )}
         </div>
 
-        <div className="results-header">
-          <span className="results-count">{results.length} providers matching your filters</span>
-          <span className="results-sort">Sorted by response time</span>
+        <div className="dir-help">
+          <p>
+            <strong>Not sure where to start?</strong> Answer a few short questions and we will match you with providers
+            who suit your needs. It is free and there is no obligation.
+          </p>
+          <button type="button" className="btn-gradient" onClick={() => openMatchModal()}>Get matched, free →</button>
         </div>
 
-        <div className="provider-grid">
-          {results.map((p) => (
-            <article key={p.code} role="button" tabIndex={0} className="provider-card" onClick={() => setSelected(p)}>
-              <div className="provider-card-top">
-                <span className="provider-code">{p.code}</span>
-                <span className="provider-status">{p.status}</span>
-              </div>
-              <h3 className="provider-name">{p.name}</h3>
-              <p className="provider-blurb">{p.blurb}</p>
-              <div className="provider-services">
-                {p.services.map((s) => (
-                  <span key={s} className="provider-service-chip">
-                    {s}
-                  </span>
-                ))}
-              </div>
-              <dl className="provider-dl">
-                <dt>Area</dt>
-                <dd>{p.area}</dd>
-                <dt>Responds</dt>
-                <dd>{p.response}</dd>
-                <dt>Funding</dt>
-                <dd>{p.funding}</dd>
-              </dl>
-              <button
-                className="link-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelected(p);
-                }}
-              >
-                View profile →
-              </button>
-            </article>
-          ))}
+        <div className="dir-results-head" aria-live="polite">
+          {loading ? 'Searching…' : error ? '' : `${total.toLocaleString('en-AU')} ${total === 1 ? 'provider' : 'providers'}${anyFilter ? ' match your search' : ' listed'}`}
         </div>
 
-        {results.length === 0 && (
-          <div className="empty-state">
-            <p>No providers match those filters yet.</p>
-            <button className="btn-gradient" onClick={reset}>
-              Show all providers
+        {error && (
+          <div className="dir-empty" role="alert">
+            <p>{error}</p>
+            <button type="button" className="btn-gradient" onClick={retry}>Try again</button>
+          </div>
+        )}
+
+        {!error && !loading && results.length === 0 && (
+          <div className="dir-empty">
+            <h2>No providers listed for this search yet</h2>
+            <p>
+              {anyFilter
+                ? 'Try removing a filter, or check the spelling. You can also send a request, and we will notify suitable providers in your area as they join.'
+                : 'No providers are listed yet.'}
+            </p>
+            <div className="dir-empty-actions">
+              {anyFilter && <button type="button" className="btn-tint" onClick={clearAll}>Clear search</button>}
+              <button type="button" className="btn-gradient" onClick={() => openMatchModal()}>Get matched, free →</button>
+            </div>
+          </div>
+        )}
+
+        <ul className="dir-grid">
+          {results.map((p) => {
+            const name = p.tradingName || p.legalEntityName;
+            const status = STATUS_STYLE[p.intakeStatus];
+            const moreSuburbs = p.serviceSuburbCount - p.serviceSuburbs.length;
+            return (
+              <li key={p.id} className="dir-card">
+                <div className="dir-card-top">
+                  {p.logoUrl
+                    ? <img className="dir-logo" src={p.logoUrl} alt="" loading="lazy" />
+                    : <span className="dir-logo dir-logo-fallback" aria-hidden="true">{initials(name)}</span>}
+                  <div className="dir-card-title">
+                    <h3>{name}</h3>
+                    {status && <span className={`dir-status dir-status-${status.tone}`}>{status.label}</span>}
+                  </div>
+                </div>
+
+                {p.registrationGroups.length > 0 && (
+                  <div className="dir-tags" aria-label="Supports offered">
+                    {p.registrationGroups.slice(0, 4).map((g) => <span key={g} className="dir-tag">{g}</span>)}
+                    {p.registrationGroups.length > 4 && <span className="dir-tag dir-tag-more">+{p.registrationGroups.length - 4} more</span>}
+                  </div>
+                )}
+
+                <p className="dir-areas">
+                  {p.serviceSuburbs.length > 0
+                    ? <>Supports people in <strong>{p.serviceSuburbs.join(', ')}</strong>{moreSuburbs > 0 ? ` and ${moreSuburbs} more area${moreSuburbs === 1 ? '' : 's'}` : ''}</>
+                    : 'Service areas not listed'}
+                </p>
+
+                <button type="button" className="dir-card-cta" onClick={() => openMatchModal()}>
+                  Get matched with providers like this →
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+
+        {hasMore && !loading && (
+          <div className="dir-more">
+            <button type="button" className="btn-tint" onClick={loadMore} disabled={loadingMore}>
+              {loadingMore ? 'Loading…' : 'Show more providers'}
             </button>
           </div>
         )}
       </section>
 
       <PublicFooter />
-
-      {selected && <ProviderDetailModal provider={selected} onClose={() => setSelected(null)} />}
     </>
   );
+}
+
+function SearchIcon() {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>;
+}
+function PinIcon() {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10.5c0 5.5-8 11-8 11s-8-5.5-8-11a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10.5" r="2.6" /></svg>;
 }

@@ -216,7 +216,7 @@ export default function AdminDashboard() {
             <div><span className="ad-mini-value">{overview.providers.total}</span><span className="ad-mini-label">Total</span></div>
             <div><span className="ad-mini-value">{overview.providers.active}</span><span className="ad-mini-label">Active</span></div>
             <div><span className="ad-mini-value">{overview.providers.suspended}</span><span className="ad-mini-label">Suspended</span></div>
-            <div><span className="ad-mini-value">{overview.providers.acceptingClients}</span><span className="ad-mini-label">Accepting clients</span></div>
+            <div><span className="ad-mini-value">{overview.providers.acceptingClients}</span><span className="ad-mini-label">Accepting referrals</span></div>
             <div><span className="ad-mini-value">{overview.providers.atCapacity}</span><span className="ad-mini-label">At capacity</span></div>
             <div><span className="ad-mini-value">{overview.providers.incompleteOnboarding}</span><span className="ad-mini-label">Incomplete onboarding</span></div>
           </div>

@@ -17,6 +17,11 @@ export interface AccountType {
   // Health and participants aren't being screened, so showing them
   // this line would be legally meaningless for their account type.
   showClearanceConsent: boolean;
+  // Whether this account type can be chosen on the public signup page.
+  // 'participant' is retired for NEW registrations (families and
+  // participants use the free "Get matched" request instead of an account);
+  // existing participant accounts still sign in, so the type stays here.
+  availableForSignup: boolean;
 }
 
 // Single source of truth for account-type behavior across signup,
@@ -42,21 +47,23 @@ export const ACCOUNT_TYPES: AccountType[] = [
     // OTHER roles use to find them) — /dashboard is their real home.
     postSignupRoute: '/dashboard',
     showClearanceConsent: true,
+    availableForSignup: true,
   },
   {
     key: 'provider',
-    title: 'Provider organisation',
-    desc: 'Registered or unregistered providers listing a business, its services and its coverage.',
-    meta: 'Business profile and staff accounts',
+    title: 'Provider',
+    desc: 'Registered or unregistered providers, including sole-practitioner allied health, listing their services and coverage.',
+    meta: 'Provider profile and referrals',
     signupHeading: 'Create your provider account',
     signupCta: 'Create provider account →',
     postSignupRoute: '/onboarding',
     showClearanceConsent: true,
+    availableForSignup: true,
   },
   {
     key: 'coordinator',
     title: 'Allied Health',
-    desc: 'Allied health professionals placing participants with the right providers.',
+    desc: 'Allied health professionals and coordinators who search for providers and refer the people they support.',
     meta: 'Search, shortlist and refer',
     signupHeading: 'Create your Allied Health account',
     signupCta: 'Create Allied Health account →',
@@ -65,6 +72,7 @@ export const ACCOUNT_TYPES: AccountType[] = [
     // directory.
     postSignupRoute: '/find-providers',
     showClearanceConsent: false,
+    availableForSignup: true,
   },
   {
     key: 'participant',
@@ -75,8 +83,12 @@ export const ACCOUNT_TYPES: AccountType[] = [
     signupCta: 'Create account →',
     postSignupRoute: '/find-providers',
     showClearanceConsent: false,
+    availableForSignup: false,
   },
 ];
+
+/** Account types offered on the public signup page. */
+export const SIGNUP_ACCOUNT_TYPES = ACCOUNT_TYPES.filter((a) => a.availableForSignup);
 
 export function getAccountType(role: Role): AccountType {
   return ACCOUNT_TYPES.find((a) => a.key === role) ?? ACCOUNT_TYPES[0];

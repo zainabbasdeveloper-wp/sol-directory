@@ -1,4 +1,4 @@
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import type { AuthedRequest } from '../middleware/auth.middleware.js';
 import Provider from '../models/Provider.js';
 import ProviderView from '../models/ProviderView.js';
@@ -14,6 +14,49 @@ const MAX_LIMIT = 50;
 // search-result concern).
 const PUBLIC_PROJECTION = 'legalEntityName tradingName slug abn registrationGroups serviceSuburbs travelRadiusKm weeklyCapacityHours intakeStatus location logoUrl';
 
+// User input must never be compiled into a RegExp raw: a crafted `q` like
+// "(a+)+$" is a ReDoS, and "." / "*" silently change what matches.
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Shared search filter for the authenticated and public provider lists.
+ * Only ever matches providers who'd actually appear in search: active and
+ * not paused for an unconfirmed weekly capacity check.
+ */
+export function buildProviderFilter(query: Request['query']): Record<string, unknown> {
+  const filter: Record<string, unknown> = { accountStatus: 'active', listingPaused: { $ne: true } };
+  const and: Record<string, unknown>[] = [];
+
+  const suburb = typeof query.suburb === 'string' ? query.suburb.trim() : '';
+  const lat = Number(query.lat);
+  const lng = Number(query.lng);
+  const radiusKm = Number(query.radiusKm);
+  const hasRadius = Number.isFinite(lat) && Number.isFinite(lng) && Number.isFinite(radiusKm) && radiusKm > 0;
+  const withinRadius = { location: { $geoWithin: { $centerSphere: [[lng, lat], Math.min(radiusKm, 200) / 6378.1] } } };
+
+  if (suburb) {
+    // Case-insensitive: "bankstown" must find "Bankstown". When the caller
+    // also supplies coordinates, a provider who lists a nearby suburb (or
+    // is based within range) counts too — not only an exact suburb name.
+    const bySuburb = { serviceSuburbs: new RegExp(`^${escapeRegex(suburb)}$`, 'i') };
+    and.push(hasRadius ? { $or: [bySuburb, withinRadius] } : bySuburb);
+  } else if (hasRadius) {
+    and.push(withinRadius);
+  }
+
+  if (typeof query.service === 'string' && query.service.trim()) {
+    filter.registrationGroups = new RegExp(`^${escapeRegex(query.service.trim())}$`, 'i');
+  }
+  if (typeof query.q === 'string' && query.q.trim()) {
+    const rx = new RegExp(escapeRegex(query.q.trim()), 'i');
+    and.push({ $or: [{ legalEntityName: rx }, { tradingName: rx }] });
+  }
+  if (and.length) filter.$and = and;
+  return filter;
+}
+
 export async function listProviders(req: AuthedRequest, res: Response) {
   const page = Math.max(1, Number(req.query.page) || 1);
   const limit = Math.min(MAX_LIMIT, Number(req.query.limit) || 20);
@@ -24,28 +67,14 @@ export async function listProviders(req: AuthedRequest, res: Response) {
   // weekly-capacity-confirmation gate (scripts/weeklyCapacityCheck.ts)
   // — an unconfirmed provider drops from results the same way, per
   // the developer brief's "checked, not scraped" requirement.
-  const filter: Record<string, unknown> = { accountStatus: 'active', listingPaused: { $ne: true } };
-  if (req.query.suburb) filter.serviceSuburbs = req.query.suburb;
-  if (req.query.service) filter.registrationGroups = req.query.service;
-  if (req.query.q) {
-    filter.$or = [
-      { legalEntityName: new RegExp(String(req.query.q), 'i') },
-      { tradingName: new RegExp(String(req.query.q), 'i') },
-    ];
-  }
-  // Radius search — same $geoWithin/$centerSphere pattern already
-  // used in workers.controller.ts, now possible for providers since
-  // they have real coordinates.
-  if (req.query.lat && req.query.lng && req.query.radiusKm) {
-    const radiusRadians = Number(req.query.radiusKm) / 6378.1;
-    filter.location = {
-      $geoWithin: { $centerSphere: [[Number(req.query.lng), Number(req.query.lat)], radiusRadians] },
-    };
-  }
+  // Suburb / service / name / radius filtering is shared with the public
+  // list — see buildProviderFilter above.
+  const filter = buildProviderFilter(req.query);
 
   const [docs, total] = await Promise.all([
     Provider.find(filter)
       .select(PUBLIC_PROJECTION)
+      .sort({ tradingName: 1, legalEntityName: 1, _id: 1 })
       .skip((page - 1) * limit)
       .limit(limit)
       .lean(),
@@ -189,5 +218,62 @@ export async function getProviderBySlug(req: AuthedRequest, res: Response) {
       name: p.tradingName || p.legalEntityName,
       suburbs: p.serviceSuburbs ?? [],
     })),
+  });
+}
+
+// ---------------------------------------------------------------
+// PUBLIC directory search — no login. Powers the public /directory page
+// and the provider lists on the public service / location pages, which
+// previously called the login-gated endpoint above and so showed nothing
+// (or fell back to hardcoded fake providers) for every anonymous visitor.
+//
+// Deliberately minimal: a business name, what it offers, where it works
+// and whether it's taking referrals. NEVER contact details, ABN, account
+// or billing fields. Contact happens through the matching flow, where a
+// provider's details are protected by the same lead/unlock rules as
+// everything else. Map positions are rounded to ~1 km so a sole trader
+// working from home isn't pinpointed.
+// ---------------------------------------------------------------
+const PUBLIC_LIST_PROJECTION = 'legalEntityName tradingName slug registrationGroups serviceSuburbs intakeStatus location logoUrl';
+const PUBLIC_MAX_LIMIT = 30;
+const MAX_SUBURBS_SHOWN = 6;
+
+const roundCoord = (n: number) => Math.round(n * 100) / 100;
+
+export async function listPublicProviders(req: Request, res: Response) {
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.min(PUBLIC_MAX_LIMIT, Math.max(1, Number(req.query.limit) || 12));
+  const filter = buildProviderFilter(req.query);
+
+  const [docs, total] = await Promise.all([
+    Provider.find(filter)
+      .select(PUBLIC_LIST_PROJECTION)
+      .sort({ tradingName: 1, legalEntityName: 1, _id: 1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean(),
+    Provider.countDocuments(filter),
+  ]);
+
+  res.set('Cache-Control', 'public, max-age=60');
+  res.json({
+    items: docs.map((p: any) => ({
+      id: String(p._id),
+      slug: p.slug ?? null,
+      legalEntityName: p.legalEntityName,
+      tradingName: p.tradingName,
+      registrationGroups: p.registrationGroups ?? [],
+      serviceSuburbs: (p.serviceSuburbs ?? []).slice(0, MAX_SUBURBS_SHOWN),
+      serviceSuburbCount: (p.serviceSuburbs ?? []).length,
+      intakeStatus: p.intakeStatus,
+      location: p.location?.coordinates
+        ? { lat: roundCoord(p.location.coordinates[1]), lng: roundCoord(p.location.coordinates[0]) }
+        : null,
+      logoUrl: p.logoUrl ?? null,
+    })),
+    page,
+    limit,
+    total,
+    hasMore: page * limit < total,
   });
 }

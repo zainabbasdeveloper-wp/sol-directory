@@ -22,8 +22,8 @@ export default function Locations() {
           </span>
           <h1 className="section-heading section-heading-light">Find providers near you</h1>
           <p className="directory-page-subtitle">
-            Pick a city to jump straight to the directory, or search any suburb from
-            there.
+            Select a city to open the provider directory, then search by suburb or
+            postcode.
           </p>
         </div>
       </div>

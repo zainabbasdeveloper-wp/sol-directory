@@ -8,7 +8,6 @@ import { providerCountLabel, serviceCount, stateGroupCount } from '../../lib/sta
 import { useMatchModal } from '../../context/MatchModalContext';
 import { LOCATION_GROUPS } from '../../data/providers';
 import './Home.css';
-import { useMatchModal } from '../../context/MatchModalContext';
 
 const SERVICE_ICONS: Record<string, JSX.Element> = {
   'Personal care': <path d="M12 20.5S4 15.5 4 9.8A4.3 4.3 0 0 1 12 7.4 4.3 4.3 0 0 1 20 9.8c0 5.7-8 10.7-8 10.7Z" />,
@@ -38,6 +37,11 @@ const SERVICE_ICONS: Record<string, JSX.Element> = {
 
 export default function Home() {
   const navigate = useNavigate();
+  // Real numbers from the database (api stats.controller.ts). null while
+  // loading, on failure, or — for the reply time — until there's enough
+  // real data to publish an honest median. Each stat below hides itself
+  // when it has nothing true to show.
+  const stats = useSiteStats();
   const { openMatchModal } = useMatchModal();
 
   return (
@@ -142,9 +146,9 @@ export default function Home() {
           </span>
           <h2 className="section-heading">The list is short because it is honest</h2>
           <p className="section-copy">
-            Most directories list everyone and let you find out for yourself who has
-            capacity. We ask providers to confirm availability every week, and quietly
-            remove the ones who stop answering.
+            Many directories list every provider, whether or not they have capacity.
+            We ask providers to confirm their availability every week. Providers who
+            do not respond are removed from search results until they confirm again.
           </p>
           <ul className="check-list">
             <li>
@@ -175,9 +179,9 @@ export default function Home() {
 
       <section className="stats-section">
         <p className="stats-headline">
-          A long list is not the useful thing.{' '}
-          <span className="stats-headline-accent">What matters is who has room to start</span> — so we ask providers to
-          confirm their capacity every week and show the real numbers below.
+          The size of a directory matters less than who is available.{' '}
+          <span className="stats-headline-accent">Providers confirm their capacity every week</span>, and the figures
+          below are drawn from live records.
         </p>
         <div className="stats-row">
           {stats && stats.providersListed > 0 && (
@@ -227,7 +231,7 @@ export default function Home() {
             <div>
               <span className="eyebrow">
                 <span className="eyebrow-rule" />
-                What people search for
+                Browse by support
               </span>
               <h2 className="section-heading">Supports you can find here</h2>
             </div>
@@ -249,8 +253,8 @@ export default function Home() {
                 <span className="service-badge">Most searched</span>
                 <h3 className="service-title-featured">Support coordination</h3>
                 <p className="service-body-featured">
-                  Coordinators who help you understand a plan, choose providers and keep
-                  everything moving between reviews.
+                  Coordinators who help participants understand their plan, connect with
+                  providers and put their supports in place.
                 </p>
               </div>
               <span className="service-count-featured">
@@ -259,10 +263,10 @@ export default function Home() {
             </button>
 
             {[
-              { name: 'Personal care', body: 'Bathing, dressing, medication prompts and daily routines.' },
-              { name: 'Therapy services', body: 'Occupational therapy, physio, speech and allied health.' },
-              { name: 'Domestic assistance', body: 'Cleaning, laundry, meals and everyday household help.' },
-              { name: 'Nursing', body: 'In-home clinical care, wound care and high-intensity supports.' },
+              { name: 'Personal care', body: 'Assistance with personal hygiene, dressing, medication and daily living.' },
+              { name: 'Therapy services', body: 'Occupational therapy, physiotherapy, speech pathology and other allied health supports.' },
+              { name: 'Domestic assistance', body: 'Assistance with cleaning, laundry, meal preparation and household tasks.' },
+              { name: 'Nursing', body: 'In-home clinical nursing, wound care and complex health supports.' },
             ].map((s) => (
               <button key={s.name} className="service-card" onClick={() => navigate(`/directory?service=${encodeURIComponent(s.name)}`)}>
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="service-icon">
@@ -298,17 +302,17 @@ export default function Home() {
           <div className="checks-content">
           <span className="eyebrow eyebrow-light">
             <span className="eyebrow-rule" />
-            Before a listing goes live
+            How listings work
           </span>
-          <h2 className="section-heading section-heading-light">Six checks on every provider</h2>
+          <h2 className="section-heading section-heading-light">What every listing tells you</h2>
           <div className="checks-grid">
             {[
-              ['Registration status', 'Matched to the NDIS Commission register weekly.'],
-              ['Current capacity', 'Confirmed every Monday, or the listing is paused.'],
-              ['Worker screening', 'Clearance policy sighted for every listed service.'],
-              ['Service area', 'Suburb-level coverage, travel charges stated up front.'],
-              ['Languages spoken', 'Listed per team, including Auslan and interpreters.'],
-              ['Response record', 'Median reply time measured over thirty days.'],
+              ['Current capacity', 'Providers confirm each week that they are taking referrals. If they do not, the listing is paused.'],
+              ['Supports offered', 'Each listing states the supports the provider delivers.'],
+              ['Service areas', 'Providers list the suburbs they support, so you can search by location.'],
+              ['Languages spoken', 'Providers can list the languages their team speaks.'],
+              ['Response times', 'Shown only once enough real enquiries have been answered to report an accurate figure.'],
+              ['Registration details', 'Supplied by the provider. Always confirm registration with the provider or the NDIS Commission’s public register.'],
             ].map(([title, body]) => (
               <div key={title}>
                 <h3 className="check-title">{title}</h3>
@@ -355,11 +359,11 @@ export default function Home() {
             <span className="eyebrow-rule" />
             For providers
           </span>
-          <h2 className="section-heading">List your service where families are already looking</h2>
+          <h2 className="section-heading">List your service where participants and families are searching</h2>
           <p className="section-copy">
-            One flat monthly fee, no cost per enquiry and no bidding for position. Update
-            capacity in the portal and you drop out of results the moment your books
-            close.
+            Choose a monthly plan. There is no bidding for position: providers are matched
+            on fit, not on payment. Confirm your capacity each week so people can see who is
+            able to start.
           </p>
           <div className="providers-cta-actions">
             <button className="btn-gradient btn-lg" onClick={() => navigate('/signup?type=provider')}>

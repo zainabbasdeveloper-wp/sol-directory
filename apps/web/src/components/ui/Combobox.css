@@ -1,0 +1,39 @@
+.cbx { position: relative; min-width: 0; }
+.cbx-label { display: block; margin: 0 0 6px; font-size: 13.5px; font-weight: 600; color: var(--color-text, #10233F); }
+.cbx-field { position: relative; }
+.cbx-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); display: inline-flex; color: color-mix(in srgb, var(--color-text, #10233F) 48%, transparent); pointer-events: none; }
+.cbx-input {
+  width: 100%; box-sizing: border-box; height: 50px; padding: 0 40px 0 14px;
+  font: inherit; font-size: 16px; color: var(--color-text, #10233F);
+  background: #fff; border: 1.5px solid var(--color-border-strong, #DDE4EF); border-radius: 10px;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+.cbx-input-icon { padding-left: 42px; }
+.cbx-input:focus { outline: none; border-color: #1769E0; box-shadow: 0 0 0 3px rgba(23,105,224,0.16); }
+.cbx-input::placeholder { color: color-mix(in srgb, var(--color-text, #10233F) 48%, transparent); }
+
+.cbx-clear {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  width: 34px; height: 34px; border: 0; border-radius: 50%; background: transparent;
+  font-size: 22px; line-height: 1; color: color-mix(in srgb, var(--color-text, #10233F) 60%, transparent); cursor: pointer;
+}
+.cbx-clear:hover { background: var(--color-primary-tint, #F2F7FF); color: var(--color-text, #10233F); }
+.cbx-clear:focus-visible, .cbx-input:focus-visible { outline: 3px solid #8CB8FF; outline-offset: 1px; }
+
+.cbx-spinner {
+  position: absolute; right: 13px; top: 50%; width: 18px; height: 18px; margin-top: -9px;
+  border: 2px solid #CBD9F0; border-top-color: #1769E0; border-radius: 50%; animation: cbxSpin 700ms linear infinite;
+}
+@keyframes cbxSpin { to { transform: rotate(360deg); } }
+
+.cbx-list {
+  position: absolute; z-index: 30; top: calc(100% + 6px); left: 0; right: 0; margin: 0; padding: 4px; list-style: none;
+  background: #fff; border: 1px solid var(--color-border-strong, #DDE4EF); border-radius: 12px;
+  box-shadow: 0 14px 34px rgba(11,45,92,0.16); max-height: min(320px, 50dvh); overflow-y: auto; overscroll-behavior: contain;
+}
+.cbx-option { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 12px; border-radius: 8px; min-height: 44px; font-size: 15px; cursor: pointer; }
+.cbx-option-active { background: var(--color-primary-tint, #F2F7FF); }
+.cbx-option-hint { flex: none; font-size: 13px; font-weight: 600; color: color-mix(in srgb, var(--color-text, #10233F) 62%, transparent); }
+.cbx-empty { padding: 12px; font-size: 14px; color: color-mix(in srgb, var(--color-text, #10233F) 62%, transparent); }
+
+@media (prefers-reduced-motion: reduce) { .cbx-spinner { animation-duration: 2s; } }

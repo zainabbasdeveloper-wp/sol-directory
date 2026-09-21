@@ -7,7 +7,7 @@ import { useSiteStats } from '../../hooks/useSiteStats';
 import { providerCountLabel, stateGroupCount } from '../../lib/statsCounts';
 import PhotoSlot from '../../components/PhotoSlot';
 import {
-  COMPARE, METHOD, REGULATORS, POLICIES, FAQ,
+  COMPARE, REGULATORS, POLICIES, FAQ,
 } from '../../data/servicePageFixtures';
 import { unslugify, stateForSuburb, STATE_ABBR } from '../../data/slugHelpers';
 import { SERVICES } from '../../data/providers';
@@ -15,13 +15,13 @@ import { slugify } from '../../data/slugHelpers';
 import Counter from '../../components/Counter';
 import { useMatchModal } from '../../context/MatchModalContext';
 import { getServiceAreaPage, type ServiceAreaPage } from '../../api/wordpressApi';
-import { listProviders, type ProviderRow } from '../../api/providerResources';
+import { listPublicProviders, type PublicProviderRow } from '../../api/providerResources';
 import './ServiceLocationPage.css';
 
 // REAL DATA, TWO SOURCES, PER THE ARCHITECTURE DECIDED WITH THE USER:
 //
 // 1. Providers (this section, the hero provider count) come from the
-//    real Provider database via listProviders() — never WordPress,
+//    real Provider database via listPublicProviders() — never WordPress,
 //    never the old fixture data. This was previously the same 6 fake
 //    providers shown on every single service×suburb combination,
 //    which actively misrepresented real data. That's fixed here.
@@ -87,7 +87,7 @@ export default function ServiceLocationPage() {
   // Real providers actually matching this service + suburb — this
   // replaces the fixture PROVIDERS array entirely, not just when WP
   // content exists. Real data, always, regardless of WordPress.
-  const [providers, setProviders] = useState<ProviderRow[]>([]);
+  const [providers, setProviders] = useState<PublicProviderRow[]>([]);
   const [providersLoading, setProvidersLoading] = useState(true);
   const [providersTotal, setProvidersTotal] = useState(0);
 
@@ -98,7 +98,7 @@ export default function ServiceLocationPage() {
       .finally(() => setWpLoading(false));
 
     setProvidersLoading(true);
-    listProviders({ service: serviceName, suburb: suburbName })
+    listPublicProviders({ service: serviceName, suburb: suburbName })
       .then((res) => { setProviders(res.items); setProvidersTotal(res.total); })
       .catch(() => {})
       .finally(() => setProvidersLoading(false));
@@ -126,7 +126,7 @@ export default function ServiceLocationPage() {
       ] as [string, string][]).filter(([, v]) => v)
     : [];
 
-  const introParagraph = wp?.introParagraph || `This guide compares in-home ${serviceLower} providers covering ${suburbName}, ranked on registration, clinical credentials and service range. The providers listed service ${suburbName} and the surrounding area, and deliver registered and enrolled care for NDIS participants, aged care clients and private patients.`;
+  const introParagraph = wp?.introParagraph || `This page lists ${serviceLower} providers who support ${suburbName} and the surrounding area. Providers set their own supports, service areas and availability, and confirm their capacity each week. Before you engage a provider, confirm their registration, insurance and worker screening directly with them.`;
   const compareItems = wp?.compare?.length ? wp.compare : COMPARE;
   const demandItems = wp?.demand ?? [];
   const suburbFactsItems = wp?.suburbFacts ?? [];
@@ -145,7 +145,7 @@ export default function ServiceLocationPage() {
     { label: `About ${serviceLower}`, href: '#about-service' },
     { label: 'What to compare', href: '#compare' },
     ...(demandItems.length > 0 ? [{ label: "Who's asking", href: '#asking' }] : []),
-    { label: 'Our methodology', href: '#method' },
+    { label: 'How providers are listed', href: '#method' },
     { label: 'Where to find providers', href: '#where-to-find' },
     { label: 'Checking credentials', href: '#credentials' },
     ...(suburbFactsItems.length > 0 || localFacts.length > 0 ? [{ label: `About ${suburbName}`, href: '#suburb' }] : []),
@@ -248,7 +248,7 @@ export default function ServiceLocationPage() {
         <main className="svc-main">
           {/* Providers — REAL data, not fixtures */}
           <section id="providers">
-            <h2 className="svc-h2">Best home {serviceLower} providers near me</h2>
+            <h2 className="svc-h2">{serviceName} providers supporting {suburbName}</h2>
 
             {providersLoading ? (
               <p className="svc-p">Loading providers…</p>
@@ -268,7 +268,6 @@ export default function ServiceLocationPage() {
                       <div className="svc-provider-top">
                         <div className="svc-provider-info">
                           <div className="svc-provider-name-row">
-                            <span className="svc-provider-rank">{i + 1}</span>
                             <h3 className="svc-provider-name">
                               {p.slug ? (
                                 <Link to={`/providers/${p.slug}`}>{p.tradingName || p.legalEntityName}</Link>
@@ -374,14 +373,12 @@ export default function ServiceLocationPage() {
           )}
 
           <section id="method">
-            <h2 className="svc-h2-sm">How we rank providers</h2>
-            <p className="svc-p">
-              Rankings in {suburbName} use directory relevance and observable activity: service match, distance, register-sourced status fields, whether an enquiry can reach the provider, and recent response and claim activity. Rankings are recalculated daily. They do not assess care quality and they do not recommend a provider.
-            </p>
+            <h2 className="svc-h2-sm">How providers are listed</h2>
             <div className="svc-method-list">
-              {METHOD.map((m) => (
-                <p key={m.title} className="svc-p"><strong>{m.title}</strong> {m.body}</p>
-              ))}
+              <p className="svc-p"><strong>Alphabetical order.</strong> Providers are listed alphabetically. SolDirectory does not rank providers, assess the quality of any provider’s supports, or recommend a provider.</p>
+              <p className="svc-p"><strong>Payment does not affect position.</strong> Providers pay a subscription to receive and respond to enquiries. Payment does not change whether or where a provider appears.</p>
+              <p className="svc-p"><strong>Availability.</strong> Providers confirm each week that they are taking referrals. A provider who has not confirmed recently is removed from results until they do.</p>
+              <p className="svc-p"><strong>Provider-supplied details.</strong> Registration, insurance and other details are supplied by providers. Always confirm them directly with a provider before you engage them.</p>
             </div>
           </section>
 

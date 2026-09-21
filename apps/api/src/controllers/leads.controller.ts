@@ -5,15 +5,14 @@ import Provider from '../models/Provider.js';
 import UnlockLedger from '../models/UnlockLedger.js';
 import PlanConfig from '../models/PlanConfig.js';
 import { geocodeAddress } from '../services/geocoding.service.js';
-import { scoreMatch } from '../services/matching.service.js';
+import { scoreMatch, isGenuineMatch } from '../services/matching.service.js';
 import LeadView from '../models/LeadView.js';
 import LeadMatch from '../models/LeadMatch.js';
 import { getActiveProviderForUser } from '../utils/getActiveProvider.js';
 
-// Same threshold matchRequests.controller.ts uses to decide a match is
-// genuine — kept in sync so "notified" and "browsable" mean the same
-// thing, just with the notify-side cap removed here.
-const NEARBY_THRESHOLD = 40;
+// "Genuine match" is defined once (isGenuineMatch in matching.service.ts)
+// and shared with matchRequests.controller.ts, so "notified" and
+// "browsable" mean the same thing — just without the notify-side cap here.
 
 // getActiveProviderForUser is now imported from ../utils/getActiveProvider.js
 // — see that file for why this was extracted during a security audit.
@@ -101,7 +100,7 @@ export async function listNearbyLeads(req: AuthedRequest, res: Response) {
 
   const nearby = openLeads
     .map((l) => ({ lead: l, result: scoreMatch(l as any, provider as any) }))
-    .filter(({ result }) => result.score >= NEARBY_THRESHOLD)
+    .filter(({ result }) => isGenuineMatch(result))
     .sort((a, b) => b.result.score - a.result.score)
     .map(({ lead }) => toMaskedShape(lead));
 
