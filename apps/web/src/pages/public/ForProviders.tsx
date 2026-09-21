@@ -16,18 +16,18 @@ export default function ForProviders() {
             <span className="eyebrow-rule" />
             For providers
           </span>
-          <h1 className="section-heading">List your service where families are already looking</h1>
+          <h1 className="section-heading">List your service where participants and families are searching</h1>
           <p className="section-copy">
-            One flat monthly fee, no cost per enquiry and no bidding for position. Update
-            capacity in the portal and you drop out of results the moment your books
-            close.
+            Choose a monthly plan. There is no bidding for position: providers are matched
+            on fit, not on payment. Confirm your capacity each week so people can see who is
+            able to start.
           </p>
           <div className="providers-cta-actions">
             <button className="btn-gradient btn-lg" onClick={() => navigate('/signup?type=provider')}>
               List your business
             </button>
             <button className="link-btn" onClick={() => navigate('/signup?type=provider')}>
-              See listing rates →
+              Create your provider account →
             </button>
           </div>
         </div>
@@ -36,19 +36,19 @@ export default function ForProviders() {
             <PhotoSlot src="/images/providers.jpg" alt="A provider at their desk" variant="meeting" />
           </div>
           <div className="providers-steps-card">
-            <span className="providers-steps-label">Listing, in three steps</span>
+            <span className="providers-steps-label">Listing in three steps</span>
             <div className="providers-steps">
               <div className="providers-step">
                 <span className="providers-step-num">1</span>
-                <p>Send your registration number and service areas. We check the register.</p>
+                <p>Create your account and enter your registration details, the supports you offer and the areas you cover.</p>
               </div>
               <div className="providers-step">
                 <span className="providers-step-num">2</span>
-                <p>Write your profile, or send a service brochure and we will draft it.</p>
+                <p>Complete your provider profile, including your intake details and the languages your team speaks.</p>
               </div>
               <div className="providers-step">
                 <span className="providers-step-num">3</span>
-                <p>Confirm capacity each Monday. Enquiries reach you by email or SMS.</p>
+                <p>Confirm your capacity each week. Matched enquiries reach you by email, and by SMS if you opt in.</p>
               </div>
             </div>
           </div>

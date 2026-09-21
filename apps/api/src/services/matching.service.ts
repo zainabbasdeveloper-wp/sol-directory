@@ -39,7 +39,13 @@ function scoreFunding(lead: LeadDoc, provider: ProviderDoc): { score: number; ma
   return { score: matched ? 100 : 0, matched };
 }
 
+// The wizard offers "Not sure yet" for the service step. That's "any
+// service", not "a service nobody provides" — score it neutral so
+// providers aren't all zeroed on the heaviest-weighted factor.
+const SERVICE_NOT_SURE = 'not sure yet';
+
 function scoreService(lead: LeadDoc, provider: ProviderDoc): { score: number; matched: boolean } {
+  if ((lead.need ?? '').trim().toLowerCase() === SERVICE_NOT_SURE) return { score: 50, matched: false };
   const matched = (provider.registrationGroups ?? []).some(
     (g) => g.toLowerCase() === lead.need.toLowerCase()
   );
@@ -58,12 +64,29 @@ function scoreCondition(lead: LeadDoc, provider: ProviderDoc) {
   return { score, matchedCount: matchedConditions.length, requiredCount: required.length, matchedConditions };
 }
 
+// Great-circle distance in km between two [lng, lat] points.
+function distanceKm(a: [number, number], b: [number, number]): number {
+  const rad = (d: number) => (d * Math.PI) / 180;
+  const dLat = rad(b[1] - a[1]);
+  const dLng = rad(b[0] - a[0]);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a[1])) * Math.cos(rad(b[1])) * Math.sin(dLng / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.sqrt(h));
+}
+
 function scoreLocation(lead: LeadDoc, provider: ProviderDoc): { score: number; matched: boolean } {
-  const matched = (provider.serviceSuburbs ?? []).some((s) => s.toLowerCase() === lead.suburb?.toLowerCase());
-  // Partial credit if within travel radius but not a listed suburb —
-  // still real signal, just weaker than an exact suburb match.
+  const suburb = lead.suburb?.trim().toLowerCase();
+  const matched = !!suburb && (provider.serviceSuburbs ?? []).some((s) => s.trim().toLowerCase() === suburb);
   if (matched) return { score: 100, matched: true };
-  if (provider.travelRadiusKm && lead.distanceKm != null && lead.distanceKm <= provider.travelRadiusKm) {
+
+  // Partial credit if within travel radius but not a listed suburb —
+  // still real signal, just weaker than an exact suburb match. Distance
+  // is measured between the lead's geocoded point and the provider's
+  // real coordinates; lead.distanceKm (a field nothing in the app ever
+  // populated) is kept only as a fallback.
+  const leadPoint = lead.location?.coordinates as [number, number] | undefined;
+  const providerPoint = provider.location?.coordinates as [number, number] | undefined;
+  const km = leadPoint?.length === 2 && providerPoint?.length === 2 ? distanceKm(leadPoint, providerPoint) : lead.distanceKm;
+  if (provider.travelRadiusKm && km != null && km <= provider.travelRadiusKm) {
     return { score: 60, matched: false };
   }
   return { score: 0, matched: false };
@@ -72,6 +95,22 @@ function scoreLocation(lead: LeadDoc, provider: ProviderDoc): { score: number; m
 function scoreAvailability(provider: ProviderDoc): { score: number; status: string } {
   const map: Record<string, number> = { 'Open to referrals': 100, 'Limited capacity': 50, 'Waitlist only': 20, Closed: 0 };
   return { score: map[provider.intakeStatus] ?? 0, status: provider.intakeStatus };
+}
+
+// A match is only worth notifying/showing a provider about above this
+// score...
+export const MATCH_THRESHOLD = 40;
+
+/**
+ * ...AND only if the provider can actually reach the family. Location is
+ * only 10% of the weighted score, so on score alone a Bankstown provider
+ * scored ~90 for a Melbourne enquiry (right service, right funding, open
+ * to referrals) and got notified. Location is therefore a gate, not just
+ * a weight: the suburb must be one they list, or the family must be
+ * inside their travel radius.
+ */
+export function isGenuineMatch(result: { score: number; breakdown: { location: { score: number } } }): boolean {
+  return result.score >= MATCH_THRESHOLD && result.breakdown.location.score > 0;
 }
 
 /**

@@ -37,6 +37,34 @@ interface ProviderListResult { items: ProviderRow[]; page: number; limit: number
 
 export function isLoggedIn(): boolean { return hasToken(); }
 
+// Public directory search (GET /providers/public) — no login. The API
+// returns only what's safe to show anyone: business name, what it offers,
+// where it works and whether it's taking referrals. No ABN, no contact
+// details, and map positions rounded to ~1 km.
+export interface PublicProviderRow {
+  id: string; slug: string | null; legalEntityName: string; tradingName: string;
+  registrationGroups: string[]; serviceSuburbs: string[]; serviceSuburbCount: number;
+  intakeStatus: string;
+  location: { lat: number; lng: number } | null;
+  logoUrl: string | null;
+}
+export interface PublicProviderListResult { items: PublicProviderRow[]; page: number; limit: number; total: number; hasMore: boolean; }
+
+export function listPublicProviders(params: {
+  q?: string; suburb?: string; service?: string; lat?: number; lng?: number; radiusKm?: number; page?: number; limit?: number;
+} = {}): Promise<PublicProviderListResult> {
+  const qs = new URLSearchParams();
+  if (params.q) qs.set('q', params.q);
+  if (params.suburb) qs.set('suburb', params.suburb);
+  if (params.service) qs.set('service', params.service);
+  if (params.lat != null && params.lng != null && params.radiusKm) {
+    qs.set('lat', String(params.lat)); qs.set('lng', String(params.lng)); qs.set('radiusKm', String(params.radiusKm));
+  }
+  qs.set('page', String(params.page ?? 1));
+  if (params.limit) qs.set('limit', String(params.limit));
+  return get(`/providers/public?${qs.toString()}`);
+}
+
 export function listProviders(params: { q?: string; suburb?: string; service?: string; page?: number } = {}): Promise<ProviderListResult> {
   const qs = new URLSearchParams();
   if (params.q) qs.set('q', params.q);

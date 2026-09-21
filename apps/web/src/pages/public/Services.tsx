@@ -1,21 +1,28 @@
 import { useNavigate } from 'react-router-dom';
 import { PublicHeader, PublicFooter } from './PublicLayout';
+import { useSiteStats } from '../../hooks/useSiteStats';
+import { providerCountLabel, serviceCount } from '../../lib/statsCounts';
 import './Directory.css';
 import './Home.css';
 
+// `name` must match the service names providers register under (the
+// directory's ?service= filter and the live provider counts key off it).
 const ALL_SERVICES = [
-  { name: 'Support coordination', body: 'Coordinators who help you understand a plan, choose providers and keep everything moving between reviews.', count: '412 providers' },
-  { name: 'Personal care', body: 'Bathing, dressing, medication prompts and daily routines.', count: '1,038 providers' },
-  { name: 'Therapy services', body: 'Occupational therapy, physio, speech and allied health.', count: '694 providers' },
-  { name: 'Domestic assistance', body: 'Cleaning, laundry, meals and everyday household help.', count: '876 providers' },
-  { name: 'Nursing', body: 'In-home clinical care, wound care and high-intensity supports.', count: '241 providers' },
-  { name: 'Transport', body: 'Wheelchair-accessible transport for appointments, work, study and social activities.', count: '318 providers' },
-  { name: 'Housing (SDA & SIL)', body: 'Supported independent living and specialist disability accommodation.', count: '207 providers' },
-  { name: 'Plan management', body: 'Invoices paid fast, budgets you can actually read.', count: '126 providers' },
+  { name: 'Support coordination', body: 'Coordinators who help participants understand their plan, connect with providers and put their supports in place.' },
+  { name: 'Personal care', body: 'Assistance with personal hygiene, dressing, medication and daily living.' },
+  { name: 'Therapy services', body: 'Occupational therapy, physiotherapy, speech pathology and other allied health supports.' },
+  { name: 'Domestic assistance', body: 'Assistance with cleaning, laundry, meal preparation and household tasks.' },
+  { name: 'Nursing', body: 'In-home clinical nursing, wound care and complex health supports.' },
+  { name: 'Transport', body: 'Accessible transport to appointments, work, study and community activities.' },
+  { name: 'Housing (SDA & SIL)', body: 'Supported Independent Living (SIL) and Specialist Disability Accommodation (SDA).' },
+  { name: 'Plan management', body: 'Payment of provider invoices and clear budget reporting for plan-managed participants.' },
 ];
 
 export default function Services() {
   const navigate = useNavigate();
+  // Real provider counts from the database. A support with no listed
+  // providers yet simply shows no count.
+  const stats = useSiteStats();
 
   return (
     <>
@@ -25,12 +32,12 @@ export default function Services() {
         <div className="directory-page-header-inner">
           <span className="eyebrow eyebrow-light">
             <span className="eyebrow-rule" />
-            What people search for
+            Browse by support
           </span>
-          <h1 className="section-heading section-heading-light">Every support you can find here</h1>
+          <h1 className="section-heading section-heading-light">Supports available through SolDirectory</h1>
           <p className="directory-page-subtitle">
-            Pick a service to see providers who offer it, filtered to those confirming
-            capacity this month.
+            Select a support to see the providers who offer it. Providers who have
+            confirmed their availability recently are shown.
           </p>
         </div>
       </div>
@@ -40,18 +47,13 @@ export default function Services() {
           {ALL_SERVICES.map((s) => (
             <button
               key={s.name}
+              type="button"
               className="service-card"
-              onClick={() =>
-                s.name === 'Nursing'
-                  ? navigate('/services/nursing/bankstown')
-                  : navigate(`/directory?service=${encodeURIComponent(s.name)}`)
-              }
+              onClick={() => navigate(`/directory?service=${encodeURIComponent(s.name)}`)}
             >
               <h3 className="service-title">{s.name}</h3>
               <p className="service-body">{s.body}</p>
-              <span className="service-count">
-                {s.count} {s.name === 'Nursing' && <em style={{ fontStyle: 'normal', opacity: 0.7 }}>· see Bankstown example</em>} →
-              </span>
+              <span className="service-count">{providerCountLabel(serviceCount(stats, s.name)) ?? 'View providers'} →</span>
             </button>
           ))}
         </div>

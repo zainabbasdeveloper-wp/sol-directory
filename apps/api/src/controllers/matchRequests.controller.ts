@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import Lead from '../models/Lead.js';
 import Provider from '../models/Provider.js';
 import { geocodeAddress } from '../services/geocoding.service.js';
-import { scoreMatch } from '../services/matching.service.js';
+import { scoreMatch, isGenuineMatch } from '../services/matching.service.js';
 import { EmailService } from '../services/email.service.js';
 import { SmsService } from '../services/sms.service.js';
 import Notification from '../models/Notification.js';
@@ -29,17 +29,17 @@ const PLAN_MANAGEMENT_TO_FUNDING: Record<string, 'Plan-managed' | 'Self-managed'
   'NDIA managed': 'NDIA-managed',
 };
 
-// A match is only "genuine" enough to notify a provider about above
-// this score — otherwise every provider would get every lead
-// regardless of fit, which the spec explicitly says not to do.
-const NOTIFY_THRESHOLD = 40;
+// "Genuine" (score threshold + must be able to reach the family) is
+// defined once in matching.service.ts's isGenuineMatch — otherwise every
+// provider would get every lead regardless of fit, which the spec
+// explicitly says not to do.
 
 // Cap on providers notified per enquiry (developer brief, Phase 2:
 // "cap on providers per enquiry (default 5, configurable)"). Providers
-// who scored above NOTIFY_THRESHOLD but missed the cap aren't left
+// who were genuine matches but missed the cap aren't left
 // with nothing — they can still find and claim the lead themselves via
 // the "browse nearby requests" endpoint (listNearbyLeads), which uses
-// the same scoreMatch/NOTIFY_THRESHOLD logic without the cap.
+// the same isGenuineMatch rule without the cap.
 const MAX_NOTIFIED_PER_LEAD = Number(process.env.MAX_PROVIDERS_PER_LEAD) || 5;
 
 // Shared field mapping between the draft-save and final-submit
@@ -49,7 +49,7 @@ const MAX_NOTIFIED_PER_LEAD = Number(process.env.MAX_PROVIDERS_PER_LEAD) || 5;
 // worth spending it on every autosave — only the final submit, and
 // the browse/matching paths, ever need real coordinates).
 function mapFormToLeadFields(body: Record<string, unknown>) {
-  const { location, careFor, timeframe, funding, planManagement, service, email, phone, name, additionalDetails } = body as Record<string, string | undefined>;
+  const { location, suburb, state, postcode, careFor, timeframe, funding, planManagement, service, email, phone, name, additionalDetails } = body as Record<string, string | undefined>;
   return {
     need: service,
     fundingType: funding,
@@ -57,13 +57,34 @@ function mapFormToLeadFields(body: Record<string, unknown>) {
     planManagement: funding === 'NDIS' ? planManagement : undefined,
     careFor,
     timeframe,
-    suburb: location,
+    // The bare suburb name (picked from the wizard's suburb search) is
+    // what matching compares against Provider.serviceSuburbs; a
+    // free-typed location falls back to the raw text as before.
+    suburb: suburb?.trim() || location,
+    state: state?.trim() || undefined,
+    postcode: postcode?.trim() || undefined,
     requesterEmail: email,
     requesterName: name,
     contactName: name,
     contactPhone: phone || '',
     note: additionalDetails || '',
   };
+}
+
+// Mainland + Tasmania bounding box — rejects nonsense/garbage coordinates
+// from the client instead of storing them.
+function parseAuCoordinates(lat: unknown, lng: unknown): [number, number] | null {
+  const la = Number(lat);
+  const ln = Number(lng);
+  if (!Number.isFinite(la) || !Number.isFinite(ln)) return null;
+  if (la < -44.5 || la > -9 || ln < 112 || ln > 154.5) return null;
+  return [ln, la];
+}
+
+// Best geocodable text for a free-typed location.
+function suburbText(form: Record<string, unknown>): string {
+  const s = form as Record<string, string | undefined>;
+  return [s.suburb, s.state, s.postcode].filter(Boolean).join(' ').trim();
 }
 
 const DRAFT_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -117,10 +138,15 @@ export async function submitMatchRequest(req: Request, res: Response) {
 
   // Geocode once, at creation time — never repeatedly on every page
   // load, per the spec's own explicit instruction.
-  const geo = await geocodeAddress(`${location}, Australia`);
+  // The wizard already resolved the suburb to coordinates when the family
+  // picked it from the suggestions, so use those (no extra API call);
+  // otherwise geocode the free-typed text once.
+  const clientCoords = parseAuCoordinates((form as Record<string, unknown>).lat, (form as Record<string, unknown>).lng);
+  const geo = clientCoords ? null : await geocodeAddress(`${[suburbText(form), location].find(Boolean)}, Australia`);
+  const point = clientCoords ?? (geo ? ([geo.lng, geo.lat] as [number, number]) : null);
   const fields = {
     ...mapFormToLeadFields(form),
-    location: geo ? { type: 'Point' as const, coordinates: [geo.lng, geo.lat] as [number, number] } : undefined,
+    location: point ? { type: 'Point' as const, coordinates: point } : undefined,
     status: 'matched' as const,
     draftExpiresAt: undefined, // no longer a draft — stop it from ever being TTL-deleted
   };
@@ -138,7 +164,7 @@ export async function submitMatchRequest(req: Request, res: Response) {
   const providers = await Provider.find({ accountStatus: 'active', listingPaused: { $ne: true } }).lean();
   const matchedProviders = providers
     .map((p: any) => ({ provider: p, result: scoreMatch(lead as any, p as any) }))
-    .filter(({ result }) => result.score >= NOTIFY_THRESHOLD)
+    .filter(({ result }) => isGenuineMatch(result))
     .sort((a, b) => b.result.score - a.result.score)
     .slice(0, MAX_NOTIFIED_PER_LEAD);
 

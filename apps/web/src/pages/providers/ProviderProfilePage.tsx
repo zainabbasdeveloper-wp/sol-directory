@@ -103,7 +103,7 @@ export default function ProviderProfilePage() {
           {provider.logoUrl && <img className="pp-logo" src={provider.logoUrl} alt="" />}
           <div>
             <h1 className="pp-name">{provider.name}</h1>
-            {provider.intakeStatus === 'Open to referrals' && <span className="pp-status-pill">Taking new clients</span>}
+            {provider.intakeStatus === 'Open to referrals' && <span className="pp-status-pill">Accepting new participants</span>}
           </div>
         </div>
         <div className="pp-header-actions">

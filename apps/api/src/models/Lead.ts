@@ -28,6 +28,11 @@ export interface LeadDoc extends Document {
   // at submission time.
   location?: { type: 'Point'; coordinates: [number, number] };
   suburb: string;
+  // Structured parts of the location the family picked in the wizard's
+  // suburb search (state code + postcode). `suburb` above is the bare
+  // suburb NAME so it can be compared with Provider.serviceSuburbs.
+  state?: string;
+  postcode?: string;
   distanceKm: number;
   hoursPerWeek: string;
   funding?: 'Plan-managed' | 'Self-managed' | 'NDIA-managed';
@@ -62,6 +67,8 @@ const leadSchema = new Schema<LeadDoc>(
       coordinates: { type: [Number], default: undefined },
     },
     suburb: String,
+    state: String,
+    postcode: String,
     fundingType: String,
     requesterEmail: String,
     requesterName: String,

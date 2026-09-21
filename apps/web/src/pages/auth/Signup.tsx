@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { ACCOUNT_TYPES, getAccountType } from '../../data/accountTypes';
+import { SIGNUP_ACCOUNT_TYPES, getAccountType } from '../../data/accountTypes';
 import { useAuth } from '../../context/AuthContext';
+import { useMatchModal } from '../../context/MatchModalContext';
 import { ApiError } from '../../api/client';
 import Button from '../../components/ui/Button';
 import { Checkbox } from '../../components/ui/Chip';
@@ -17,15 +18,20 @@ export default function Signup() {
   // deep-linking, e.g. /signup?role=provider. Once the page has
   // loaded, `accountType` state is the only thing that matters; the
   // URL is never re-read as a source of truth after this line.
-  const urlRole = searchParams.get('role') as Role | null;
+  // Both ?role= and ?type= are accepted: every "List your business"
+  // button links with ?type=provider, which this page used to ignore, so
+  // providers landed on the WORKER form. A retired or unknown role (e.g.
+  // an old ?role=participant link) falls back to the default.
+  const urlRole = (searchParams.get('role') ?? searchParams.get('type')) as Role | null;
   const [accountType, setAccountType] = useState<Role>(
-    urlRole && ACCOUNT_TYPES.some((a) => a.key === urlRole) ? urlRole : 'worker'
+    urlRole && SIGNUP_ACCOUNT_TYPES.some((a) => a.key === urlRole) ? urlRole : 'worker'
   );
   const [form, setForm] = useState({ name: '', email: '', mobile: '', password: '' });
   const [terms, setTerms] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { signup } = useAuth();
+  const { openMatchModal } = useMatchModal();
   const navigate = useNavigate();
 
   const selected = getAccountType(accountType);
@@ -87,12 +93,14 @@ export default function Signup() {
       <h1 className="signup-heading">What are you signing up as?</h1>
       <p className="signup-paragraph">
         Accounts are free. What you register as decides what you can see:
-        NDIS Workers build a listing, providers manage a business profile,
-        and Allied Health professionals and participants search for providers.
+        NDIS workers build a listing, providers manage their profile and
+        receive referrals, and allied health professionals and coordinators
+        search for providers. Looking for support for yourself or a family
+        member? You don’t need an account. Use <button type="button" className="signup-link" style={{ background: 'none', border: 0, padding: 0, font: 'inherit', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => openMatchModal()}>Get matched</button>.
       </p>
 
       <div className="signup-role-grid" role="radiogroup" aria-label="Account type">
-        {ACCOUNT_TYPES.map((a) => {
+        {SIGNUP_ACCOUNT_TYPES.map((a) => {
           const isSelected = accountType === a.key;
           return (
             <button
@@ -148,7 +156,7 @@ export default function Signup() {
                 <>
                   I agree to the <a href="/terms" className="signup-link">directory terms</a> and the{' '}
                   <a href="/privacy" className="signup-link">privacy policy</a>, and I consent to my
-                  clearances being verified against the NDIS Commission register.
+                  registration and clearance details being reviewed for verification purposes.
                 </>
               ) : (
                 <>

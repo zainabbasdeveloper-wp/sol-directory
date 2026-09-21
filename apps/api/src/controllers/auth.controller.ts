@@ -21,11 +21,13 @@ function signToken(user: UserDoc): string {
 }
 
 // Admin accounts are never created through public signup — the
-// frontend's role cards already only offer these four, but the
+// frontend's role cards already only offer these three, but the
 // backend has to be the one that actually enforces it, since a
 // request payload can be edited by hand regardless of what the UI
-// shows.
-const PUBLIC_SIGNUP_ROLES = ['worker', 'provider', 'coordinator', 'participant'];
+// shows. 'participant' is retired for NEW registrations (families use
+// the free "Get matched" request instead); existing participant accounts
+// can still sign in, so the role itself remains valid elsewhere.
+const PUBLIC_SIGNUP_ROLES = ['worker', 'provider', 'coordinator'];
 
 export async function signup(req: Request, res: Response) {
   const { name, email, mobile, password, role, referralCode } = req.body;
