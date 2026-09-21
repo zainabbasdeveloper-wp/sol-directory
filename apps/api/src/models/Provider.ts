@@ -114,6 +114,13 @@ export interface ProviderDoc extends Document {
   // Explicit opt-in to SMS alerts (new enquiries + the weekly capacity
   // prompt). Off by default — see services/sms.service.ts.
   smsNotifications?: boolean;
+  // false = created by the scraper/register import for a business that
+  // hasn't signed up yet (its owner User has an unusable random password).
+  // Flipped to true when the owner proves control of the contact inbox by
+  // completing the emailed password-reset link (auth.controller.ts
+  // resetPassword). Defaults true so self-registered and pre-existing
+  // providers are unaffected.
+  claimed?: boolean;
   capacityConfirmTokenHash?: string;
   capacityConfirmExpiresAt?: Date;
 }
@@ -184,6 +191,7 @@ const providerSchema = new Schema<ProviderDoc>(
     lastCapacityConfirmedAt: Date,
     listingPaused: { type: Boolean, default: false },
     smsNotifications: { type: Boolean, default: false },
+    claimed: { type: Boolean, default: true },
     capacityConfirmTokenHash: { type: String, index: true },
     capacityConfirmExpiresAt: Date,
   },

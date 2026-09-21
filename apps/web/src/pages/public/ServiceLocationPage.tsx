@@ -3,6 +3,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import DOMPurify from 'dompurify';
 import { PublicHeader, PublicFooter } from './PublicLayout';
 import { runAction } from '../../lib/runAction';
+import { useAuth } from '../../context/AuthContext';
+import { canViewProviderProfiles } from '../../lib/profileAccess';
 import { useSiteStats } from '../../hooks/useSiteStats';
 import { providerCountLabel, stateGroupCount } from '../../lib/statsCounts';
 import PhotoSlot from '../../components/PhotoSlot';
@@ -68,6 +70,8 @@ const STATE_COVERAGE = [
 export default function ServiceLocationPage() {
   const navigate = useNavigate();
   const stats = useSiteStats();
+  const { user } = useAuth();
+  const canOpenProfiles = canViewProviderProfiles(user?.role);
   const { openMatchModal } = useMatchModal();
   const { serviceSlug = 'nursing', suburb: suburbSlug = 'bankstown' } = useParams<{ serviceSlug: string; suburb: string }>();
 
@@ -269,7 +273,7 @@ export default function ServiceLocationPage() {
                         <div className="svc-provider-info">
                           <div className="svc-provider-name-row">
                             <h3 className="svc-provider-name">
-                              {p.slug ? (
+                              {p.slug && canOpenProfiles ? (
                                 <Link to={`/providers/${p.slug}`}>{p.tradingName || p.legalEntityName}</Link>
                               ) : (
                                 p.tradingName || p.legalEntityName
@@ -294,7 +298,7 @@ export default function ServiceLocationPage() {
 
                       <div className="svc-provider-cta">
                         <button className="btn-gradient" onClick={openMatchModal}>Get matched</button>
-                        {p.slug && <Link to={`/providers/${p.slug}`} className="svc-readmore">View full profile</Link>}
+                        {p.slug && canOpenProfiles && <Link to={`/providers/${p.slug}`} className="svc-readmore">View full profile</Link>}
                       </div>
                     </article>
                   ))}

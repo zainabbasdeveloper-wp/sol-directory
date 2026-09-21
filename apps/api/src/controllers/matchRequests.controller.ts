@@ -197,7 +197,13 @@ export async function submitMatchRequest(req: Request, res: Response) {
           dashboardUrl,
         }).catch(() => {});
       } else {
-        EmailService.sendProviderLeadTeaser(provider.intakeEmail, lead.need, lead.suburb, dashboardUrl).catch(() => {});
+        // An unclaimed (imported) listing also gets a claim link: it opens the
+        // forgot-password page pre-filled with this address, which emails a
+        // secure reset link — nothing here grants access by itself.
+        const claimUrl = provider.claimed === false
+          ? `${frontendOrigin}/forgot-password?claim=1&email=${encodeURIComponent(provider.intakeEmail)}`
+          : undefined;
+        EmailService.sendProviderLeadTeaser(provider.intakeEmail, lead.need, lead.suburb, dashboardUrl, claimUrl).catch(() => {});
       }
     }
     // Opt-in text alert (no-op unless Twilio is configured AND the

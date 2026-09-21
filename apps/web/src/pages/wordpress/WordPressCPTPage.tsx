@@ -9,6 +9,8 @@ import ProviderMap from '../../components/ProviderMap';
 import NotFound from './NotFound';
 import type { CPTRouteConfig } from '../../lib/cptRouteConfig';
 import { runAction } from '../../lib/runAction';
+import { useAuth } from '../../context/AuthContext';
+import { canViewProviderProfiles } from '../../lib/profileAccess';
 import './WordPressCPTPage.css';
 
 interface FAQItem { question: string; answer: string }
@@ -33,6 +35,8 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
   const { slug = '' } = useParams<{ slug: string }>();
   const { openMatchModal } = useMatchModal();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const canOpenProfiles = canViewProviderProfiles(user?.role);
   // Every WP-controlled button goes through the shared interpreter
   // (lib/runAction.ts) with a REAL navigate — this page used to pass a
   // no-op, so any button whose ACF URL was a path did nothing.
@@ -295,9 +299,14 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
                 )}
                 <div className="wp-cpt-provider-grid">
                   {providers.map((p) => (
-                    <Link key={p.id} to={p.slug ? `/providers/${p.slug}` : '/find-providers'} className="wp-cpt-provider-card">
-                      {p.tradingName || p.legalEntityName}
-                    </Link>
+                    p.slug && canOpenProfiles ? (
+                      <Link key={p.id} to={`/providers/${p.slug}`} className="wp-cpt-provider-card">
+                        {p.tradingName || p.legalEntityName}
+                      </Link>
+                    ) : (
+                      // Profiles are login-gated; don't send anonymous visitors to a login wall.
+                      <div key={p.id} className="wp-cpt-provider-card">{p.tradingName || p.legalEntityName}</div>
+                    )
                   ))}
                 </div>
                 <button type="button" className="btn-gradient" style={{ marginTop: 16 }} onClick={() => openMatchModal()}>{finderCtaLabel}</button>

@@ -105,8 +105,8 @@ export const EmailService = {
     return sendMail(to, subject, html);
   },
 
-  async sendProviderLeadTeaser(to: string, need: string, suburb: string, dashboardUrl?: string) {
-    const { subject, html } = providerLeadTeaserTemplate({ need, suburb, dashboardUrl });
+  async sendProviderLeadTeaser(to: string, need: string, suburb: string, dashboardUrl?: string, claimUrl?: string) {
+    const { subject, html } = providerLeadTeaserTemplate({ need, suburb, dashboardUrl, claimUrl });
     return sendMail(to, subject, html);
   },
 

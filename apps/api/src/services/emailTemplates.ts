@@ -127,11 +127,11 @@ export function providerLeadNotificationTemplate(input: { need: string; suburb: 
   return { subject: 'New care opportunity available', html };
 }
 
-export function providerLeadTeaserTemplate(input: { need: string; suburb: string; dashboardUrl?: string }): { subject: string; html: string } {
+export function providerLeadTeaserTemplate(input: { need: string; suburb: string; dashboardUrl?: string; claimUrl?: string }): { subject: string; html: string } {
   const html = renderEmailLayout({
     preheader: `A new ${escapeHtml(input.need)} lead is available in ${escapeHtml(input.suburb)}`,
     heading: 'New lead in your service area',
-    bodyHtml: `<p>A new request for <strong>${escapeHtml(input.need)}</strong> in <strong>${escapeHtml(input.suburb)}</strong> may suit your organisation.</p><p>Upgrade your plan to unlock the full brief and contact details. The requester's email and phone number are hidden until the lead is unlocked.</p>`,
+    bodyHtml: `<p>A new request for <strong>${escapeHtml(input.need)}</strong> in <strong>${escapeHtml(input.suburb)}</strong> may suit your organisation.</p><p>Upgrade your plan to unlock the full brief and contact details. The requester's email and phone number are hidden until the lead is unlocked.</p>${input.claimUrl ? `<p><strong>This organisation has a free SolDirectory listing that has not been claimed yet.</strong> <a href="${escapeHtml(input.claimUrl)}">Claim your listing</a> to update your details and respond to enquiries.</p>` : ''}`,
     ctaLabel: input.dashboardUrl ? 'View lead opportunity' : undefined,
     ctaUrl: input.dashboardUrl,
   });

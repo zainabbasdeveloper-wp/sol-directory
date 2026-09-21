@@ -23,7 +23,13 @@ const errorStyle = { color: '#8C2F1E', fontSize: 13.5, margin: '0 0 16px' } as c
 
 /** Step 1 — ask for the reset link. */
 export function ForgotPassword() {
-  const [email, setEmail] = useState('');
+  // Arriving from a "Claim your listing" email link (?claim=1&email=…): an
+  // imported provider has an account but no known password, and this page is
+  // how they set one. The email is pre-filled; nothing is granted until they
+  // click the secure link we send to that address.
+  const [params] = useSearchParams();
+  const isClaim = params.get('claim') === '1';
+  const [email, setEmail] = useState(params.get('email') ?? '');
   const [state, setState] = useState<'idle' | 'sending' | 'sent'>('idle');
   const [error, setError] = useState('');
 
@@ -45,7 +51,7 @@ export function ForgotPassword() {
 
   return (
     <Shell>
-      <h1 style={{ fontSize: 26, marginBottom: 10 }}>Reset your password</h1>
+      <h1 style={{ fontSize: 26, marginBottom: 10 }}>{isClaim ? 'Claim your listing' : 'Reset your password'}</h1>
       {state === 'sent' ? (
         <>
           <p style={{ ...muted, marginBottom: 20 }}>
@@ -55,12 +61,16 @@ export function ForgotPassword() {
         </>
       ) : (
         <form onSubmit={onSubmit} noValidate>
-          <p style={{ ...muted, marginBottom: 20 }}>Enter the email you signed up with and we'll send you a link to choose a new password.</p>
+          <p style={{ ...muted, marginBottom: 20 }}>
+            {isClaim
+              ? 'Your organisation already has a free listing on SolDirectory. Confirm the email below and we will send you a secure link to set a password and take control of it.'
+              : 'Enter the email you signed up with and we’ll send you a link to choose a new password.'}
+          </p>
           <label htmlFor="fp-email" className="login-field-label">Email</label>
           <input id="fp-email" type="email" autoComplete="email" className="login-input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
           {error && <p role="alert" style={{ ...errorStyle, marginTop: 12 }}>{error}</p>}
           <button type="submit" className="btn-gradient" style={{ marginTop: 16, width: '100%' }} disabled={state === 'sending'}>
-            {state === 'sending' ? 'Sending…' : 'Send reset link'}
+            {state === 'sending' ? 'Sending…' : isClaim ? 'Email me a secure link' : 'Send reset link'}
           </button>
         </form>
       )}

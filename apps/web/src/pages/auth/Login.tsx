@@ -10,53 +10,17 @@ import type { Role } from '@soldirectory/shared-types';
 import './Login.css';
 import '../../styles/auth-shared.css';
 
-const ROLES: { key: Role; label: string }[] = [
-  { key: 'worker', label: 'NDIS worker' },
-  { key: 'provider', label: 'Provider' },
-  { key: 'coordinator', label: 'Allied Health' },
-  { key: 'participant', label: 'Participant' },
-  { key: 'admin', label: 'Sol admin' },
-];
-
-// Content that actually changes based on the selected role tab.
-// Stats stay identical across roles per instruction — only the
-// framing copy changes, not fabricated numbers.
-const ROLE_CONTENT: Record<Role, { eyebrow: string; heading: string; subhead: string; asideHeading: string; asideParagraph: string }> = {
-  worker: {
-    eyebrow: 'Worker directory',
-    heading: 'Log in to your worker account',
-    subhead: 'Manage your profile, availability, clearances and opportunities.',
-    asideHeading: 'Build your profile. Find the right opportunities.',
-    asideParagraph: 'Manage your worker listing, availability, clearances and incoming opportunities from providers and families.',
-  },
-  provider: {
-    eyebrow: 'Provider portal',
-    heading: 'Log in to your provider account',
-    subhead: 'Manage your organisation, team, services, leads and coverage.',
-    asideHeading: 'Grow your care organisation from one place.',
-    asideParagraph: 'Manage services, coverage areas, staff, onboarding and incoming leads.',
-  },
-  coordinator: {
-    eyebrow: 'Allied Health portal',
-    heading: 'Log in to find support',
-    subhead: 'Search providers, shortlist options and manage referrals.',
-    asideHeading: 'Find support faster for the people you work with.',
-    asideParagraph: 'Search verified providers by location, availability and service.',
-  },
-  participant: {
-    eyebrow: 'Support directory',
-    heading: 'Log in to find support',
-    subhead: 'Search providers, manage requests and track your matches.',
-    asideHeading: 'Find the right support with less searching.',
-    asideParagraph: 'Search providers and workers based on your location and support needs.',
-  },
-  admin: {
-    eyebrow: 'Administration',
-    heading: 'Log in to SolDirectory Admin',
-    subhead: 'Manage users, listings, approvals and platform operations.',
-    asideHeading: 'Manage the SolDirectory platform.',
-    asideParagraph: 'Review accounts, provider information, directory activity and platform operations.',
-  },
+// One form for everyone. The server authenticates on email + password and
+// returns the account's real role, which decides where they land (below). A
+// role picker used to sit here — it was purely client-side (the API never
+// saw it), rejected people who picked the "wrong" chip, listed retired
+// account types, and exposed the admin role on a public page.
+const CONTENT = {
+  eyebrow: 'Account login',
+  heading: 'Log in to your account',
+  subhead: 'Manage your profile, availability and referrals.',
+  asideHeading: 'Connecting people with the right support.',
+  asideParagraph: 'Log in to manage your listing, referrals and shortlists in one place.',
 };
 
 // Existing routes only. worker can't access /workers (excluded
@@ -77,12 +41,10 @@ const EMAIL_RE = /.+@.+\..+/;
 export default function Login() {
   const stats = useSiteStats();
   const [searchParams] = useSearchParams();
-  const initialRole = (searchParams.get('role') as Role) || 'worker';
-  const [role, setRole] = useState<Role>(ROLES.some((r) => r.key === initialRole) ? initialRole : 'worker');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const { login, logout, user, loading: authLoading } = useAuth();
+  const { login, user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -93,7 +55,7 @@ export default function Login() {
   }, [authLoading, user, navigate]);
 
   const emailValid = EMAIL_RE.test(email);
-  const content = ROLE_CONTENT[role];
+  const content = CONTENT;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -102,20 +64,6 @@ export default function Login() {
     setError('');
     try {
       const authedUser = await login(email, password);
-      // The selected tab must match the account's real role. A
-      // mismatch used to let the person in anyway with a notice —
-      // that's been reversed: this is now a hard rejection. Login
-      // technically succeeded against the backend (valid
-      // credentials), so we explicitly log back out rather than
-      // leave an authenticated session sitting around for an account
-      // type the person didn't confirm they wanted.
-      if (authedUser.role !== role) {
-        logout();
-        setError(
-          `This account is registered as ${ROLES.find((r) => r.key === authedUser.role)?.label ?? authedUser.role}. Please select the correct account type and try again.`
-        );
-        return;
-      }
       const returnTo = searchParams.get('returnTo');
       navigate(returnTo || ROLE_DESTINATION[authedUser.role]);
     } catch (err) {
@@ -176,22 +124,7 @@ export default function Login() {
             <p className="login-form-subhead">{content.subhead}</p>
 
             <form onSubmit={handleSubmit}>
-              <p className="login-role-label">I am logging in as</p>
-              <div className="login-role-pills" role="group" aria-label="I am logging in as">
-                {ROLES.map((r) => (
-                  <button
-                    key={r.key}
-                    type="button"
-                    aria-pressed={role === r.key}
-                    className={`login-role-pill ${role === r.key ? 'login-role-pill-selected' : ''}`}
-                    onClick={() => setRole(r.key)}
-                  >
-                    {r.label}
-                  </button>
-                ))}
-              </div>
-
-              <label htmlFor="login-email" className="login-field-label">Work email</label>
+              <label htmlFor="login-email" className="login-field-label">Email</label>
               <input
                 id="login-email"
                 type="email"
@@ -227,7 +160,7 @@ export default function Login() {
 
               <p className="login-footer">
                 No account?{' '}
-                <Link to={`/signup?role=${role}`} className="login-link login-link-strong">Create one</Link>{' '}
+                <Link to="/signup" className="login-link login-link-strong">Create one</Link>{' '}
                 · <Link to="/" className="login-link login-link-strong">Back to the public site</Link>
               </p>
             </form>

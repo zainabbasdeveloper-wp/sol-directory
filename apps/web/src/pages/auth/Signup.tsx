@@ -178,7 +178,7 @@ export default function Signup() {
           <Button type="submit" size="cta" disabled={!valid || loading}>
             {loading ? 'Creating account…' : selected.signupCta}
           </Button>
-          <Link to={`/login?role=${accountType}`} className="signup-existing-link">
+          <Link to="/login" className="signup-existing-link">
             I already have an account
           </Link>
         </div>

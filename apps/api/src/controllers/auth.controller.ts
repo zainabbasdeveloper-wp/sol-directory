@@ -215,5 +215,9 @@ export async function resetPassword(req: Request, res: Response) {
 
   EmailService.sendPasswordChanged(user.email).catch(() => {});
 
+  // Completing the emailed reset link proves control of the contact inbox —
+  // for an imported (unclaimed) listing that IS the claim.
+  await Provider.updateOne({ userId: user._id, claimed: false }, { $set: { claimed: true } });
+
   res.json({ message: 'Your password has been reset. You can now sign in with your new password.' });
 }

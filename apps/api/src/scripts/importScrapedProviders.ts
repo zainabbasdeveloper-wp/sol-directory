@@ -108,6 +108,7 @@ async function importOne(input: ScrapedProviderInput): Promise<ImportResult> {
       tradingName: input.tradingName,
       abn: normalizeAbn(input.abn),
       intakeEmail: input.contactEmail,
+      claimed: false, // the business hasn't signed up yet; see Provider.claimed
       registrationGroups: input.services ?? [],
       acceptedFunding: input.fundingAccepted ?? [],
       conditionExperience: input.conditionExperience ?? [],

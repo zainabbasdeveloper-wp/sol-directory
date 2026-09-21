@@ -61,7 +61,6 @@ export default function Home() {
           <h1 className="hero-heading">Find NDIS &amp; Aged Care Providers Near You</h1>
           <p className="hero-copy">
             Tell us what you need and we will do the searching for you, free.
-            A new connection every 5 minutes during business hours.
           </p>
           <div className="hero-actions">
             <button className="btn-gradient btn-lg" onClick={openMatchModal}>
