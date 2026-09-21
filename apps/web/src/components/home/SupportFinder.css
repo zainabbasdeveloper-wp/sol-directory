@@ -1,0 +1,55 @@
+/* Home "find a support" section. Shares .services-section / .services-inner /
+   .section-header-row / .btn-* from Home.css. */
+
+.sf-search { display: flex; gap: 12px; align-items: flex-end; background: #fff; border-radius: var(--radius-md); padding: 20px; box-shadow: var(--shadow-md); }
+.sf-search-field { flex: 1; min-width: 0; }
+.sf-search-btn { height: 50px; padding: 0 30px; flex: none; }
+.sf-hint { margin: 14px 4px 0; font-size: 14.5px; line-height: 1.6; color: color-mix(in srgb, var(--color-text) 78%, transparent); }
+.sf-hint a, .sf-hint .link-btn { color: var(--color-accent-700); font-weight: 600; text-decoration: underline; }
+
+.sf-tabs { display: flex; flex-wrap: wrap; gap: 10px; margin: 30px 0 22px; }
+.sf-tab {
+  min-height: 44px; padding: 0 20px; font: inherit; font-size: 14.5px; font-weight: 600; cursor: pointer;
+  color: var(--color-text); background: #fff; border: 1.5px solid transparent; border-radius: 100px; box-shadow: var(--shadow-sm);
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+.sf-tab:hover { border-color: var(--color-accent); }
+.sf-tab:focus-visible, .sf-card:focus-visible { outline: 3px solid #8CB8FF; outline-offset: 2px; }
+.sf-tab-active { background: var(--color-accent-900); color: #fff; }
+.sf-tab-active:hover { border-color: transparent; }
+
+.sf-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: clamp(14px, 1.8vw, 22px); }
+.sf-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 8px; text-align: left; font: inherit; color: inherit;
+  background: #fff; border: 1.5px solid transparent; border-radius: var(--radius-md); padding: 26px 24px 22px; cursor: pointer;
+  box-shadow: var(--shadow-sm); transition: box-shadow 200ms ease, transform 200ms ease, border-color 200ms ease;
+}
+.sf-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); border-color: color-mix(in srgb, var(--color-accent) 40%, transparent); }
+.sf-icon {
+  display: inline-flex; align-items: center; justify-content: center; width: 50px; height: 50px; margin-bottom: 8px;
+  border-radius: 14px; color: var(--color-accent-700); background: color-mix(in srgb, var(--color-accent) 10%, #fff);
+}
+.sf-card-title { font-size: 19px; font-weight: 600; letter-spacing: -0.012em; line-height: 1.25; }
+.sf-card-body { flex: 1; font-size: 14.5px; line-height: 1.65; color: color-mix(in srgb, var(--color-text) 72%, transparent); }
+.sf-card-foot { margin-top: 8px; font-size: 14px; font-weight: 600; color: var(--color-accent-700); }
+
+.sf-help {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 28px;
+  margin-top: clamp(22px, 2.6vw, 34px); padding: 22px 26px; border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-accent) 10%, #fff); border: 1px solid color-mix(in srgb, var(--color-accent) 22%, transparent);
+}
+.sf-help > div { display: grid; gap: 4px; min-width: 0; flex: 1 1 320px; }
+.sf-help strong { font-size: 17px; font-weight: 600; }
+.sf-help span { font-size: 14.5px; line-height: 1.55; color: color-mix(in srgb, var(--color-text) 74%, transparent); }
+.sf-help .btn-gradient { height: 48px; padding: 0 28px; }
+
+@media (max-width: 640px) {
+  .sf-search { flex-direction: column; align-items: stretch; padding: 16px; }
+  .sf-search-btn { width: 100%; }
+  /* Chips scroll sideways instead of wrapping into a tall block. */
+  .sf-tabs { flex-wrap: nowrap; overflow-x: auto; margin-inline: calc(-1 * clamp(20px, 5vw, 56px)); padding: 0 clamp(20px, 5vw, 56px) 6px; scrollbar-width: none; }
+  .sf-tabs::-webkit-scrollbar { display: none; }
+  .sf-tab { flex: none; }
+  .sf-help .btn-gradient { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) { .sf-card, .sf-tab { transition: none; } .sf-card:hover { transform: none; } }

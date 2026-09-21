@@ -4,36 +4,11 @@ import Counter from '../../components/Counter';
 import PhotoSlot from '../../components/PhotoSlot';
 import { useSiteStats } from '../../hooks/useSiteStats';
 import { siteConfig, phoneHref } from '../../config/siteConfig';
-import { providerCountLabel, serviceCount, stateGroupCount } from '../../lib/statsCounts';
+import { providerCountLabel, stateGroupCount } from '../../lib/statsCounts';
+import SupportFinder from '../../components/home/SupportFinder';
 import { useMatchModal } from '../../context/MatchModalContext';
 import { LOCATION_GROUPS } from '../../data/providers';
 import './Home.css';
-
-const SERVICE_ICONS: Record<string, JSX.Element> = {
-  'Personal care': <path d="M12 20.5S4 15.5 4 9.8A4.3 4.3 0 0 1 12 7.4 4.3 4.3 0 0 1 20 9.8c0 5.7-8 10.7-8 10.7Z" />,
-  'Therapy services': (
-    <>
-      <path d="M4 4v6a5 5 0 0 0 10 0V4" />
-      <path d="M2 4h4M12 4h4" />
-      <path d="M9 15v2a4 4 0 0 0 8 0v-1" />
-      <circle cx="18" cy="13" r="2.5" />
-    </>
-  ),
-  'Domestic assistance': (
-    <>
-      <path d="M3 10.5 12 3l9 7.5" />
-      <path d="M5 9.5V21h14V9.5" />
-      <path d="M9.5 21v-6h5v6" />
-    </>
-  ),
-  Nursing: (
-    <>
-      <rect x="3" y="6" width="18" height="14" rx="2" />
-      <path d="M9 6V4h6v2" />
-      <path d="M12 10v6M9 13h6" />
-    </>
-  ),
-};
 
 export default function Home() {
   const navigate = useNavigate();
@@ -43,6 +18,23 @@ export default function Home() {
   // real data to publish an honest median. Each stat below hides itself
   // when it has nothing true to show.
   const stats = useSiteStats();
+
+  // Each figure appears only when the database can back it (see
+  // stats.controller.ts); nothing here is estimated or padded.
+  const supportTypes = stats ? Object.values(stats.providersByService).filter((n) => n > 0).length : 0;
+  const reply = stats?.medianFirstReplyMinutes ?? null;
+  const figures: { label: string; value: number; suffix?: string; format?: boolean; accent?: boolean }[] = [];
+  if (stats && stats.providersListed > 0) figures.push({ label: 'Providers accepting enquiries', value: stats.providersListed });
+  if (stats && stats.suburbsCovered > 0) figures.push({ label: 'Suburbs with a listed provider', value: stats.suburbsCovered });
+  if (supportTypes > 0) figures.push({ label: 'Support types offered', value: supportTypes });
+  if (reply !== null) {
+    figures.push(
+      reply < 120
+        ? { label: 'Median time to first provider response', value: reply, suffix: ' min', format: false, accent: true }
+        : { label: 'Median time to first provider response', value: Math.round(reply / 60), suffix: ' hr', format: false, accent: true }
+    );
+  }
+  if (stats && stats.enquiriesLast30Days > 0) figures.push({ label: 'Support requests in the last 30 days', value: stats.enquiriesLast30Days });
 
   return (
     <>
@@ -73,54 +65,32 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="info-cards">
+      <section className="info-cards" aria-label="How Get Matched works">
         <div className="info-card info-card-accent">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="info-icon">
-            <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z" />
-          </svg>
-          {siteConfig.contactPhone ? (
-            <>
-              <h3 className="info-title">Talk to a person</h3>
-              <p className="info-body info-body-light">We will shortlist providers for you over the phone, at no cost.</p>
-              <a className="info-phone" href={phoneHref(siteConfig.contactPhone)}>{siteConfig.contactPhone}</a>
-            </>
-          ) : (
-            <>
-              <h3 className="info-title">Tell us what you need</h3>
-              <p className="info-body info-body-light">Answer a few questions and we will match you with providers who have capacity — free.</p>
-              <button type="button" className="info-phone" style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer', color: 'inherit', textAlign: 'left', font: 'inherit' }} onClick={() => openMatchModal()}>
-                Get matched, free →
-              </button>
-            </>
-          )}
+          <span className="info-step">Step 1</span>
+          <h3 className="info-title">Tell us what you need</h3>
+          <p className="info-body info-body-light">Answer a few short questions about the supports you are looking for, where you live and how they are funded.</p>
+          <button type="button" className="info-action" onClick={() => openMatchModal()}>
+            Get matched <span aria-hidden="true">→</span>
+          </button>
         </div>
 
         <div className="info-card">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="info-icon">
-            <path d="M12 3 4 6v6c0 5 3.4 8.2 8 9 4.6-.8 8-4 8-9V6Z" />
-            <path d="m9 12 2 2 4-4" />
-          </svg>
-          <h3 className="info-title">Checked, not scraped</h3>
-          <p className="info-body">Providers confirm they are still taking referrals every week. Anyone who stops answering is taken off the list until they confirm again.</p>
+          <span className="info-step">Step 2</span>
+          <h3 className="info-title">We look for providers who can start</h3>
+          <p className="info-body">Your request is compared with each provider’s service area, supports offered and confirmed availability.</p>
           <Link to="/directory" className="link-btn">
-            How listings are checked →
+            Browse the directory →
           </Link>
         </div>
 
         <div className="info-card">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="info-icon">
-            <circle cx="12" cy="12" r="9" />
-            <path d="M12 7v5l3 2" />
-          </svg>
-          <h3 className="info-title">Support hours</h3>
-          <dl className="hours-dl">
-            <dt>Monday – Friday</dt>
-            <dd>8:00 – 18:00</dd>
-            <dt>Saturday</dt>
-            <dd>9:00 – 13:00</dd>
-            <dt>Directory search</dt>
-            <dd>Always open</dd>
-          </dl>
+          <span className="info-step">Step 3</span>
+          <h3 className="info-title">Providers contact you directly</h3>
+          <p className="info-body">Only providers matched to your request can access your contact details. You decide who to work with.</p>
+          <Link to="/privacy" className="link-btn">
+            How we handle your details →
+          </Link>
         </div>
       </section>
 
@@ -154,8 +124,6 @@ export default function Home() {
               <CheckIcon /> Availability confirmed weekly, not at sign-up
             </li>
             <li>
-            </li>
-            <li>
               <CheckIcon /> Providers cannot pay for a higher position
             </li>
             <li>
@@ -176,121 +144,27 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="stats-section">
-        <p className="stats-headline">
-          The size of a directory matters less than who is available.{' '}
-          <span className="stats-headline-accent">Providers confirm their capacity every week</span>, and the figures
-          below are drawn from live records.
-        </p>
-        <div className="stats-row">
-          {stats && stats.providersListed > 0 && (
-            <div>
-              <span className="stat-value">
-                <Counter value={stats.providersListed} />
-              </span>
-              <span className="stat-label">Providers listed</span>
-            </div>
-          )}
-          {stats && stats.suburbsCovered > 0 && (
-            <div>
-              <span className="stat-value">
-                <Counter value={stats.suburbsCovered} />
-              </span>
-              <span className="stat-label">Suburbs covered</span>
-            </div>
-          )}
-          {stats && stats.medianFirstReplyMinutes !== null && (
-            <div>
-              <span className="stat-value stat-value-accent">
-                <Counter value={stats.medianFirstReplyMinutes} suffix=" min" format={false} />
-              </span>
-              <span className="stat-label">Median first reply</span>
-            </div>
-          )}
-          {stats && stats.enquiriesLast30Days > 0 && (
-            <div>
-              <span className="stat-value">
-                <Counter value={stats.enquiriesLast30Days} />
-              </span>
-              <span className="stat-label">Enquiries in the last 30 days</span>
-            </div>
-          )}
-          <div>
-            <span className="stat-value">
-              <Counter value={0} prefix="$" format={false} />
-            </span>
-            <span className="stat-label">Cost to families</span>
-          </div>
-        </div>
-      </section>
-
-      <section id="services" className="services-section">
-        <div className="services-inner">
-          <div className="section-header-row">
-            <div>
-              <span className="eyebrow">
-                <span className="eyebrow-rule" />
-                Browse by support
-              </span>
-              <h2 className="section-heading">Supports you can find here</h2>
-            </div>
-            <Link to="/directory" className="btn-white">
-              Browse all providers
-            </Link>
-          </div>
-
-          <div className="services-grid">
-            <button className="service-card service-card-featured" onClick={() => navigate('/directory?service=Support%20coordination')}>
-              <div>
-                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="service-icon-featured">
-                  <circle cx="12" cy="12" r="3" />
-                  <circle cx="5" cy="5" r="2" />
-                  <circle cx="19" cy="5" r="2" />
-                  <circle cx="12" cy="21" r="2" />
-                  <path d="M6.5 6.5 10 10M17.5 6.5 14 10M12 15v4" />
-                </svg>
-                <span className="service-badge">Most searched</span>
-                <h3 className="service-title-featured">Support coordination</h3>
-                <p className="service-body-featured">
-                  Coordinators who help participants understand their plan, connect with
-                  providers and put their supports in place.
-                </p>
+      {figures.length > 0 && (
+        <section className="stats-section home-stats" aria-label="Directory figures">
+          <p className="stats-headline">
+            A bigger register is not a better one. What helps participants is knowing{' '}
+            <span className="stats-headline-accent">which providers can start supports</span>, so that is what we report.
+          </p>
+          <dl className="home-stats-row">
+            {figures.map((f) => (
+              <div key={f.label} className="home-stat">
+                <dt className="home-stat-label">{f.label}</dt>
+                <dd className={`home-stat-value${f.accent ? ' home-stat-accent' : ''}`}>
+                  <Counter value={f.value} suffix={f.suffix} format={f.format ?? true} />
+                </dd>
               </div>
-              <span className="service-count-featured">
-                {providerCountLabel(serviceCount(stats, 'Support coordination')) ?? 'Browse providers'} →
-              </span>
-            </button>
-
-            {[
-              { name: 'Personal care', body: 'Assistance with personal hygiene, dressing, medication and daily living.' },
-              { name: 'Therapy services', body: 'Occupational therapy, physiotherapy, speech pathology and other allied health supports.' },
-              { name: 'Domestic assistance', body: 'Assistance with cleaning, laundry, meal preparation and household tasks.' },
-              { name: 'Nursing', body: 'In-home clinical nursing, wound care and complex health supports.' },
-            ].map((s) => (
-              <button key={s.name} className="service-card" onClick={() => navigate(`/directory?service=${encodeURIComponent(s.name)}`)}>
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="service-icon">
-                  {SERVICE_ICONS[s.name]}
-                </svg>
-                <h3 className="service-title">{s.name}</h3>
-                <p className="service-body">{s.body}</p>
-                <span className="service-count">{providerCountLabel(serviceCount(stats, s.name)) ?? 'Browse providers'} →</span>
-              </button>
             ))}
-          </div>
+          </dl>
+          <p className="home-stats-note">Providers confirm their availability every week. Figures are calculated from live directory records.</p>
+        </section>
+      )}
 
-          <div className="pill-row">
-            <button className="pill-btn" onClick={() => navigate('/directory?service=Transport')}>
-              Transport{serviceCount(stats, 'Transport') !== null && <span className="pill-count">{serviceCount(stats, 'Transport')}</span>}
-            </button>
-            <button className="pill-btn" onClick={() => navigate('/directory?service=Housing%20(SDA%20%26%20SIL)')}>
-              Housing, SDA &amp; SIL{serviceCount(stats, 'Housing (SDA & SIL)') !== null && <span className="pill-count">{serviceCount(stats, 'Housing (SDA & SIL)')}</span>}
-            </button>
-            <button className="pill-btn" onClick={() => navigate('/directory?service=Plan%20management')}>
-              Plan management{serviceCount(stats, 'Plan management') !== null && <span className="pill-count">{serviceCount(stats, 'Plan management')}</span>}
-            </button>
-          </div>
-        </div>
-      </section>
+      <SupportFinder stats={stats} />
 
       <section className="checks-section">
         <div className="checks-photo-bg">
