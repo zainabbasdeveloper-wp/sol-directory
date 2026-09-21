@@ -139,4 +139,9 @@ export const EmailService = {
     const { subject, html } = welcomeTemplate({ name });
     return sendMail(to, subject, html);
   },
+
+  async sendCapacityConfirmation(to: string, providerName: string, confirmUrl: string) {
+    const { subject, html } = capacityConfirmationTemplate({ providerName, confirmUrl });
+    return sendMail(to, subject, html);
+  },
 };
