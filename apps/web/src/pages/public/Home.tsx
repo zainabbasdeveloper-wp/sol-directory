@@ -8,7 +8,6 @@ import { providerCountLabel, serviceCount, stateGroupCount } from '../../lib/sta
 import { useMatchModal } from '../../context/MatchModalContext';
 import { LOCATION_GROUPS } from '../../data/providers';
 import './Home.css';
-import { useMatchModal } from '../../context/MatchModalContext';
 
 const SERVICE_ICONS: Record<string, JSX.Element> = {
   'Personal care': <path d="M12 20.5S4 15.5 4 9.8A4.3 4.3 0 0 1 12 7.4 4.3 4.3 0 0 1 20 9.8c0 5.7-8 10.7-8 10.7Z" />,
@@ -39,6 +38,7 @@ const SERVICE_ICONS: Record<string, JSX.Element> = {
 export default function Home() {
   const navigate = useNavigate();
   const { openMatchModal } = useMatchModal();
+  const stats = useSiteStats();
 
   return (
     <>
