@@ -144,19 +144,35 @@ export async function submitMatchRequest(req: Request, res: Response) {
 
   const requestNumber = String(lead._id).slice(-8).toUpperCase();
 
-  // Fire-and-forget — a slow/failed email must never fail the
-  // request itself, same reliability principle as every other
-  // EmailService call in this codebase. Every matched provider gets
-  // this email regardless of plan — a paying (non-'starter') provider
-  // ALSO sees the lead live on their dashboard (Dashboard.tsx's
-  // existing 30s poll already does this for every provider, since
-  // listLeads was never plan-gated to begin with), but that's
-  // additive, not a replacement for the email.
+  // Fire-and-forget — email failure must never fail lead submission.
+  // Starter providers receive only a privacy-safe teaser. Active paid
+  // providers receive the full contact brief because their subscription
+  // includes lead access.
   const frontendOrigin = process.env.CLIENT_ORIGIN ?? 'http://localhost:5173';
   for (const { provider, result } of matchedProviders) {
     if (provider.intakeEmail) {
       const dashboardUrl = `${frontendOrigin}/leads/${lead._id}`;
-      EmailService.sendProviderLeadNotification(provider.intakeEmail, lead.need, lead.suburb, dashboardUrl).catch(() => {});
+      const hasPaidAccess = ['growth', 'pro'].includes(provider.plan)
+        && provider.planStatus === 'active'
+        && (!provider.planExpiresAt || new Date(provider.planExpiresAt) > new Date());
+
+      if (hasPaidAccess) {
+        EmailService.sendProviderLeadFull(provider.intakeEmail, {
+          need: lead.need,
+          suburb: lead.suburb,
+          requesterName: lead.requesterName,
+          requesterEmail: lead.requesterEmail,
+          requesterPhone: lead.contactPhone,
+          careFor: lead.careFor,
+          timeframe: lead.timeframe,
+          fundingType: lead.fundingType,
+          planManagement: lead.planManagement,
+          additionalDetails: lead.note,
+          dashboardUrl,
+        }).catch(() => {});
+      } else {
+        EmailService.sendProviderLeadTeaser(provider.intakeEmail, lead.need, lead.suburb, dashboardUrl).catch(() => {});
+      }
     }
     // Opt-in text alert (no-op unless Twilio is configured AND the
     // provider switched SMS on). Same fire-and-forget contract as email.

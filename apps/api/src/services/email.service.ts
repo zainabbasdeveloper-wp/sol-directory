@@ -1,7 +1,8 @@
 import nodemailer, { type Transporter } from 'nodemailer';
 import {
   leadConfirmationTemplate, providerMatchedTemplate, providerResponseTemplate,
-  providerLeadNotificationTemplate, adminNotificationTemplate, renderEmailLayout,
+  providerLeadNotificationTemplate, providerLeadTeaserTemplate, providerLeadFullTemplate,
+  adminNotificationTemplate, renderEmailLayout,
   passwordResetTemplate, passwordChangedTemplate, verificationResultTemplate, welcomeTemplate,
   capacityConfirmationTemplate,
 } from './emailTemplates.js';
@@ -22,18 +23,20 @@ let transporter: Transporter | null = null;
 function getTransporter(): Transporter | null {
   if (transporter) return transporter;
 
-  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD } = process.env;
-  if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASSWORD) {
-    console.warn('[EmailService] SMTP_HOST/PORT/USER/PASSWORD not fully configured — emails will be logged, not sent.');
+  const { SMTP_URL, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD } = process.env;
+  if (SMTP_URL) {
+    transporter = nodemailer.createTransport(SMTP_URL);
+  } else if (SMTP_HOST && SMTP_PORT && SMTP_USER && SMTP_PASSWORD) {
+    transporter = nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: Number(SMTP_PORT),
+      secure: Number(SMTP_PORT) === 465,
+      auth: { user: SMTP_USER, pass: SMTP_PASSWORD },
+    });
+  } else {
+    console.warn('[EmailService] Set SMTP_URL or SMTP_HOST/PORT/USER/PASSWORD — emails will be logged, not sent.');
     return null;
   }
-
-  transporter = nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: Number(SMTP_PORT),
-    secure: Number(SMTP_PORT) === 465,
-    auth: { user: SMTP_USER, pass: SMTP_PASSWORD },
-  });
   return transporter;
 }
 
@@ -102,8 +105,13 @@ export const EmailService = {
     return sendMail(to, subject, html);
   },
 
-  async sendCapacityConfirmation(to: string, providerName: string, confirmUrl: string) {
-    const { subject, html } = capacityConfirmationTemplate({ providerName, confirmUrl });
+  async sendProviderLeadTeaser(to: string, need: string, suburb: string, dashboardUrl?: string) {
+    const { subject, html } = providerLeadTeaserTemplate({ need, suburb, dashboardUrl });
+    return sendMail(to, subject, html);
+  },
+
+  async sendProviderLeadFull(to: string, input: Parameters<typeof providerLeadFullTemplate>[0]) {
+    const { subject, html } = providerLeadFullTemplate(input);
     return sendMail(to, subject, html);
   },
 
@@ -129,6 +137,11 @@ export const EmailService = {
 
   async sendWelcome(to: string, name: string) {
     const { subject, html } = welcomeTemplate({ name });
+    return sendMail(to, subject, html);
+  },
+
+  async sendCapacityConfirmation(to: string, providerName: string, confirmUrl: string) {
+    const { subject, html } = capacityConfirmationTemplate({ providerName, confirmUrl });
     return sendMail(to, subject, html);
   },
 };
