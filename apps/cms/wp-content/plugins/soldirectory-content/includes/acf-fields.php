@@ -337,6 +337,30 @@ add_action('acf/init', function () {
         'location' => [[['param' => 'post_type', 'operator' => '==', 'value' => 'service']]],
     ]);
 
+    // --- SEO (Part: search-engine metadata) — one small group reused
+    // across every public content type, so an editor gets real control
+    // over the title/description/image search engines and social
+    // shares show, without needing a separate SEO plugin installed.
+    // Every field is optional: the frontend (wordpressApi.ts) falls
+    // back to the post's own real title/excerpt/featured image when
+    // left blank — never a generic or invented line. ---
+    soldirectory_add_group([
+        'key' => 'group_seo_fields',
+        'title' => 'SEO',
+        'fields' => [
+            ['key' => 'field_seo_title', 'label' => 'SEO Title', 'name' => 'seo_title', 'type' => 'text', 'instructions' => 'Overrides the title search engines and social shares show. Leave blank to use the page title.'],
+            ['key' => 'field_seo_description', 'label' => 'SEO Description', 'name' => 'seo_description', 'type' => 'textarea', 'rows' => 2, 'instructions' => 'Aim for under 160 characters. Leave blank to use the page summary.'],
+            ['key' => 'field_seo_og_image', 'label' => 'Social Share Image', 'name' => 'seo_og_image', 'type' => 'image', 'return_format' => 'url', 'instructions' => 'Shown when this page is shared on social media. Leave blank to use the featured image.'],
+            ['key' => 'field_seo_noindex', 'label' => 'Hide from search engines', 'name' => 'seo_noindex', 'type' => 'true_false', 'ui' => 1, 'instructions' => 'Turn on while this page is still a draft or duplicate, so it does not show up in Google.'],
+        ],
+        'location' => [
+            [['param' => 'post_type', 'operator' => '==', 'value' => 'service']],
+            [['param' => 'post_type', 'operator' => '==', 'value' => 'service_area_page']],
+            [['param' => 'post_type', 'operator' => '==', 'value' => 'location']],
+            [['param' => 'post_type', 'operator' => '==', 'value' => 'guide']],
+        ],
+    ]);
+
     // --- Provider (display mirror — see post-types.php's 'provider'
     // CPT comment and services/wordpressSync.service.ts. Every field
     // below is overwritten on the provider's next sync from Mongo;
@@ -666,8 +690,13 @@ add_action('acf/init', function () {
 function soldirectory_inject_acf_meta(array $response_data, WP_Post $post): array {
     if (!function_exists('get_field')) return $response_data;
 
+    // Every public content type shares the same 4 SEO fields
+    // (group_seo_fields) — appended once here instead of repeated in
+    // each post type's own list below.
+    $seo_fields = ['seo_title', 'seo_description', 'seo_og_image', 'seo_noindex'];
+
     $simple_fields = [
-        'service' => [
+        'service' => array_merge([
             'overview_heading', 'overview_content', 'who_for', 'eligibility', 'funding_info',
             'plan_management_info', 'availability', 'wait_time', 'typical_cost', 'how_to_pay', 'hours', 'registration_info',
             'hero_eyebrow', 'hero_headline', 'hero_description', 'hero_background_image', 'hero_cta_label', 'hero_cta_url',
@@ -675,10 +704,10 @@ function soldirectory_inject_acf_meta(array $response_data, WP_Post $post): arra
             'finder_count', 'finder_sort', 'finder_show_filters', 'finder_show_map', 'finder_show_count',
             'cta_heading', 'cta_description', 'cta_primary_label', 'cta_primary_action', 'cta_secondary_label', 'cta_secondary_action',
             'regulations_heading', 'regulations_intro',
-        ],
-        'location' => ['state', 'population', 'key_stats'],
-        'guide' => ['reading_time'],
-        'service_area_page' => ['service_name', 'suburb', 'state', 'intro_paragraph'],
+        ], $seo_fields),
+        'location' => array_merge(['state', 'population', 'key_stats'], $seo_fields),
+        'guide' => array_merge(['reading_time'], $seo_fields),
+        'service_area_page' => array_merge(['service_name', 'suburb', 'state', 'intro_paragraph'], $seo_fields),
         'provider' => [
             'mongo_id', 'mongo_slug', 'legal_entity_name', 'abn', 'contact_email',
             'address', 'suburb', 'state', 'postcode', 'latitude', 'longitude',

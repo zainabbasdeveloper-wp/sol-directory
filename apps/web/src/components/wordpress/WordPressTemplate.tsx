@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import DOMPurify from 'dompurify';
 import type { WPContentBase } from '../../api/wordpressApi';
+import { applySeoTags } from '../../lib/seo';
 import './WordPressTemplate.css';
 
 interface Props {
@@ -34,37 +35,12 @@ export default function WordPressTemplate({ loading, error, content, children, h
   // than pretending this is complete SEO.
   useEffect(() => {
     if (!content) return;
-
-    document.title = content.seo.title || content.title;
-
-    // Creates the meta/link tag if it doesn't already exist, updates
-    // it if it does — this app has no <Head> component (plain Vite
-    // SPA), so these are the actual <head> tags this document has,
-    // not a virtual representation of them.
-    function setMeta(selector: string, attr: string, value: string, createTag: () => HTMLElement) {
-      let el = document.querySelector(selector) as HTMLElement | null;
-      if (!el) { el = createTag(); document.head.appendChild(el); }
-      el.setAttribute(attr, value);
-    }
-
-    setMeta('meta[name="description"]', 'content', content.seo.description, () => {
-      const m = document.createElement('meta'); m.setAttribute('name', 'description'); return m;
+    applySeoTags({
+      title: content.seo.title || content.title,
+      description: content.seo.description,
+      ogImage: content.seo.ogImage,
+      noindex: content.seo.noindex,
     });
-    setMeta('meta[property="og:title"]', 'content', content.seo.title || content.title, () => {
-      const m = document.createElement('meta'); m.setAttribute('property', 'og:title'); return m;
-    });
-    setMeta('meta[property="og:description"]', 'content', content.seo.description, () => {
-      const m = document.createElement('meta'); m.setAttribute('property', 'og:description'); return m;
-    });
-    if (content.seo.ogImage) {
-      setMeta('meta[property="og:image"]', 'content', content.seo.ogImage, () => {
-        const m = document.createElement('meta'); m.setAttribute('property', 'og:image'); return m;
-      });
-    }
-    setMeta('link[rel="canonical"]', 'href', window.location.href, () => {
-      const l = document.createElement('link'); l.setAttribute('rel', 'canonical'); return l;
-    });
-
     // Real limitation, stated in code not just prose: none of this
     // helps a crawler that doesn't execute JavaScript, since these
     // tags don't exist until this effect runs client-side. A crawler

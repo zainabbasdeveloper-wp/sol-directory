@@ -18,6 +18,7 @@ import Counter from '../../components/Counter';
 import { useMatchModal } from '../../context/MatchModalContext';
 import { getServiceAreaPage, type ServiceAreaPage } from '../../api/wordpressApi';
 import { listPublicProviders, type PublicProviderRow } from '../../api/providerResources';
+import { applySeoTags, setJsonLd } from '../../lib/seo';
 import './ServiceLocationPage.css';
 
 // REAL DATA, TWO SOURCES, PER THE ARCHITECTURE DECIDED WITH THE USER:
@@ -163,6 +164,32 @@ export default function ServiceLocationPage() {
     { label: 'Find providers near you', href: '#find-near-you' },
     { label: 'FAQ', href: '#faq' },
   ];
+
+  // SEO: an editor's own "SEO" fields (wp.seo) win when they've filled
+  // them in; otherwise a real, page-specific title/description built
+  // from the actual service + suburb + the real intro paragraph above
+  // — never a generic or invented line. Runs once wp has resolved
+  // (null on "nothing authored", which still yields a real fallback).
+  useEffect(() => {
+    if (wpLoading) return;
+    applySeoTags({
+      title: wp?.seo.title || `${serviceName} providers in ${suburbName}, ${stateAbbr} | SolDirectory`,
+      description: wp?.seo.description || introParagraph,
+      ogImage: wp?.seo.ogImage,
+      noindex: wp?.seo.noindex,
+    });
+    setJsonLd('service-location', {
+      '@type': 'Service',
+      name: `${serviceName} in ${suburbName}, ${stateAbbr}`,
+      serviceType: serviceName,
+      areaServed: { '@type': 'City', name: suburbName, containedInPlace: { '@type': 'State', name: stateName } },
+      provider: { '@type': 'Organization', name: 'SolDirectory', url: `${window.location.origin}/` },
+      description: introParagraph,
+      url: window.location.href,
+    });
+    return () => setJsonLd('service-location', null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wpLoading, wp, serviceName, suburbName, stateAbbr, stateName, introParagraph]);
 
   const HERO_CHECKS = [
     `${providersLoading ? '…' : providersTotal} providers in ${suburbName}`,
