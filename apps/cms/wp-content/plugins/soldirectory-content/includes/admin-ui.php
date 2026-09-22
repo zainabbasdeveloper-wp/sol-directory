@@ -31,6 +31,72 @@ add_filter('use_block_editor_for_post_type', function ($use_block_editor, $post_
     return $use_block_editor;
 }, 10, 2);
 
+/**
+ * "Uncaught ReferenceError: acf is not defined" + Add row doing nothing
+ * but scroll to the top (the browser's default behaviour for a plain
+ * `href="#"` link that never got a click handler bound) both point to
+ * the SAME thing: ACF/SCF's own JS bundle (acf-input.js, which sets
+ * window.acf and binds every button on the page, add-row included)
+ * never finished running before the page's other inline scripts
+ * needed it. That bundle depends on jQuery and is registered as a
+ * dependency of the inline "boot" scripts ACF prints per field group
+ * — so under normal WordPress script loading this can't happen. It
+ * almost always means something ELSE on the site is adding `defer` or
+ * `async` to admin scripts (a caching/performance-optimization plugin
+ * with a "delay/defer JS" setting that isn't scoped to is_admin()),
+ * which breaks execution order: the deferred acf-input.js runs AFTER
+ * the inline scripts that call it.
+ *
+ * This strips defer/async specifically off ACF's own script handles
+ * in wp-admin, which is the correct fix if that's the cause and is a
+ * no-op (harmless) if it isn't. It cannot fix a plugin that has
+ * fully DEQUEUED the script or a jQuery conflict — see the console
+ * diagnostic below, which reports exactly which of those is true.
+ */
+add_filter('script_loader_tag', function ($tag, $handle) {
+    if (!is_admin() || strpos($handle, 'acf') !== 0) return $tag;
+    return str_replace([' defer', ' async', ' defer=""', ' async=""'], '', $tag);
+}, 10, 2);
+
+/**
+ * A console-visible diagnostic, not a fix — prints once, only for
+ * admins, only on a post edit screen for one of our ACF-heavy post
+ * types, and only reports what it finds (never assumes). Answers the
+ * three questions needed to actually root-cause "acf is not defined"
+ * without needing to see the live site's Network tab directly:
+ *   1. Did acf-input.js's <script> tag even end up in the page?
+ *   2. Is jQuery present (acf-input.js throws immediately without it)?
+ *   3. Is window.acf defined by the time the page finishes loading?
+ * Remove this block once the real cause is found — it's a temporary
+ * aid, not permanent admin-UI code.
+ */
+add_action('admin_footer', function () {
+    $screen = function_exists('get_current_screen') ? get_current_screen() : null;
+    if (!$screen || $screen->base !== 'post' || !current_user_can('manage_options')) return;
+    if (!in_array($screen->post_type, ['service', 'service_area_page', 'location', 'guide', 'provider', 'mega_menu_tab'], true)) return;
+    ?>
+    <script>
+    window.addEventListener('load', function () {
+        var acfScripts = Array.prototype.slice.call(document.querySelectorAll('script[src*="acf"]'))
+            .map(function (s) { return s.src + (s.defer ? ' [defer]' : '') + (s.async ? ' [async]' : ''); });
+        console.log('[SolDirectory ACF diagnostic] acf-*.js tags found on this page:', acfScripts);
+        console.log('[SolDirectory ACF diagnostic] jQuery present:', typeof window.jQuery !== 'undefined');
+        console.log('[SolDirectory ACF diagnostic] window.acf defined:', typeof window.acf !== 'undefined');
+        if (typeof window.acf === 'undefined') {
+            console.error(
+                '[SolDirectory ACF diagnostic] window.acf is missing. If the list above is EMPTY, ' +
+                'Secure Custom Fields’ script was dequeued by another plugin/theme (check any ' +
+                'caching, performance, or "remove unused JS" plugin’s exclude list for wp-admin). ' +
+                'If jQuery is false, something is blocking jQuery from loading first. If both are true ' +
+                'but this still logs, the script loaded but threw its own error — check above this ' +
+                'line in the console for the real exception, expand it, and send that.'
+            );
+        }
+    });
+    </script>
+    <?php
+});
+
 /** Tells editors exactly what is (and isn't) editable on a synced provider. */
 add_action('admin_notices', function () {
     $screen = function_exists('get_current_screen') ? get_current_screen() : null;
