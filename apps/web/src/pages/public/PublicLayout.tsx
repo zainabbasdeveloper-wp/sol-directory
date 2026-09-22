@@ -90,10 +90,10 @@ export function PublicFooter() {
         </div>
         <div className="public-footer-col">
           <span className="public-footer-heading">Guides</span>
-          <Link to="/directory">NDIS price guide</Link>
-          <Link to="/directory">Choosing a provider</Link>
-          <Link to="/directory">Plan management basics</Link>
-          <Link to="/directory">Aged care support</Link>
+          <Link to="/guides/ndis-price-guide">NDIS price guide</Link>
+          <Link to="/guides/choosing-a-provider">Choosing a provider</Link>
+          <Link to="/guides/plan-management-basics">Plan management basics</Link>
+          <Link to="/guides/aged-care-support">Aged care support</Link>
         </div>
         <div className="public-footer-col">
           <span className="public-footer-heading">Company</span>

@@ -43,9 +43,13 @@ interface MatchFormData {
   additionalDetails: string;
 }
 
+// Matches the API's "neutral service" value (matching.service.ts).
+const SERVICE_NOT_SURE = 'Not sure yet';
+
 const EMPTY_FORM: MatchFormData = {
   location: '', suburb: '', state: '', postcode: '', lat: '', lng: '',
-  service: '', careFor: '', timeframe: '', funding: '', planManagement: '',
+  // Not asked as its own step for now — sent as-is so matching still gets a value.
+  service: SERVICE_NOT_SURE, careFor: '', timeframe: '', funding: '', planManagement: '',
   email: '', phone: '', name: '', additionalDetails: '',
 };
 
@@ -63,9 +67,8 @@ const STEP_LABELS: Record<StepId, string> = {
 };
 
 function getSteps(funding: string): StepId[] {
-  // "service" isn't in the Carevo flow but matching needs it (it carries
-  // the heaviest weight), so it sits right after the location.
-  const base: StepId[] = ['careFor', 'location', 'service', 'timeframe', 'funding'];
+  // "service" is not asked as its own step for now (see EMPTY_FORM).
+  const base: StepId[] = ['careFor', 'location', 'timeframe', 'funding'];
   if (funding === 'NDIS') base.push('planManagement');
   return [...base, 'email', 'phone', 'name', 'additionalDetails'];
 }
@@ -100,9 +103,6 @@ const PLAN_OPTIONS: Option[] = [
   { value: 'NDIA managed', label: 'NDIA Managed', icon: <IconShield /> },
   { value: 'Not sure', label: 'Not Sure', icon: <IconHelp /> },
 ];
-
-// Matches the API's "neutral service" value (matching.service.ts).
-const SERVICE_NOT_SURE = 'Not sure yet';
 
 const EMAIL_RE = /.+@.+\..+/;
 
@@ -250,7 +250,6 @@ export default function MatchingWizard() {
   function validateStep(id: StepId): string {
     const v = form[id];
     if (id === 'location' && !v.trim()) return 'Enter a suburb or postcode so we know where to look.';
-    if (id === 'service' && !v) return 'Choose the support you need, or select “Not sure yet”.';
     if (id === 'careFor' && !v) return 'Choose who this is for.';
     if (id === 'timeframe' && !v) return 'Choose a timeframe.';
     if (id === 'funding' && !v) return 'Choose a funding type. “Not Sure” is a fine answer.';
@@ -407,7 +406,6 @@ export default function MatchingWizard() {
                 <div className="mw-review-list">
                   <ReviewRow label="Who the support is for" value={labelFor(CARE_FOR_OPTIONS, form.careFor)} onEdit={() => editField('careFor')} />
                   <ReviewRow label="Location" value={form.location} onEdit={() => editField('location')} />
-                  <ReviewRow label="Support needed" value={form.service} onEdit={() => editField('service')} />
                   <ReviewRow label="Timeframe" value={labelFor(TIMEFRAME_OPTIONS, form.timeframe)} onEdit={() => editField('timeframe')} />
                   <ReviewRow label="Funding" value={labelFor(FUNDING_OPTIONS, form.funding)} onEdit={() => editField('funding')} />
                   {form.funding === 'NDIS' && (
@@ -751,17 +749,6 @@ function WizardStep({
             lat: s.lat != null ? String(s.lat) : '', lng: s.lng != null ? String(s.lng) : '',
           })}
         />
-        {err}
-      </>
-    );
-  }
-
-  if (stepId === 'service') {
-    return (
-      <>
-        <Heading headingRef={headingRef}>What support do you need?</Heading>
-        <p className="mw-supporting">Search for the support you are looking for. Choose the closest match.</p>
-        <ServiceStep value={form.service} onChange={(v) => set('service', v)} options={serviceOptions} />
         {err}
       </>
     );

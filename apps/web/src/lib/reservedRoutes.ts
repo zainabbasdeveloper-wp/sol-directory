@@ -32,6 +32,7 @@ export const RESERVED_PATH_PREFIXES = [
   '/terms',
   '/provider-agreement',
   '/lead-disclaimer',
+  '/guides',
   '/dashboard',
   '/leads',
   '/plans',

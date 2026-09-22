@@ -11,5 +11,7 @@
 .legal-section h2 { margin: 0 0 10px; font-size: 19px; color: var(--color-text, #10233F); }
 .legal-section p { margin: 0 0 12px; font-size: 15px; line-height: 1.7; color: var(--color-text, #10233F); }
 .legal-section a { color: var(--color-primary, #1769E0); text-decoration: underline; }
+.guide-list { margin: 0; padding-left: 20px; }
+.guide-list li { margin: 0 0 12px; font-size: 15px; line-height: 1.7; color: var(--color-text, #10233F); }
 .legal-other { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--color-border, #E8EEF7); font-size: 14px; }
 .legal-other a { color: var(--color-primary, #1769E0); }
