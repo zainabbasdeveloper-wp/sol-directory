@@ -11,6 +11,7 @@ import Signup from '../pages/auth/Signup';
 import ConfirmCapacity from '../pages/ConfirmCapacity';
 import { ForgotPassword, ResetPassword } from '../pages/auth/AccountRecovery';
 import LegalPage from '../pages/public/LegalPage';
+import GuidePage from '../pages/public/GuidePage';
 import Dashboard from '../pages/Dashboard';
 import WorkerDirectory from '../pages/workers/WorkerDirectory';
 import WorkerProfile from '../pages/workers/WorkerProfile';
@@ -122,6 +123,10 @@ export default function AppRoutes() {
       <Route path="/terms" element={<LegalPage slug="terms" />} />
       <Route path="/provider-agreement" element={<LegalPage slug="provider-agreement" />} />
       <Route path="/lead-disclaimer" element={<LegalPage slug="lead-disclaimer" />} />
+      <Route path="/guides/ndis-price-guide" element={<GuidePage slug="ndis-price-guide" />} />
+      <Route path="/guides/choosing-a-provider" element={<GuidePage slug="choosing-a-provider" />} />
+      <Route path="/guides/plan-management-basics" element={<GuidePage slug="plan-management-basics" />} />
+      <Route path="/guides/aged-care-support" element={<GuidePage slug="aged-care-support" />} />
       {/* Public — the weekly capacity confirmation email link's token
           IS the credential, same principle as password-reset links. */}
       <Route path="/confirm-capacity" element={<ConfirmCapacity />} />
