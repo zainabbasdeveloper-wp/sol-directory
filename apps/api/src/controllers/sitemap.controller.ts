@@ -12,12 +12,52 @@ const STATIC_PUBLIC_ROUTES = ['/', '/directory', '/services', '/locations', '/pr
 let cached: { xml: string; at: number } | null = null;
 const CACHE_MS = 10 * 60 * 1000; // 10 minutes
 
+// Skips anything an editor has flagged "Hide from search engines"
+// (the SEO field group's seo_noindex toggle, acf-fields.php) — a
+// sitemap entry for a page that also tells crawlers not to index it
+// would just waste crawl budget on a contradiction.
 async function fetchWpSlugs(base: string, path: string): Promise<string[]> {
   try {
-    const res = await fetch(`${base}${path}?per_page=100&_fields=slug`);
+    const res = await fetch(`${base}${path}?per_page=100&_fields=slug,meta.seo_noindex`);
     if (!res.ok) return [];
     const items = await res.json();
-    return Array.isArray(items) ? items.map((i: any) => i.slug).filter(Boolean) : [];
+    if (!Array.isArray(items)) return [];
+    return items.filter((i: any) => !i?.meta?.seo_noindex).map((i: any) => i.slug).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+// Matches web/src/data/slugHelpers.ts's slugify() exactly — the real
+// service_area_page's own service_name/suburb fields (not a guessed
+// split of its WP slug) are what building /services/:service/:suburb
+// correctly depends on.
+function slugify(text: string): string {
+  return text.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}
+
+/**
+ * service_area_page is the service×suburb combo page
+ * (ServiceLocationPage.tsx, route /services/:serviceSlug/:suburb) — by
+ * far the largest and most search-relevant page type on the site, so
+ * it gets its own fetch rather than reusing fetchWpSlugs: the route
+ * needs the real service_name/suburb fields, not the post's own WP
+ * slug (which isn't unambiguously splittable back into the two).
+ */
+async function fetchServiceAreaPaths(base: string): Promise<string[]> {
+  try {
+    const res = await fetch(`${base}/wp-json/wp/v2/service-area-pages?per_page=100&_fields=meta`);
+    if (!res.ok) return [];
+    const items = await res.json();
+    if (!Array.isArray(items)) return [];
+    return items
+      .filter((i: any) => !i?.meta?.seo_noindex)
+      .map((i: any) => {
+        const service = slugify(String(i?.meta?.service_name ?? ''));
+        const suburb = slugify(String(i?.meta?.suburb ?? ''));
+        return service && suburb ? `/services/${service}/${suburb}` : null;
+      })
+      .filter((p): p is string => !!p);
   } catch {
     return [];
   }
@@ -43,16 +83,18 @@ export async function getSitemap(req: Request, res: Response) {
   // shouldn't take the whole sitemap down, it just means those URLs
   // are temporarily missing from it until the next regeneration.
   if (wpUrl) {
-    const [pages, services, locations, guides] = await Promise.all([
+    const [pages, services, locations, guides, serviceAreaPaths] = await Promise.all([
       fetchWpSlugs(wpUrl, '/wp-json/wp/v2/pages'),
       fetchWpSlugs(wpUrl, '/wp-json/wp/v2/services'),
       fetchWpSlugs(wpUrl, '/wp-json/wp/v2/locations'),
       fetchWpSlugs(wpUrl, '/wp-json/wp/v2/guides'),
+      fetchServiceAreaPaths(wpUrl),
     ]);
     pages.forEach((slug) => urls.push(`/${slug}`));
     services.forEach((slug) => urls.push(`/services/${slug}`));
     locations.forEach((slug) => urls.push(`/locations/${slug}`));
     guides.forEach((slug) => urls.push(`/guides/${slug}`));
+    urls.push(...serviceAreaPaths);
   }
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>

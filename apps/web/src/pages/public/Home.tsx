@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PublicHeader, PublicFooter } from './PublicLayout';
+import { setJsonLd } from '../../lib/seo';
 import Counter from '../../components/Counter';
 import PhotoSlot from '../../components/PhotoSlot';
 import { useSiteStats } from '../../hooks/useSiteStats';
@@ -35,6 +37,22 @@ export default function Home() {
     );
   }
   if (stats && stats.enquiriesLast30Days > 0) figures.push({ label: 'Support requests in the last 30 days', value: stats.enquiriesLast30Days });
+
+  // Organization structured data — every field is either fixed (the
+  // site's own name/URL) or read straight from siteConfig (apps/web/.env),
+  // never invented. Fields siteConfig leaves blank (no address on file,
+  // no social links) are simply left out, not padded with placeholders.
+  useEffect(() => {
+    setJsonLd('organization', {
+      '@type': 'Organization',
+      name: siteConfig.legalEntity || 'SolDirectory',
+      url: window.location.origin,
+      ...(siteConfig.contactPhone ? { telephone: siteConfig.contactPhone } : {}),
+      ...(siteConfig.contactEmail ? { email: siteConfig.contactEmail } : {}),
+      ...(siteConfig.contactAddress ? { address: { '@type': 'PostalAddress', streetAddress: siteConfig.contactAddress } } : {}),
+    });
+    return () => setJsonLd('organization', null);
+  }, []);
 
   return (
     <>
