@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ApiError } from '../../api/client';
 import { listActiveServices, type ActiveService } from '../../api/serviceCatalogue';
 import { listActiveConditions, type ActiveCondition } from '../../api/conditionCatalogue';
+import Pagination from '../../components/ui/Pagination';
 import './WorkerDirectory.css';
 
 interface WorkerMasked {
@@ -114,6 +115,7 @@ export default function WorkerDirectory() {
   const [error, setError] = useState('');
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const skipNextUrlSync = useRef(false);
+  const resultsTopRef = useRef<HTMLDivElement>(null);
 
   const hasActiveFilters = !!(query || service || suburb || language || gender || condition || minRating > 0 || sort);
 
@@ -263,7 +265,7 @@ export default function WorkerDirectory() {
             </div>
           ) : (
             <>
-              <div className="wd-results-toolbar">
+              <div className="wd-results-toolbar" ref={resultsTopRef}>
                 <span className="wd-results-count">{loading ? 'Searching…' : `${total} worker${total === 1 ? '' : 's'} found`}</span>
                 <label className="wd-sort-control">
                   <span>Sort by</span>
@@ -322,11 +324,11 @@ export default function WorkerDirectory() {
               )}
 
               {!loading && totalPages > 1 && (
-                <nav className="wd-pagination" aria-label="Pagination">
-                  <button className="wd-page-btn" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>← Previous</button>
-                  <span className="wd-page-indicator">Page {page} of {totalPages}</span>
-                  <button className="wd-page-btn" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>Next →</button>
-                </nav>
+                <Pagination
+                  page={page}
+                  totalPages={totalPages}
+                  onChange={(p) => { setPage(p); resultsTopRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }); }}
+                />
               )}
             </>
           )}
