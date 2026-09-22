@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import Pagination from '../../components/ui/Pagination';
 import { useSearchParams } from 'react-router-dom';
 import { PublicHeader, PublicFooter } from './PublicLayout';
 import Combobox, { type ComboItem } from '../../components/ui/Combobox';
@@ -48,16 +49,23 @@ export default function Directory() {
   const [placeLoading, setPlaceLoading] = useState(false);
 
   // ---- Results ----
+  // Real page numbers, not "Load more": with the number of providers and
+  // independent workers this directory is meant to grow to, an
+  // ever-appending list would mean re-rendering thousands of cards and a
+  // page that only gets heavier the longer someone browses. Each page
+  // change instead fetches and shows exactly one bounded page.
   const [results, setResults] = useState<PublicProviderRow[]>([]);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(false);
+  const initialPage = Math.max(1, Number(params.get('page')) || 1);
+  const [page, setPage] = useState(initialPage);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
+  const [pageLoading, setPageLoading] = useState(false);
   const [error, setError] = useState('');
   const requestId = useRef(0);
+  const resultsTopRef = useRef<HTMLDivElement>(null);
   // Bumped by "Try again" so the search re-runs even though no filter changed.
   const [reloadKey, setReloadKey] = useState(0);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   useEffect(() => {
     document.title = 'Find a provider — SolDirectory';
@@ -90,14 +98,16 @@ export default function Directory() {
     return () => { controller.abort(); clearTimeout(t); };
   }, [placeText, place]);
 
-  // Keep the URL shareable / bookmarkable.
+  // Keep the URL shareable / bookmarkable — including which page, so a
+  // link to "page 3 of personal care in Parramatta" reopens on page 3.
   useEffect(() => {
     const next = new URLSearchParams();
     if (service) next.set('service', service);
     if (place?.suburb) next.set('suburb', place.suburb);
+    if (page > 1) next.set('page', String(page));
     setParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [service, place]);
+  }, [service, place, page]);
 
   function searchArgs(pageNumber: number) {
     return {
@@ -112,7 +122,8 @@ export default function Directory() {
     };
   }
 
-  // New search whenever a committed filter changes.
+  // New search whenever a committed filter changes — always starts back
+  // on page 1, since a filter change makes the previous page meaningless.
   useEffect(() => {
     const id = ++requestId.current;
     setLoading(true);
@@ -122,7 +133,6 @@ export default function Directory() {
         if (id !== requestId.current) return;
         setResults(res.items);
         setTotal(res.total);
-        setHasMore(res.hasMore);
         setPage(1);
       })
       .catch(() => { if (id === requestId.current) setError('We couldn’t load providers just now. Please try again.'); })
@@ -130,19 +140,33 @@ export default function Directory() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [service, place, nameQuery, reloadKey]);
 
-  function loadMore() {
-    const id = requestId.current;
-    setLoadingMore(true);
-    listPublicProviders(searchArgs(page + 1))
+  function goToPage(n: number) {
+    const target = Math.min(Math.max(1, n), totalPages);
+    if (target === page) return;
+    const id = ++requestId.current;
+    setPageLoading(true);
+    setError('');
+    listPublicProviders(searchArgs(target))
       .then((res) => {
         if (id !== requestId.current) return;
-        setResults((prev) => [...prev, ...res.items]);
-        setHasMore(res.hasMore);
-        setPage((p) => p + 1);
+        setResults(res.items);
+        setTotal(res.total);
+        setPage(target);
+        resultsTopRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
       })
-      .catch(() => setError('We couldn’t load more providers. Please try again.'))
-      .finally(() => setLoadingMore(false));
+      .catch(() => { if (id === requestId.current) setError('We couldn’t load that page. Please try again.'); })
+      .finally(() => { if (id === requestId.current) setPageLoading(false); });
   }
+
+  // On first load, honour a ?page= from a shared/bookmarked link once
+  // results for page 1 are in and we know how many pages actually exist.
+  const appliedInitialPage = useRef(false);
+  useEffect(() => {
+    if (appliedInitialPage.current || loading || initialPage <= 1) return;
+    appliedInitialPage.current = true;
+    if (initialPage <= totalPages) goToPage(initialPage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]);
 
   const retry = () => setReloadKey((k) => k + 1);
 
@@ -255,8 +279,14 @@ export default function Directory() {
           <button type="button" className="btn-gradient" onClick={() => openMatchModal()}>Get matched, free →</button>
         </div>
 
-        <div className="dir-results-head" aria-live="polite">
-          {loading ? 'Searching…' : error ? '' : `${total.toLocaleString('en-AU')} ${total === 1 ? 'provider' : 'providers'}${anyFilter ? ' match your search' : ' listed'}`}
+        <div className="dir-results-head" aria-live="polite" ref={resultsTopRef}>
+          {loading || pageLoading
+            ? 'Searching…'
+            : error || total === 0
+              ? ''
+              : total <= PAGE_SIZE
+                ? `${total.toLocaleString('en-AU')} ${total === 1 ? 'provider' : 'providers'}${anyFilter ? ' match your search' : ' listed'}`
+                : `Showing ${((page - 1) * PAGE_SIZE + 1).toLocaleString('en-AU')}–${Math.min(page * PAGE_SIZE, total).toLocaleString('en-AU')} of ${total.toLocaleString('en-AU')} providers${anyFilter ? ' matching your search' : ''}`}
         </div>
 
         {error && (
@@ -281,7 +311,7 @@ export default function Directory() {
           </div>
         )}
 
-        <ul className="dir-grid">
+        <ul className={`dir-grid${pageLoading ? ' dir-grid-loading' : ''}`} aria-busy={pageLoading}>
           {results.map((p) => {
             const name = p.tradingName || p.legalEntityName;
             const status = STATUS_STYLE[p.intakeStatus];
@@ -319,12 +349,8 @@ export default function Directory() {
           })}
         </ul>
 
-        {hasMore && !loading && (
-          <div className="dir-more">
-            <button type="button" className="btn-tint" onClick={loadMore} disabled={loadingMore}>
-              {loadingMore ? 'Loading…' : 'Show more providers'}
-            </button>
-          </div>
+        {!loading && !error && total > PAGE_SIZE && (
+          <Pagination page={page} totalPages={totalPages} onChange={goToPage} disabled={pageLoading} />
         )}
       </section>
 

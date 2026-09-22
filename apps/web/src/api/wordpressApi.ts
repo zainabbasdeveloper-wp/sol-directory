@@ -37,6 +37,7 @@ export interface ServiceAreaPage {
   local: { population: string; medianIncome: string; nearestHospital: string; publicTransport: string; communityInfo: string; postcode: string; dataDate: string } | null;
   cta: { heading: string; description: string; primaryLabel: string; primaryAction: string; primaryUrl: string; secondaryLabel: string; secondaryAction: string; secondaryUrl: string } | null;
   relatedServices: { id: number; title: string; slug: string; featuredImage: string | null; url: string }[];
+  seo: { title: string; description: string; ogImage: string | null; noindex: boolean };
 }
 
 const s = (v: unknown): string => (typeof v === 'string' ? v : v == null ? '' : String(v));
@@ -131,6 +132,15 @@ function mapServiceAreaPage(raw: any): ServiceAreaPage {
       };
     })(),
     relatedServices: arr(meta.related_services).filter((r) => r && r.slug),
+    seo: {
+      title: s(meta.seo_title) || raw.yoast_head_json?.title || '',
+      // service_area_page has no 'excerpt' support, so the real,
+      // editor-written intro paragraph is the honest fallback here,
+      // not a generic/invented line.
+      description: s(meta.seo_description) || raw.yoast_head_json?.description || s(meta.intro_paragraph).slice(0, 160),
+      ogImage: s(meta.seo_og_image) || raw.yoast_head_json?.og_image?.[0]?.url || null,
+      noindex: bool(meta.seo_noindex, false),
+    },
   };
 }
 
@@ -214,7 +224,25 @@ export interface WPContentBase {
   excerpt: string;
   featuredImage: WPImage | null;
   terms: WPTerm[];
-  seo: { title: string; description: string; ogImage: string | null };
+  seo: { title: string; description: string; ogImage: string | null; noindex: boolean };
+}
+
+// SEO title/description/image/noindex, in priority order:
+//  1. The plugin's own "SEO" ACF field group (soldirectory_add_group in
+//     acf-fields.php) — real per-page editorial control, works without
+//     any extra SEO plugin installed.
+//  2. Yoast's REST output, if that plugin happens to be active instead.
+//  3. A plain, honest fallback built from the post's own real title/
+//     excerpt/featured image — never invented copy.
+function mapSeo(raw: any): WPContentBase['seo'] {
+  const meta = raw.meta ?? {};
+  const plainExcerpt = (raw.excerpt?.rendered ?? '').replace(/<[^>]+>/g, '').trim();
+  return {
+    title: meta.seo_title || raw.yoast_head_json?.title || raw.title?.rendered || '',
+    description: meta.seo_description || raw.yoast_head_json?.description || plainExcerpt,
+    ogImage: meta.seo_og_image || raw.yoast_head_json?.og_image?.[0]?.url || extractFeaturedImage(raw)?.url || null,
+    noindex: meta.seo_noindex === true || meta.seo_noindex === '1' || raw.yoast_head_json?.robots?.index === 'noindex',
+  };
 }
 
 function mapBaseContent(raw: any): WPContentBase {
@@ -226,11 +254,7 @@ function mapBaseContent(raw: any): WPContentBase {
     excerpt: (raw.excerpt?.rendered ?? '').replace(/<[^>]+>/g, '').trim(),
     featuredImage: extractFeaturedImage(raw),
     terms: extractTerms(raw),
-    seo: {
-      title: raw.yoast_head_json?.title ?? raw.title?.rendered ?? '',
-      description: raw.yoast_head_json?.description ?? (raw.excerpt?.rendered ?? '').replace(/<[^>]+>/g, '').trim(),
-      ogImage: raw.yoast_head_json?.og_image?.[0]?.url ?? extractFeaturedImage(raw)?.url ?? null,
-    },
+    seo: mapSeo(raw),
   };
 }
 
