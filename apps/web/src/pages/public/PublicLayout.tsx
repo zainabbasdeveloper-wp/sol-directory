@@ -29,6 +29,7 @@ export function PublicHeader() {
           )}
           <span className="utility-right">
             <Link to="/login">Login</Link>
+            <Link to="/providers">For providers</Link>
           </span>
         </div>
       </div>
