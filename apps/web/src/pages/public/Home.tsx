@@ -58,8 +58,8 @@ export default function Home() {
             <button className="btn-gradient btn-lg" onClick={openMatchModal}>
               Get matched free <span aria-hidden="true">→</span>
             </button>
-            <button className="btn-outline-light btn-lg" onClick={() => navigate('/directory')}>
-              Find support
+            <button className="btn-outline-light btn-lg" onClick={() => navigate('/signup?type=provider')}>
+              List your business
             </button>
           </div>
         </div>
