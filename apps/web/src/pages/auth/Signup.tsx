@@ -85,11 +85,6 @@ export default function Signup() {
         <Link to="/" className="auth-header-back">← Back to public website</Link>
       </div>
 
-      <div className="signup-brand-block">
-        <p className="signup-brand-name">SolDirectory</p>
-        <p className="signup-brand-eyebrow">Create an account</p>
-      </div>
-
       <h1 className="signup-heading">What are you signing up as?</h1>
       <p className="signup-paragraph">
         Accounts are free. What you register as decides what you can see:
