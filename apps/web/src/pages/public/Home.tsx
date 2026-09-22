@@ -58,7 +58,7 @@ export default function Home() {
             <button className="btn-gradient btn-lg" onClick={openMatchModal}>
               Get matched free <span aria-hidden="true">→</span>
             </button>
-            <button className="btn-outline-light btn-lg" onClick={() => navigate('/signup?type=provider')}>
+            <button className="btn-outline-light btn-lg" onClick={() => navigate('/providers')}>
               List your business
             </button>
           </div>
@@ -239,7 +239,7 @@ export default function Home() {
             able to start.
           </p>
           <div className="providers-cta-actions">
-            <button className="btn-gradient btn-lg" onClick={() => navigate('/signup?type=provider')}>
+            <button className="btn-gradient btn-lg" onClick={() => navigate('/providers')}>
               List your business
             </button>
             <Link to="/providers" className="link-btn">

@@ -25,6 +25,7 @@
 .fp-hero-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 18px; }
 .fp-hero-actions .link-btn { color: #ffffff; }
 .fp-hero-actions .link-btn:hover { color: color-mix(in srgb, #ffffff 80%, transparent); }
+.fp-coordinator-link { font: inherit; border: 0; padding: 0; cursor: pointer; }
 
 .fp-stats-bar {
   max-width: 900px;
