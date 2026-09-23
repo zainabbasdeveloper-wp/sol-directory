@@ -2,10 +2,16 @@
 /**
  * Seeds the 5 real Mega Menu Tab posts (Service/Condition/Funding/
  * Coordinator/Language), each with their full Column -> Link
- * structure via ACF/SCF's update_field() — matching exactly the
- * content in apps/web/src/data/staticMegaMenuFallback.ts, so the
- * live WordPress-driven menu and the offline fallback show identical
+ * structure — matching exactly the content in
+ * apps/web/src/data/staticMegaMenuFallback.ts, so the live
+ * WordPress-driven menu and the offline fallback show identical
  * content once this has run.
+ *
+ * Writes plain post meta directly (update_post_meta), matching the
+ * storage convention custom-fields-engine.php uses: scalar fields as
+ * plain values, 'active' as '1'/'0', 'columns' as a JSON-encoded
+ * array. mega_menu_tab moved off ACF/SCF (see custom-fields.php's
+ * top comment for why), so this no longer calls update_field().
  *
  * For the Service tab specifically: rather than recomputing slugs,
  * this looks up each already-seeded 'service' post by title (from
@@ -24,9 +30,6 @@ require_once __DIR__ . '/wordpress/wp-load.php';
 if (!post_type_exists('mega_menu_tab')) {
     die("ERROR: 'mega_menu_tab' post type not found. Is the SolDirectory Content plugin active with the latest post-types.php?\n");
 }
-if (!function_exists('update_field')) {
-    die("ERROR: ACF/SCF's update_field() isn't available. Is Secure Custom Fields active?\n");
-}
 
 function sd_get_or_create_tab(string $tabKey, string $label, string $description): int {
     $existing = get_posts([
@@ -41,10 +44,14 @@ function sd_get_or_create_tab(string $tabKey, string $label, string $description
     } else {
         $id = wp_insert_post(['post_type' => 'mega_menu_tab', 'post_title' => $label, 'post_status' => 'publish']);
     }
-    update_field('tab_key', $tabKey, $id);
-    update_field('description', $description, $id);
-    update_field('active', true, $id);
+    update_post_meta($id, 'tab_key', $tabKey);
+    update_post_meta($id, 'description', $description);
+    update_post_meta($id, 'active', '1');
     return $id;
+}
+
+function sd_set_columns(int $id, array $columns): void {
+    update_post_meta($id, 'columns', wp_json_encode($columns));
 }
 
 // Real 'service' post lookup, by title -> real slug. Falls back to a
@@ -112,7 +119,7 @@ $serviceGroups = [
     ['Therapy, Equipment & Home', sd_merge($cats, [9, 11, 12, 13, 14])],
 ];
 $id = sd_get_or_create_tab('service', 'Service', 'NDIS, aged care, allied health, and more');
-update_field('columns', sd_columns($serviceGroups, 'sd_real_service_url'), $id);
+sd_set_columns($id, sd_columns($serviceGroups, 'sd_real_service_url'));
 echo "Seeded: Service ($id)\n";
 
 // --- Condition ---
@@ -125,7 +132,7 @@ $conditionGroups = [
     ['ABI, Stroke & Neuro Rehab', ['Acquired Brain Injury', 'Stroke Recovery', 'Traumatic Brain Injury', "Huntington's Disease", 'Neuro Physiotherapy']],
 ];
 $id = sd_get_or_create_tab('condition', 'Condition', 'Find support by diagnosis or need');
-update_field('columns', sd_columns($conditionGroups, 'sd_combo_url'), $id);
+sd_set_columns($id, sd_columns($conditionGroups, 'sd_combo_url'));
 echo "Seeded: Condition ($id)\n";
 
 // --- Funding ---
@@ -137,7 +144,7 @@ $fundingGroups = [
     ['Help With Funding', ['Plan Managers', 'Bookkeeping & Invoicing', 'Price Guide Explained', 'Funding Eligibility', 'Budget Categories']],
 ];
 $id = sd_get_or_create_tab('funding', 'Funding', 'NDIS plans, HCP, CHSP, DVA, and private');
-update_field('columns', sd_columns($fundingGroups, 'sd_combo_url'), $id);
+sd_set_columns($id, sd_columns($fundingGroups, 'sd_combo_url'));
 echo "Seeded: Funding ($id)\n";
 
 // --- Coordinator ---
@@ -149,7 +156,7 @@ $coordinatorGroups = [
     ['Working With Us', ['Coordinator Accounts', 'Team Access', 'Training & Webinars', 'Contact the Directory Team']],
 ];
 $id = sd_get_or_create_tab('coordinator', 'Support coordinator referrals', 'Referral pathways for support coordinators');
-update_field('columns', sd_columns($coordinatorGroups, 'sd_combo_url'), $id);
+sd_set_columns($id, sd_columns($coordinatorGroups, 'sd_combo_url'));
 echo "Seeded: Support coordinator referrals ($id)\n";
 
 // --- Language ---
@@ -162,7 +169,7 @@ $languageGroups = [
     ['Access & Interpreting', ['Auslan', 'Deafblind Interpreters', 'TIS National Bookings', 'Easy Read Materials', 'Translated Documents']],
 ];
 $id = sd_get_or_create_tab('language', 'Language', 'Support in a language spoken at home');
-update_field('columns', sd_columns($languageGroups, 'sd_combo_url'), $id);
+sd_set_columns($id, sd_columns($languageGroups, 'sd_combo_url'));
 echo "Seeded: Language ($id)\n";
 
 // Set the native page-attributes menu_order to match the intended

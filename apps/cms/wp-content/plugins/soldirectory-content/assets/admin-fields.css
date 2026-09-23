@@ -1,0 +1,83 @@
+/* Custom meta box styling for custom-fields-engine.php — replaces the
+   old ACF-specific CSS (that targeted ACF's own DOM structure, which
+   no longer exists on these screens). Plain, deliberately simple. */
+
+.sdmb-box { display: flex; flex-direction: column; }
+.sdmb-readonly-notice {
+  margin: 0 0 14px; padding: 10px 14px; background: #f0f6fc; border-left: 3px solid #72aee6;
+  font-size: 13px; color: #1d2327;
+}
+
+.sdmb-tab-heading {
+  margin: 22px 0 12px; padding-top: 16px; border-top: 1px solid #dcdcde;
+  font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: #646970;
+}
+.sdmb-box > .sdmb-field:first-child .sdmb-tab-heading,
+.sdmb-tab-heading:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+
+.sdmb-field { padding: 12px 0; border-top: 1px solid #f0f0f1; display: inline-block; box-sizing: border-box; vertical-align: top; width: 100%; }
+.sdmb-box > .sdmb-field:first-child,
+.sdmb-repeater-row-fields > .sdmb-field:first-child { border-top: 0; padding-top: 0; }
+.sdmb-field-label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; color: #1d2327; }
+.sdmb-field-desc { margin: 4px 0 0; font-size: 12.5px; line-height: 1.5; color: #646970; }
+
+.sdmb-input {
+  width: 100%; max-width: 640px; box-sizing: border-box; padding: 7px 10px;
+  border: 1px solid #8c8f94; border-radius: 4px; font-size: 13.5px; line-height: 1.5;
+}
+.sdmb-input:focus { border-color: #2271b1; box-shadow: 0 0 0 1px #2271b1; outline: none; }
+.sdmb-input-number { max-width: 160px; }
+textarea.sdmb-input { max-width: 100%; }
+.sdmb-relationship { max-width: 480px; }
+
+.sdmb-toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; cursor: pointer; }
+.sdmb-toggle input { margin: 0; }
+
+.sdmb-image-field { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.sdmb-image-preview { width: 100px; height: 100px; border: 1px solid #dcdcde; border-radius: 4px; overflow: hidden; background: #f6f7f7; }
+.sdmb-image-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.sdmb-image-remove { color: #a00; font-size: 12.5px; }
+.sdmb-image-remove:hover { color: #dc3232; }
+
+.sdmb-group {
+  border: 1px solid #e5e5e7; border-radius: 6px; padding: 4px 16px; background: #fbfbfc; margin-top: 4px;
+}
+
+/* ---- Repeaters ---- */
+.sdmb-repeater { margin-top: 4px; }
+.sdmb-repeater-template { display: none; }
+
+/* Table layout: hero stats, glance, TOC, response times, etc. */
+.sdmb-repeater-table {
+  width: 100%; border-collapse: collapse; border: 1px solid #dcdcde; border-radius: 6px; overflow: hidden; margin-bottom: 10px;
+}
+.sdmb-repeater-table th {
+  background: #f6f7f7; text-align: left; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em;
+  color: #50575e; padding: 8px 10px; border-bottom: 1px solid #dcdcde;
+}
+.sdmb-repeater-table td { padding: 8px 10px; border-top: 1px solid #eee; vertical-align: middle; }
+.sdmb-repeater-table .sdmb-input { max-width: none; }
+.sdmb-repeater-table tr:hover { background: #f9fbfe; }
+
+/* Block layout: FAQ, credential checks, regulator cards, compare cards, etc. */
+.sdmb-repeater-block > .sdmb-repeater-rows { display: flex; flex-direction: column; gap: 12px; margin-bottom: 10px; }
+.sdmb-repeater-row {
+  position: relative; border: 1px solid #e0e0e0; border-radius: 6px; padding: 16px 40px 4px 16px; background: #fff;
+}
+.sdmb-repeater-row-fields > .sdmb-field { padding: 10px 0; }
+.sdmb-repeater-row .sdmb-remove-row {
+  position: absolute; top: 8px; right: 10px; font-size: 18px; line-height: 1; color: #a00; text-decoration: none;
+}
+.sdmb-repeater-row .sdmb-remove-row:hover { color: #dc3232; }
+.sdmb-repeater-table .sdmb-remove-row { font-size: 16px; color: #a00; text-decoration: none; }
+.sdmb-repeater-table .sdmb-remove-row:hover { color: #dc3232; }
+
+.sdmb-add-row { font-weight: 600; }
+
+/* Nested repeater (e.g. mega menu Links inside a Column) reads as
+   clearly indented/contained within its parent row. */
+.sdmb-repeater-row-fields .sdmb-repeater { margin-top: 10px; padding: 10px; border: 1px dashed #dcdcde; border-radius: 6px; background: #fcfcfd; }
+
+@media (max-width: 782px) {
+  .sdmb-field[style] { width: 100% !important; }
+}
