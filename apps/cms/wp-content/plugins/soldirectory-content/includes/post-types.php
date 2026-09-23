@@ -32,7 +32,7 @@ add_action('init', function () {
     ]);
 
     // Every service_area_page field is now managed by the ACF/SCF
-    // field group (acf-fields.php) — nothing left to register
+    // field group (custom-fields.php) — nothing left to register
     // directly here.
 
     // --- Service ---
@@ -46,7 +46,7 @@ add_action('init', function () {
         'publicly_queryable' => true,
     ]);
     // eligibility, funding_info, faq_json are now managed by the ACF/
-    // SCF field group (acf-fields.php) — nothing left to register
+    // SCF field group (custom-fields.php) — nothing left to register
     // directly here.
 
     // --- Location ---
