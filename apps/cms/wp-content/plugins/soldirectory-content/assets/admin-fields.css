@@ -1,83 +1,157 @@
-/* Custom meta box styling for custom-fields-engine.php — replaces the
-   old ACF-specific CSS (that targeted ACF's own DOM structure, which
-   no longer exists on these screens). Plain, deliberately simple. */
+/* Styling for the custom meta boxes in custom-fields-engine.php — the
+   whole reason this plugin stopped using ACF/SCF's admin UI. Nothing
+   here depends on any ACF markup; every class below is one this
+   plugin's own PHP renders (the "sdmb-" prefix = SolDirectory Meta
+   Box), so it can't silently stop matching if ACF/SCF changes or is
+   ever removed from the site. */
 
-.sdmb-box { display: flex; flex-direction: column; }
+:root {
+  --sdmb-accent: #2271b1;
+  --sdmb-accent-dark: #0a4b78;
+  --sdmb-border: #dcdcde;
+  --sdmb-border-light: #eee;
+  --sdmb-text: #1d2327;
+  --sdmb-text-muted: #646970;
+  --sdmb-bg-tint: #f6f7f7;
+  --sdmb-radius: 8px;
+}
+
+/* ---- Postbox (field group) chrome ---------------------------------
+   Every meta box below is its own WordPress postbox — style that
+   shell so a page with 8 of them reads as 8 distinct, scannable
+   cards, not one long unbroken form. Scoped under #poststuff so it
+   only ever touches post-edit screens. */
+#poststuff .postbox {
+  border: 1px solid var(--sdmb-border); border-radius: var(--sdmb-radius);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04); margin-bottom: 22px; overflow: hidden;
+}
+#poststuff .postbox .postbox-header { border-bottom: 1px solid var(--sdmb-border); }
+#poststuff .postbox .hndle,
+#poststuff .postbox .postbox-header h2 {
+  font-size: 14px; font-weight: 600; padding: 14px 18px; color: var(--sdmb-text);
+  background: linear-gradient(to bottom, #fbfbfc, #f6f7f7);
+}
+#poststuff .postbox .inside { padding: 20px 20px 22px; margin: 0; }
+#poststuff .postbox .handlediv { margin-top: 2px; }
+
+/* Deliberately NOT display:flex — a flex container "blockifies" its
+   children per spec, which would silently override every field's own
+   inline-block + percentage width below and stack fields that are
+   meant to share one row (Suburb/State/Postcode etc.) one per line
+   instead. Plain block flow is what lets that layout work at all. */
+.sdmb-box { display: block; }
 .sdmb-readonly-notice {
-  margin: 0 0 14px; padding: 10px 14px; background: #f0f6fc; border-left: 3px solid #72aee6;
-  font-size: 13px; color: #1d2327;
+  margin: 0 0 16px; padding: 10px 14px; background: #f0f6fc; border-left: 3px solid #72aee6;
+  border-radius: 0 4px 4px 0; font-size: 13px; color: var(--sdmb-text);
 }
 
+/* ---- Tabs (section dividers within one long meta box) -------------- */
 .sdmb-tab-heading {
-  margin: 22px 0 12px; padding-top: 16px; border-top: 1px solid #dcdcde;
-  font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: #646970;
+  margin: 26px 0 14px; padding: 4px 0 10px; border-bottom: 2px solid var(--sdmb-accent);
+  font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--sdmb-accent-dark);
 }
-.sdmb-box > .sdmb-field:first-child .sdmb-tab-heading,
-.sdmb-tab-heading:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+.sdmb-box > .sdmb-tab-heading:first-child { margin-top: 0; }
 
-.sdmb-field { padding: 12px 0; border-top: 1px solid #f0f0f1; display: inline-block; box-sizing: border-box; vertical-align: top; width: 100%; }
+/* ---- Fields ---------------------------------------------------------
+   inline-block + a settable inline width is how the "two/three short
+   fields on one row" layout (Suburb/State/Postcode etc.) works — the
+   PHP only ever sets that width inline for fields meant to share a
+   row, so everything else naturally takes the full row. */
+.sdmb-field { padding: 14px 0; border-top: 1px solid var(--sdmb-border-light); display: inline-block; box-sizing: border-box; vertical-align: top; width: 100%; }
 .sdmb-box > .sdmb-field:first-child,
 .sdmb-repeater-row-fields > .sdmb-field:first-child { border-top: 0; padding-top: 0; }
-.sdmb-field-label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; color: #1d2327; }
-.sdmb-field-desc { margin: 4px 0 0; font-size: 12.5px; line-height: 1.5; color: #646970; }
+.sdmb-field-label { display: block; margin-bottom: 7px; font-weight: 600; font-size: 13px; color: var(--sdmb-text); }
+.sdmb-field-desc { margin: 5px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--sdmb-text-muted); }
 
 .sdmb-input {
-  width: 100%; max-width: 640px; box-sizing: border-box; padding: 7px 10px;
-  border: 1px solid #8c8f94; border-radius: 4px; font-size: 13.5px; line-height: 1.5;
+  width: 100%; max-width: 640px; box-sizing: border-box; padding: 8px 11px;
+  border: 1px solid #8c8f94; border-radius: 5px; font-size: 13.5px; line-height: 1.5;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
 }
-.sdmb-input:focus { border-color: #2271b1; box-shadow: 0 0 0 1px #2271b1; outline: none; }
+.sdmb-input:focus { border-color: var(--sdmb-accent); box-shadow: 0 0 0 1px var(--sdmb-accent); outline: none; }
 .sdmb-input-number { max-width: 160px; }
 textarea.sdmb-input { max-width: 100%; }
 .sdmb-relationship { max-width: 480px; }
 
-.sdmb-toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; cursor: pointer; }
-.sdmb-toggle input { margin: 0; }
+/* A real switch, not a bare checkbox — the same control pattern used
+   everywhere else on the modern web for an on/off setting, so "Show
+   Filters" reads as a toggle at a glance instead of needing to be
+   parsed as "checkbox, then the word On". Styles the checkbox INPUT
+   itself (appearance:none + its own ::before for the thumb) rather
+   than layering pseudo-elements on the label, so it can't be thrown
+   off by however the label's other children (the hidden input, the
+   "On" text) happen to lay out. */
+.sdmb-toggle { display: inline-flex; align-items: center; gap: 10px; font-size: 13.5px; color: var(--sdmb-text); cursor: pointer; user-select: none; }
+.sdmb-toggle input[type='checkbox'] {
+  appearance: none; -webkit-appearance: none; position: relative; flex: none; margin: 0; cursor: pointer;
+  width: 36px; height: 20px; border-radius: 20px; background: #c7cad0; transition: background 140ms ease;
+}
+.sdmb-toggle input[type='checkbox']::before {
+  content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25); transition: transform 140ms ease;
+}
+.sdmb-toggle input[type='checkbox']:checked { background: var(--sdmb-accent); }
+.sdmb-toggle input[type='checkbox']:checked::before { transform: translateX(16px); }
+.sdmb-toggle input[type='checkbox']:focus-visible { outline: 2px solid var(--sdmb-accent); outline-offset: 2px; }
+.sdmb-toggle input[type='checkbox']:disabled { opacity: 0.5; cursor: default; }
 
-.sdmb-image-field { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
-.sdmb-image-preview { width: 100px; height: 100px; border: 1px solid #dcdcde; border-radius: 4px; overflow: hidden; background: #f6f7f7; }
+/* ---- Image picker ---------------------------------------------------- */
+.sdmb-image-field { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.sdmb-image-preview { width: 100px; height: 100px; border: 1px solid var(--sdmb-border); border-radius: 6px; overflow: hidden; background: var(--sdmb-bg-tint); flex: none; }
 .sdmb-image-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .sdmb-image-remove { color: #a00; font-size: 12.5px; }
 .sdmb-image-remove:hover { color: #dc3232; }
 
+/* ---- Group fields (a fixed, non-repeating set — Hero Summary Card,
+   Cost & Payment, etc.) — a tinted, bordered panel so its fields read
+   as one unit rather than more top-level fields. ---------------------- */
 .sdmb-group {
-  border: 1px solid #e5e5e7; border-radius: 6px; padding: 4px 16px; background: #fbfbfc; margin-top: 4px;
+  border: 1px solid #e5e5e7; border-radius: 6px; padding: 6px 18px; background: #fbfbfc; margin-top: 6px;
 }
 
-/* ---- Repeaters ---- */
-.sdmb-repeater { margin-top: 4px; }
+/* ---- Repeaters -------------------------------------------------------- */
+.sdmb-repeater { margin-top: 6px; }
 .sdmb-repeater-template { display: none; }
 
 /* Table layout: hero stats, glance, TOC, response times, etc. */
 .sdmb-repeater-table {
-  width: 100%; border-collapse: collapse; border: 1px solid #dcdcde; border-radius: 6px; overflow: hidden; margin-bottom: 10px;
+  width: 100%; border-collapse: collapse; border: 1px solid var(--sdmb-border); border-radius: 6px; overflow: hidden; margin-bottom: 12px;
 }
 .sdmb-repeater-table th {
-  background: #f6f7f7; text-align: left; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em;
-  color: #50575e; padding: 8px 10px; border-bottom: 1px solid #dcdcde;
+  background: var(--sdmb-bg-tint); text-align: left; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em;
+  color: var(--sdmb-text-muted); padding: 9px 10px; border-bottom: 1px solid var(--sdmb-border);
 }
-.sdmb-repeater-table td { padding: 8px 10px; border-top: 1px solid #eee; vertical-align: middle; }
+.sdmb-repeater-table td { padding: 8px 10px; border-top: 1px solid var(--sdmb-border-light); vertical-align: middle; }
 .sdmb-repeater-table .sdmb-input { max-width: none; }
-.sdmb-repeater-table tr:hover { background: #f9fbfe; }
+.sdmb-repeater-table tr:hover { background: #f7fafd; }
 
-/* Block layout: FAQ, credential checks, regulator cards, compare cards, etc. */
-.sdmb-repeater-block > .sdmb-repeater-rows { display: flex; flex-direction: column; gap: 12px; margin-bottom: 10px; }
+/* Block layout: FAQ, credential checks, regulator cards, compare cards. */
+.sdmb-repeater-block > .sdmb-repeater-rows { display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; }
 .sdmb-repeater-row {
-  position: relative; border: 1px solid #e0e0e0; border-radius: 6px; padding: 16px 40px 4px 16px; background: #fff;
+  position: relative; border: 1px solid var(--sdmb-border); border-radius: 7px; padding: 18px 42px 6px 18px; background: #fff;
 }
 .sdmb-repeater-row-fields > .sdmb-field { padding: 10px 0; }
 .sdmb-repeater-row .sdmb-remove-row {
-  position: absolute; top: 8px; right: 10px; font-size: 18px; line-height: 1; color: #a00; text-decoration: none;
+  position: absolute; top: 10px; right: 12px; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%; font-size: 17px; line-height: 1; color: #a00; text-decoration: none; transition: background 120ms ease, color 120ms ease;
 }
-.sdmb-repeater-row .sdmb-remove-row:hover { color: #dc3232; }
+.sdmb-repeater-row .sdmb-remove-row:hover { background: #fbe3e3; color: #dc3232; }
 .sdmb-repeater-table .sdmb-remove-row { font-size: 16px; color: #a00; text-decoration: none; }
 .sdmb-repeater-table .sdmb-remove-row:hover { color: #dc3232; }
 
-.sdmb-add-row { font-weight: 600; }
+.sdmb-add-row {
+  font-weight: 600; color: var(--sdmb-accent-dark); border-color: var(--sdmb-accent) !important;
+}
+.sdmb-add-row::before { content: '+'; margin-right: 5px; font-weight: 700; }
+.sdmb-add-row:hover { background: #f0f6fc !important; }
 
 /* Nested repeater (e.g. mega menu Links inside a Column) reads as
    clearly indented/contained within its parent row. */
-.sdmb-repeater-row-fields .sdmb-repeater { margin-top: 10px; padding: 10px; border: 1px dashed #dcdcde; border-radius: 6px; background: #fcfcfd; }
+.sdmb-repeater-row-fields .sdmb-repeater { margin-top: 12px; padding: 12px; border: 1px dashed var(--sdmb-border); border-radius: 6px; background: #fcfcfd; }
 
 @media (max-width: 782px) {
   .sdmb-field[style] { width: 100% !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sdmb-toggle::before, .sdmb-toggle::after, .sdmb-input { transition: none; }
 }
