@@ -76,7 +76,7 @@ export default function Login() {
   return (
     <div className="login-page">
       <div className="auth-header">
-        <Link to="/" className="auth-header-logo"><img src="/images/sol-directory-horizontal-black.png" alt="Sol Directory by Sol Business Consultant" /></Link>
+        <Link to="/" className="auth-header-logo"><img src="/images/sol-directory-logo-black-transparent-v2.png" alt="Sol Directory by Sol Business Consultant" /></Link>
         <Link to="/" className="auth-header-back">← Back to public website</Link>
       </div>
 
