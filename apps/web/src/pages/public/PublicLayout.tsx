@@ -37,10 +37,7 @@ export function PublicHeader() {
       <nav className="public-nav">
         <div className="public-nav-inner">
           <Link to="/" className="public-brand-link">
-            <span className="public-brand-stack">
-              <span className="public-brand-name">SolDirectory</span>
-              <span className="public-brand-sub">A Sol Consultancy service</span>
-            </span>
+            <img className="public-brand-logo" src="/images/sol-directory-header-logo.png" alt="Sol Directory by Sol Business Consultant" />
           </Link>
           <Link to="/directory" className="public-nav-link">
             Find a provider
@@ -66,7 +63,7 @@ export function PublicFooter() {
     <footer className="public-footer">
       <div className="public-footer-inner">
         <div className="public-footer-brand">
-          <span className="public-footer-name">SolDirectory</span>
+          <img className="public-footer-logo" src="/images/sol-directory-header-logo.png" alt="Sol Directory by Sol Business Consultant" />
           <p className="public-footer-tagline">
             An independent directory and enquiry service for people seeking NDIS
             and aged care provider information in Australia.
