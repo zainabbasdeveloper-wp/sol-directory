@@ -81,7 +81,7 @@ export default function Signup() {
   return (
     <div className="signup-page">
       <div className="auth-header">
-        <Link to="/" className="auth-header-logo"><img src="/images/sol-directory-header-logo.png" alt="Sol Directory by Sol Business Consultant" /></Link>
+        <Link to="/" className="auth-header-logo"><img src="/images/sol-directory-horizontal-black.png" alt="Sol Directory by Sol Business Consultant" /></Link>
         <Link to="/" className="auth-header-back">← Back to public website</Link>
       </div>
 

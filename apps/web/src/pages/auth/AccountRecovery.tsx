@@ -10,7 +10,7 @@ function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="login-page">
       <div className="auth-header">
-        <Link to="/" className="auth-header-logo"><img src="/images/sol-directory-header-logo.png" alt="Sol Directory by Sol Business Consultant" /></Link>
+        <Link to="/" className="auth-header-logo"><img src="/images/sol-directory-horizontal-black.png" alt="Sol Directory by Sol Business Consultant" /></Link>
         <Link to="/login" className="auth-header-back">Back to sign in →</Link>
       </div>
       <div style={{ maxWidth: 440, margin: '64px auto', padding: '0 20px' }}>{children}</div>
