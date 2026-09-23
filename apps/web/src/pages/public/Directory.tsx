@@ -273,10 +273,10 @@ export default function Directory() {
 
         <div className="dir-help">
           <p>
-            <strong>Not sure where to start?</strong> Answer a few short questions and we will match you with providers
-            who suit your needs. It is free and there is no obligation.
+            <strong>Need assistance identifying provider options?</strong> Submit your location, timeframe and funding
+            information so relevant providers can assess your enquiry. There is no cost to submit a request.
           </p>
-          <button type="button" className="btn-gradient" onClick={() => openMatchModal()}>Get matched, free →</button>
+          <button type="button" className="btn-gradient" onClick={() => openMatchModal()}>Submit an enquiry →</button>
         </div>
 
         <div className="dir-results-head" aria-live="polite" ref={resultsTopRef}>
@@ -306,7 +306,7 @@ export default function Directory() {
             </p>
             <div className="dir-empty-actions">
               {anyFilter && <button type="button" className="btn-tint" onClick={clearAll}>Clear search</button>}
-              <button type="button" className="btn-gradient" onClick={() => openMatchModal()}>Get matched, free →</button>
+              <button type="button" className="btn-gradient" onClick={() => openMatchModal()}>Submit an enquiry →</button>
             </div>
           </div>
         )}

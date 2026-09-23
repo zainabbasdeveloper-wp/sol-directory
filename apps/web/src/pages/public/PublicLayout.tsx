@@ -37,10 +37,7 @@ export function PublicHeader() {
       <nav className="public-nav">
         <div className="public-nav-inner">
           <Link to="/" className="public-brand-link">
-            <span className="public-brand-stack">
-              <span className="public-brand-name">SolDirectory</span>
-              <span className="public-brand-sub">A Sol Consultancy service</span>
-            </span>
+            <img className="public-brand-logo" src="/images/sol-directory-header-logo.png" alt="Sol Directory by Sol Business Consultant" />
           </Link>
           <Link to="/directory" className="public-nav-link">
             Find a provider
@@ -49,8 +46,8 @@ export function PublicHeader() {
           <Link to="/locations" className="public-nav-link">
             Locations
           </Link>
-          <Link to="/workers" className="public-nav-link">
-            For workers
+          <Link to="/independent-workers" className="public-nav-link">
+            Independent Workers
           </Link>
           <button onClick={openMatchModal} className="public-cta-btn">
             Get matched free
@@ -66,10 +63,10 @@ export function PublicFooter() {
     <footer className="public-footer">
       <div className="public-footer-inner">
         <div className="public-footer-brand">
-          <span className="public-footer-name">SolDirectory</span>
+          <img className="public-footer-logo" src="/images/sol-directory-header-logo.png" alt="Sol Directory by Sol Business Consultant" />
           <p className="public-footer-tagline">
-            A Sol Consultancy service connecting Australians with NDIS and aged
-            care providers across every state and territory.
+            An independent directory and enquiry service for people seeking NDIS
+            and aged care provider information in Australia.
           </p>
           {(siteConfig.contactPhone || siteConfig.contactEmail || siteConfig.contactAddress) && (
             <p className="public-footer-contact">
@@ -100,6 +97,7 @@ export function PublicFooter() {
         <div className="public-footer-col">
           <span className="public-footer-heading">Company</span>
           <Link to="/providers">List your business</Link>
+          <Link to="/independent-workers">Independent Workers</Link>
           {siteConfig.contactEmail && <a href={`mailto:${siteConfig.contactEmail}`}>Contact</a>}
           <Link to="/privacy">Privacy policy</Link>
           <Link to="/terms">Terms of use</Link>

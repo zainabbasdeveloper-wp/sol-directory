@@ -6,6 +6,7 @@ import Directory from '../pages/public/Directory';
 import Services from '../pages/public/Services';
 import Locations from '../pages/public/Locations';
 import ForProviders from '../pages/public/ForProviders';
+import IndependentWorkers from '../pages/public/IndependentWorkers';
 import Login from '../pages/auth/Login';
 import Signup from '../pages/auth/Signup';
 import ConfirmCapacity from '../pages/ConfirmCapacity';
@@ -108,6 +109,7 @@ export default function AppRoutes() {
       <Route path="/services" element={<Services />} />
       <Route path="/locations" element={<Locations />} />
       <Route path="/providers" element={<ForProviders />} />
+      <Route path="/independent-workers" element={<IndependentWorkers />} />
       <Route path="/services/:serviceSlug/:suburb" element={<ServiceLocationPage />} />
       {/* Public-register pages (data from the NDIS Commission / My Aged Care registers). */}
       <Route path="/ndis-providers" element={<RegisterHubRoute path="ndis-providers" />} />
