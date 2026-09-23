@@ -13,10 +13,13 @@
   padding: 0 clamp(20px, 5vw, 56px);
 }
 .auth-header-logo {
-  font-size: 19px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--color-text, #10233F);
+  display: flex;
+  align-items: center;
+}
+.auth-header-logo img {
+  display: block;
+  width: clamp(180px, 17vw, 236px);
+  height: auto;
 }
 .auth-header-back {
   font-size: 14px;

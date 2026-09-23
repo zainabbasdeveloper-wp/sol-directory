@@ -41,6 +41,7 @@ const PLAN_MANAGEMENT_TO_FUNDING: Record<string, 'Plan-managed' | 'Self-managed'
 // the "browse nearby requests" endpoint (listNearbyLeads), which uses
 // the same isGenuineMatch rule without the cap.
 const MAX_NOTIFIED_PER_LEAD = Number(process.env.MAX_PROVIDERS_PER_LEAD) || 5;
+const SERVICE_NOT_SURE = 'Not sure yet';
 
 // Shared field mapping between the draft-save and final-submit
 // endpoints — the wizard sends the same raw shape to both, just at
@@ -51,7 +52,7 @@ const MAX_NOTIFIED_PER_LEAD = Number(process.env.MAX_PROVIDERS_PER_LEAD) || 5;
 function mapFormToLeadFields(body: Record<string, unknown>) {
   const { location, suburb, state, postcode, careFor, timeframe, funding, planManagement, service, email, phone, name, additionalDetails } = body as Record<string, string | undefined>;
   return {
-    need: service,
+    need: service?.trim() || SERVICE_NOT_SURE,
     fundingType: funding,
     funding: funding === 'NDIS' ? PLAN_MANAGEMENT_TO_FUNDING[planManagement ?? ''] : undefined,
     planManagement: funding === 'NDIS' ? planManagement : undefined,
@@ -126,13 +127,12 @@ export async function saveMatchRequestDraft(req: Request, res: Response) {
  */
 export async function submitMatchRequest(req: Request, res: Response) {
   const { draftId, ...form } = req.body ?? {};
-  const { location, careFor, timeframe, funding, service, email, name } = form as Record<string, string | undefined>;
+  const { location, careFor, timeframe, funding, email, name } = form as Record<string, string | undefined>;
 
   if (!location?.trim()) return res.status(400).json({ error: 'Location is required.' });
   if (!careFor?.trim()) return res.status(400).json({ error: 'Please tell us who this is for.' });
   if (!timeframe?.trim()) return res.status(400).json({ error: 'Please choose a timeframe.' });
   if (!funding?.trim()) return res.status(400).json({ error: 'Please choose a funding type.' });
-  if (!service?.trim()) return res.status(400).json({ error: 'Please choose the service you need.' });
   if (!email || !/.+@.+\..+/.test(email)) return res.status(400).json({ error: 'A valid email address is required.' });
   if (!name?.trim()) return res.status(400).json({ error: 'Please enter your name.' });
 
@@ -225,7 +225,7 @@ export async function submitMatchRequest(req: Request, res: Response) {
       matchReason: describeMatchReason(result),
     }).catch(() => {});
   }
-  EmailService.sendLeadConfirmation(email, requestNumber, service).catch(() => {});
+  EmailService.sendLeadConfirmation(email, requestNumber, lead.need).catch(() => {});
 
   res.status(201).json({
     id: String(lead._id),

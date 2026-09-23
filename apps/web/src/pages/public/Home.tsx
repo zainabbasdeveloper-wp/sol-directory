@@ -74,7 +74,7 @@ export default function Home() {
           </span>
           <h1 className="hero-heading">Find NDIS &amp; Aged Care Providers Near You</h1>
           <p className="hero-copy">
-            Tell us what you need and we will do the searching for you, free.
+            Search provider profiles by support and location, or submit a free request to identify providers serving your area.
           </p>
           <div className="hero-actions">
             <button className="btn-gradient btn-lg" onClick={openMatchModal}>
@@ -90,8 +90,8 @@ export default function Home() {
       <section className="info-cards" aria-label="How Get Matched works">
         <div className="info-card info-card-accent">
           <span className="info-step">Step 1</span>
-          <h3 className="info-title">Tell us what you need</h3>
-          <p className="info-body info-body-light">Answer a few short questions about the supports you are looking for, where you live and how they are funded.</p>
+          <h3 className="info-title">Submit your support request</h3>
+          <p className="info-body info-body-light">Provide your location, preferred timeframe and funding information so relevant providers can assess your request.</p>
           <button type="button" className="info-action" onClick={() => openMatchModal()}>
             Get matched <span aria-hidden="true">→</span>
           </button>
@@ -99,8 +99,8 @@ export default function Home() {
 
         <div className="info-card">
           <span className="info-step">Step 2</span>
-          <h3 className="info-title">We look for providers who can start</h3>
-          <p className="info-body">Your request is compared with each provider’s service area, supports offered and confirmed availability.</p>
+          <h3 className="info-title">Review relevant provider options</h3>
+          <p className="info-body">Your request is compared with provider service areas, funding arrangements and recently confirmed availability.</p>
           <Link to="/directory" className="link-btn">
             Browse the directory →
           </Link>
@@ -108,8 +108,8 @@ export default function Home() {
 
         <div className="info-card">
           <span className="info-step">Step 3</span>
-          <h3 className="info-title">Providers contact you directly</h3>
-          <p className="info-body">Only providers matched to your request can access your contact details. You decide who to work with.</p>
+          <h3 className="info-title">Make an informed choice</h3>
+          <p className="info-body">Notified providers may contact you directly. You can compare options, verify credentials and decide whether to enter a service agreement.</p>
           <Link to="/privacy" className="link-btn">
             How we handle your details →
           </Link>
@@ -135,26 +135,26 @@ export default function Home() {
             <span className="eyebrow-rule" />
             Why SolDirectory
           </span>
-          <h2 className="section-heading">The list is short because it is honest</h2>
+          <h2 className="section-heading">Current provider information to support your choice</h2>
           <p className="section-copy">
-            Many directories list every provider, whether or not they have capacity.
-            We ask providers to confirm their availability every week. Providers who
-            do not respond are removed from search results until they confirm again.
+            Provider listings include service areas and availability information supplied by each provider.
+            Providers are asked to confirm their capacity each week, and listings are paused when that
+            confirmation is not received within the required period.
           </p>
           <ul className="check-list">
             <li>
-              <CheckIcon /> Availability confirmed weekly, not at sign-up
+              <CheckIcon /> Provider capacity is reconfirmed each week
             </li>
             <li>
-              <CheckIcon /> Providers cannot pay for a higher position
+              <CheckIcon /> Search results are not ordered by paid placement
             </li>
             <li>
-              <CheckIcon /> Your details go only to the providers you choose
+              <CheckIcon /> Personal information is shared only for the purpose of responding to your request
             </li>
           </ul>
           <div className="about-cta-row">
             <button className="btn-gradient" onClick={() => navigate('/directory')}>
-              Start searching
+              Search provider listings
             </button>
             {siteConfig.contactPhone && (
               <div>
@@ -169,8 +169,8 @@ export default function Home() {
       {figures.length > 0 && (
         <section className="stats-section home-stats" aria-label="Directory figures">
           <p className="stats-headline">
-            A bigger register is not a better one. What helps participants is knowing{' '}
-            <span className="stats-headline-accent">which providers can start supports</span>, so that is what we report.
+            Directory figures are based on current platform records, including{' '}
+            <span className="stats-headline-accent">providers accepting enquiries and locations represented</span>.
           </p>
           <dl className="home-stats-row">
             {figures.map((f) => (
@@ -266,11 +266,10 @@ export default function Home() {
             <span className="eyebrow-rule" />
             For providers
           </span>
-          <h2 className="section-heading">List your service where participants and families are searching</h2>
+          <h2 className="section-heading">Present your services to participants, families and support coordinators</h2>
           <p className="section-copy">
-            Choose a monthly plan. There is no bidding for position: providers are matched
-            on fit, not on payment. Confirm your capacity each week so people can see who is
-            able to start.
+            Create a provider profile with your supports, service areas, funding arrangements and intake details.
+            Keep your capacity current so people can make informed enquiries about your services.
           </p>
           <div className="providers-cta-actions">
             <button className="btn-gradient btn-lg" onClick={() => navigate('/providers')}>
