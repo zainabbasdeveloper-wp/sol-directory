@@ -40,18 +40,24 @@ add_action('admin_enqueue_scripts', function ($hook) {
 
     wp_enqueue_media();
     wp_enqueue_editor(); // wp_editor()'s own assets, for the one wysiwyg field
+
+    // filemtime(), not a hand-maintained version string — every edit to
+    // either file (like this CSS pass) automatically busts any cache a
+    // browser or CDN was holding, with nothing to remember to bump.
+    $jsPath = __DIR__ . '/../assets/admin-fields.js';
+    $cssPath = __DIR__ . '/../assets/admin-fields.css';
     wp_enqueue_script(
         'soldirectory-admin-fields',
         plugins_url('../assets/admin-fields.js', __FILE__),
         [],
-        '1.0.0',
+        file_exists($jsPath) ? (string) filemtime($jsPath) : false,
         true
     );
     wp_enqueue_style(
         'soldirectory-admin-fields',
         plugins_url('../assets/admin-fields.css', __FILE__),
         [],
-        '1.0.0'
+        file_exists($cssPath) ? (string) filemtime($cssPath) : false
     );
 });
 

@@ -14,7 +14,15 @@ add_action('init', function () {
         'public' => true,
         'show_in_rest' => true,
         'rest_base' => 'mega-menu-tabs',
-        'supports' => ['title', 'custom-fields', 'page-attributes'], // page-attributes gives a native "Order" field for tab ordering
+        // 'custom-fields' deliberately left out: it would add WordPress's
+        // own generic "Custom Fields" box (a raw Name/Value list of every
+        // meta key) below the real, labelled meta boxes custom-fields-
+        // engine.php already renders for this post type — confusing
+        // duplication, not a second way to edit anything. Removing it
+        // doesn't affect REST meta at all (that's register_post_meta(),
+        // unrelated to this support flag) or content.rendered.
+        // page-attributes gives a native "Order" field for tab ordering.
+        'supports' => ['title', 'page-attributes'],
         'has_archive' => false,
         'publicly_queryable' => false, // this is menu config, not a page anyone should visit directly
         'show_in_menu' => true,
@@ -26,7 +34,9 @@ add_action('init', function () {
         'public' => true,
         'show_in_rest' => true,
         'rest_base' => 'service-area-pages',
-        'supports' => ['title', 'editor', 'custom-fields'],
+        // See the 'custom-fields' comment on mega_menu_tab above — same
+        // reason it's left out here and for every post type below.
+        'supports' => ['title', 'editor'],
         'has_archive' => false,
         'publicly_queryable' => true,
     ]);
@@ -41,7 +51,7 @@ add_action('init', function () {
         'public' => true,
         'show_in_rest' => true,
         'rest_base' => 'services',
-        'supports' => ['title', 'editor', 'excerpt', 'thumbnail', 'custom-fields'],
+        'supports' => ['title', 'editor', 'excerpt', 'thumbnail'],
         'has_archive' => false,
         'publicly_queryable' => true,
     ]);
@@ -55,7 +65,7 @@ add_action('init', function () {
         'public' => true,
         'show_in_rest' => true,
         'rest_base' => 'locations',
-        'supports' => ['title', 'editor', 'excerpt', 'thumbnail', 'custom-fields'],
+        'supports' => ['title', 'editor', 'excerpt', 'thumbnail'],
         'has_archive' => false,
         'publicly_queryable' => true,
     ]);
@@ -67,7 +77,7 @@ add_action('init', function () {
         'public' => true,
         'show_in_rest' => true,
         'rest_base' => 'guides',
-        'supports' => ['title', 'editor', 'excerpt', 'thumbnail', 'custom-fields'],
+        'supports' => ['title', 'editor', 'excerpt', 'thumbnail'],
         'has_archive' => false,
         'publicly_queryable' => true,
     ]);
@@ -90,7 +100,7 @@ add_action('init', function () {
         'public' => true,
         'show_in_rest' => true,
         'rest_base' => 'providers',
-        'supports' => ['title', 'thumbnail', 'custom-fields'],
+        'supports' => ['title', 'thumbnail'],
         'has_archive' => false,
         'publicly_queryable' => true,
     ]);
