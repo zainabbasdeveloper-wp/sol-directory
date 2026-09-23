@@ -243,7 +243,7 @@ export async function submitClaimRequest(req: Request, res: Response) {
     await ClaimRequest.create({ listingId: listing._id, type, slug, listingName: listing.name, name, email, phone: phone || undefined, role, message: message || undefined });
     await RegisterListing.updateOne({ _id: listing._id, claimStatus: 'unclaimed' }, { $set: { claimStatus: 'requested' } });
 
-    const notify = process.env.ADMIN_NOTIFY_EMAIL;
+    const notify = process.env.ADMIN_NOTIFY_EMAIL || process.env.ADMIN_NOTIFICATION_EMAIL;
     if (notify) {
       EmailService.sendAdminNotification(
         notify,

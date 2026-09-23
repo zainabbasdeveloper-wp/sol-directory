@@ -21,6 +21,8 @@ import matchRequestsRoutes from './routes/matchRequests.routes.js';
 import notificationsRoutes from './routes/notifications.routes.js';
 import sitemapRoutes from './routes/sitemap.routes.js';
 import registerRoutes from './routes/register.routes.js';
+import adminClaimsRoutes from './routes/admin.claims.routes.js';
+import { registerShell } from './controllers/registerShell.controller.js';
 import { getSitemapPart } from './controllers/sitemap.controller.js';
 import adminRoutes from './routes/admin.routes.js';
 import adminDashboardRoutes from './routes/admin.dashboard.routes.js';
@@ -66,9 +68,12 @@ app.use('/api/admin/conditions', adminConditionsRoutes);
 app.use('/api/admin/diagnostics', adminDiagnosticsRoutes);
 app.use('/api/admin/leads', adminLeadsRoutes);
 app.use('/api/admin/email-logs', adminEmailLogsRoutes);
+app.use('/api/admin/claims', adminClaimsRoutes);
 app.use('/api/capacity', capacityRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/register', registerRoutes);
+// Crawler-readable HTML for the register pages; nginx routes /ndis-providers/* here (deploy/nginx-soldirectory.conf).
+app.get('/seo-shell/*', (req, res, next) => { registerShell(req, res).catch(next); });
 app.use('/sitemap.xml', sitemapRoutes);
 app.get('/sitemap-:name.xml', (req, res, next) => { getSitemapPart(req, res).catch(next); });
 

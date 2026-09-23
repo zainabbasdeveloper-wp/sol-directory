@@ -30,6 +30,7 @@ import AdminMemberPlans from '../pages/admin/AdminMemberPlans';
 import AdminServices from '../pages/admin/AdminServices';
 import AdminConditions from '../pages/admin/AdminConditions';
 import AdminDiagnostics from '../pages/admin/AdminDiagnostics';
+import AdminClaims from '../pages/admin/AdminClaims';
 import ProviderDirectory from '../pages/providers/ProviderDirectory';
 import ProviderProfilePage from '../pages/providers/ProviderProfilePage';
 import SavedProviders from '../pages/providers/SavedProviders';
@@ -184,6 +185,7 @@ export default function AppRoutes() {
         <Route path="/admin/services" element={<RequireRole roles={['admin']}><AdminServices /></RequireRole>} />
         <Route path="/admin/conditions" element={<RequireRole roles={['admin']}><AdminConditions /></RequireRole>} />
         <Route path="/admin/diagnostics" element={<RequireRole roles={['admin']}><AdminDiagnostics /></RequireRole>} />
+        <Route path="/admin/claims" element={<RequireRole roles={['admin']}><AdminClaims /></RequireRole>} />
       </Route>
 
       <Route path="*" element={<WordPressCatchAllPage />} />

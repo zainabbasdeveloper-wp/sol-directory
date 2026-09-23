@@ -103,7 +103,8 @@ async function buildPageUrls(): Promise<UrlEntry[]> {
       fetchWpSlugs(wpUrl, '/wp-json/wp/v2/guides'),
       fetchServiceAreaPaths(wpUrl),
     ]);
-    pages.forEach((slug) => paths.push(`/${slug}`));
+    // WordPress ships a placeholder "Sample Page"; it's never real content.
+    pages.filter((slug) => slug !== 'sample-page').forEach((slug) => paths.push(`/${slug}`));
     services.forEach((slug) => paths.push(`/services/${slug}`));
     locations.forEach((slug) => paths.push(`/locations/${slug}`));
     guides.forEach((slug) => paths.push(`/guides/${slug}`));
@@ -128,9 +129,9 @@ async function buildRegisterUrls(): Promise<UrlEntry[]> {
   const urls: UrlEntry[] = [];
   for (const type of REGISTER_TYPES) {
     const base = REGISTER_PATH[type];
-    for (const state of STATE_CODES) urls.push({ path: `${base}/${state.toLowerCase()}` });
-
     const hub = await computeHub(type);
+    // A state with no listings is a noindex empty page — don't advertise it.
+    for (const state of STATE_CODES) if (hub.states[state]) urls.push({ path: `${base}/${state.toLowerCase()}` });
     for (const s of hub.suburbs) urls.push({ path: `${base}/${s.state.toLowerCase()}/${s.slug}` });
 
     const cursor = RegisterListing.find({ type, 'services.0': { $exists: true } }).select('slug updatedAt').lean().cursor();

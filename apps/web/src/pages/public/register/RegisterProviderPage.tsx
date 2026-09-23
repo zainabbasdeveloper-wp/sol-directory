@@ -48,7 +48,7 @@ export default function RegisterProviderPage({ kind, slug }: { kind: RegisterKin
     const shown = listing.areas.slice(0, 2).map(areaLabel);
     const extra = listing.areaCount - shown.length;
     applySeoTags({
-      title: trimTo(`${listing.name} | ${kind.label} provider in ${where} | SolDirectory`, 66),
+      title: `${trimTo(listing.name, 44)} | ${kind.label} provider in ${where}`,
       description: trimTo(
         `${listing.name} is ${kind.listedAs}${shown.length ? ` for ${shown.join(' and ')}${extra > 0 ? ` and ${extra} more area${extra === 1 ? '' : 's'}` : ''}` : ''}. See the supports listed, where it operates and how to check its current status.`,
         158
