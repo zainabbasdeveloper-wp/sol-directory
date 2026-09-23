@@ -6,11 +6,15 @@ import Counter from '../../components/Counter';
 import PhotoSlot from '../../components/PhotoSlot';
 import { useSiteStats } from '../../hooks/useSiteStats';
 import { siteConfig, phoneHref } from '../../config/siteConfig';
-import { providerCountLabel, stateGroupCount } from '../../lib/statsCounts';
+import { providerCountLabel } from '../../lib/statsCounts';
 import SupportFinder from '../../components/home/SupportFinder';
 import { useMatchModal } from '../../context/MatchModalContext';
-import { LOCATION_GROUPS } from '../../data/providers';
+import { LOCATION_GROUPS, SERVICES } from '../../data/providers';
+import { slugify } from '../../data/slugHelpers';
 import './Home.css';
+
+const SEO_SERVICE_AREAS = LOCATION_GROUPS.flatMap((group) => group.places).slice(0, 4);
+const SEO_SERVICES = SERVICES.filter((service) => service !== 'All services');
 
 export default function Home() {
   const navigate = useNavigate();
@@ -76,7 +80,7 @@ export default function Home() {
             <button className="btn-gradient btn-lg" onClick={openMatchModal}>
               Get matched free <span aria-hidden="true">→</span>
             </button>
-            <button className="btn-outline-light btn-lg" onClick={() => navigate('/signup?type=provider')}>
+            <button className="btn-outline-light btn-lg" onClick={() => navigate('/providers')}>
               List your business
             </button>
           </div>
@@ -191,11 +195,11 @@ export default function Home() {
         </div>
         <div className="checks-inner">
           <div className="checks-content">
-          <span className="eyebrow eyebrow-light">
+          <span className="eyebrow checks-eyebrow">
             <span className="eyebrow-rule" />
             How listings work
           </span>
-          <h2 className="section-heading section-heading-light">What every listing tells you</h2>
+          <h2 className="section-heading checks-heading">What every listing tells you</h2>
           <div className="checks-grid">
             {[
               ['Current capacity', 'Providers confirm each week that they are taking referrals. If they do not, the listing is paused.'],
@@ -205,9 +209,12 @@ export default function Home() {
               ['Response times', 'Shown only once enough real enquiries have been answered to report an accurate figure.'],
               ['Registration details', 'Supplied by the provider. Always confirm registration with the provider or the NDIS Commission’s public register.'],
             ].map(([title, body]) => (
-              <div key={title}>
+              <div key={title} className="check-item">
+                <span className="check-item-mark" aria-hidden="true">✓</span>
+                <div>
                 <h3 className="check-title">{title}</h3>
                 <p className="check-body">{body}</p>
+                </div>
               </div>
             ))}
           </div>
@@ -215,32 +222,41 @@ export default function Home() {
         </div>
       </section>
 
-
-      <section id="locations" className="locations-section">
-        <div className="locations-inner">
+      <section className="coverage-section" aria-labelledby="coverage-heading">
+        <div className="coverage-inner">
           <div className="section-header-row">
-            <h2 className="section-heading">Cities, suburbs and regions</h2>
-            <Link to="/locations" className="link-btn">
-              View all locations →
-            </Link>
+            <div>
+              <span className="eyebrow">
+                <span className="eyebrow-rule" />
+                Services and areas we cover
+              </span>
+              <h2 id="coverage-heading" className="section-heading">Explore support by service and location</h2>
+            </div>
+            <Link to="/services" className="btn-white">Browse all services</Link>
           </div>
-          <div className="locations-grid">
-            {LOCATION_GROUPS.slice(0, 4).map((g) => (
-              <div key={g.state}>
-                <h3 className="location-state">{g.state}</h3>
-                {providerCountLabel(stateGroupCount(stats, g.states)) && (
-                  <p className="location-count">{providerCountLabel(stateGroupCount(stats, g.states))}</p>
-                )}
-                <div className="location-places">
-                  {g.places.slice(0, 4).map((place) => (
-                    <button key={place} className="location-link" onClick={() => navigate('/directory')}>
-                      {place}
-                    </button>
+          <p className="coverage-intro">
+            Compare services and search the locations currently represented in the SolDirectory.
+            Each page explains what to look for and helps you find providers who cover that support area.
+          </p>
+          <div className="coverage-grid">
+            {SEO_SERVICES.map((service) => (
+              <div key={service} className="coverage-group">
+                <h3 className="coverage-service-title">
+                  <Link to={`/services/${slugify(service)}/${slugify(SEO_SERVICE_AREAS[0])}`}>{service}</Link>
+                </h3>
+                <ul className="coverage-links">
+                  {SEO_SERVICE_AREAS.map((place) => (
+                    <li key={place}>
+                      <Link to={`/services/${slugify(service)}/${slugify(place)}`}>
+                        {service} in {place}
+                      </Link>
+                    </li>
                   ))}
-                </div>
+                </ul>
               </div>
             ))}
           </div>
+          <Link to="/services" className="coverage-all-link">Cannot find your suburb? Search all services and areas →</Link>
         </div>
       </section>
 
@@ -257,7 +273,7 @@ export default function Home() {
             able to start.
           </p>
           <div className="providers-cta-actions">
-            <button className="btn-gradient btn-lg" onClick={() => navigate('/signup?type=provider')}>
+            <button className="btn-gradient btn-lg" onClick={() => navigate('/providers')}>
               List your business
             </button>
             <Link to="/providers" className="link-btn">
