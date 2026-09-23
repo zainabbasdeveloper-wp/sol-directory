@@ -260,35 +260,6 @@ export default function Home() {
         </div>
       </section>
 
-
-      <section id="locations" className="locations-section">
-        <div className="locations-inner">
-          <div className="section-header-row">
-            <h2 className="section-heading">Cities, suburbs and regions</h2>
-            <Link to="/locations" className="link-btn">
-              View all locations →
-            </Link>
-          </div>
-          <div className="locations-grid">
-            {LOCATION_GROUPS.slice(0, 4).map((g) => (
-              <div key={g.state}>
-                <h3 className="location-state">{g.state}</h3>
-                {providerCountLabel(stateGroupCount(stats, g.states)) && (
-                  <p className="location-count">{providerCountLabel(stateGroupCount(stats, g.states))}</p>
-                )}
-                <div className="location-places">
-                  {g.places.slice(0, 4).map((place) => (
-                    <button key={place} className="location-link" onClick={() => navigate('/directory')}>
-                      {place}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       <section id="providers" className="providers-cta-section">
         <div>
           <span className="eyebrow">
@@ -330,6 +301,40 @@ export default function Home() {
                 <p>Confirm capacity each Monday. Enquiries reach you by email or SMS.</p>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="locations" className="locations-section">
+        <div className="locations-inner">
+          <div className="section-header-row">
+            <div>
+              <span className="eyebrow">
+                <span className="eyebrow-rule" />
+                Find support near you
+              </span>
+              <h2 className="section-heading">Cities, suburbs and regions</h2>
+            </div>
+            <Link to="/locations" className="link-btn">
+              View all locations →
+            </Link>
+          </div>
+          <div className="locations-grid">
+            {LOCATION_GROUPS.slice(0, 4).map((g) => (
+              <div key={g.state}>
+                <h3 className="location-state">{g.state}</h3>
+                {providerCountLabel(stateGroupCount(stats, g.states)) && (
+                  <p className="location-count">{providerCountLabel(stateGroupCount(stats, g.states))}</p>
+                )}
+                <div className="location-places">
+                  {g.places.slice(0, 4).map((place) => (
+                    <button key={place} className="location-link" onClick={() => navigate('/directory')}>
+                      {place}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>

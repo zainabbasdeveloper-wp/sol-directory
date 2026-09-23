@@ -402,9 +402,36 @@
 .location-link:hover { color: var(--color-accent); }
 
 .providers-cta-section {
-  max-width: 1240px;
+  position: relative;
+  max-width: none;
+  background: linear-gradient(135deg, #f1f8fb 0%, #f8fbfc 52%, #eef6f8 100%);
+  overflow: hidden;
+  padding: clamp(72px, 8vw, 120px) max(20px, calc((100% - 1240px) / 2));
+}
+.providers-cta-section::before {
+  content: '';
+  position: absolute;
+  width: 420px;
+  height: 420px;
+  top: -180px;
+  right: 8%;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-accent) 9%, transparent);
+  pointer-events: none;
+}
+.providers-cta-section > * { position: relative; z-index: 1; }
+.providers-cta-section > div:first-child { padding-left: clamp(0px, 2vw, 28px); }
+.providers-cta-section > div:first-child::after {
+  content: '';
+  display: block;
+  width: 52px;
+  height: 3px;
+  margin-top: 34px;
+  border-radius: 3px;
+  background: var(--color-accent);
+}
+.providers-cta-section {
   margin: 0 auto;
-  padding: clamp(40px, 5vw, 72px) clamp(20px, 5vw, 56px) clamp(72px, 9vw, 120px);
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: clamp(40px, 6vw, 88px);
