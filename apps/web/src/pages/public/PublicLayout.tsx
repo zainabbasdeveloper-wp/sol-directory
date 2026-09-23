@@ -86,6 +86,8 @@ export function PublicFooter() {
           <Link to="/directory">Provider finder</Link>
           <Link to="/services">Browse services</Link>
           <Link to="/locations">Browse locations</Link>
+          <Link to="/ndis-providers">NDIS provider register</Link>
+          <Link to="/aged-care-providers">Aged care provider register</Link>
           <Link to="/#about">How it works</Link>
         </div>
         <div className="public-footer-col">

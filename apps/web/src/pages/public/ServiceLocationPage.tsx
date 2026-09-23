@@ -19,6 +19,7 @@ import { useMatchModal } from '../../context/MatchModalContext';
 import { getServiceAreaPage, type ServiceAreaPage } from '../../api/wordpressApi';
 import { listPublicProviders, type PublicProviderRow } from '../../api/providerResources';
 import { applySeoTags, setJsonLd } from '../../lib/seo';
+import RegisterNearby from './register/RegisterNearby';
 import './ServiceLocationPage.css';
 
 // REAL DATA, TWO SOURCES, PER THE ARCHITECTURE DECIDED WITH THE USER:
@@ -357,6 +358,8 @@ export default function ServiceLocationPage() {
               <span>›</span>
             </Link>
           </section>
+
+          <RegisterNearby serviceName={serviceName} suburbSlug={suburbSlug} suburbName={suburbName} stateAbbr={stateAbbr} />
 
           <section id="about-service">
             <h2 className="svc-h2-sm">About home {serviceLower} in {suburbName}</h2>

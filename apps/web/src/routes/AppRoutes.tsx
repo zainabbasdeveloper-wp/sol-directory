@@ -38,6 +38,7 @@ import ServiceLocationPage from '../pages/public/ServiceLocationPage';
 import WordPressCPTPage from '../pages/wordpress/WordPressCPTPage';
 import { CPT_ROUTES } from '../lib/cptRouteConfig';
 import WordPressCatchAllPage from '../pages/wordpress/WordPressCatchAllPage';
+import { RegisterHubRoute, RegisterSingleRoute, RegisterSuburbRoute } from '../pages/public/register/RegisterRoutes';
 import type { Role } from '@soldirectory/shared-types';
 
 function RequireAuth({ children }: { children: ReactElement }) {
@@ -108,6 +109,13 @@ export default function AppRoutes() {
       <Route path="/locations" element={<Locations />} />
       <Route path="/providers" element={<ForProviders />} />
       <Route path="/services/:serviceSlug/:suburb" element={<ServiceLocationPage />} />
+      {/* Public-register pages (data from the NDIS Commission / My Aged Care registers). */}
+      <Route path="/ndis-providers" element={<RegisterHubRoute path="ndis-providers" />} />
+      <Route path="/ndis-providers/:first" element={<RegisterSingleRoute path="ndis-providers" />} />
+      <Route path="/ndis-providers/:state/:suburb" element={<RegisterSuburbRoute path="ndis-providers" />} />
+      <Route path="/aged-care-providers" element={<RegisterHubRoute path="aged-care-providers" />} />
+      <Route path="/aged-care-providers/:first" element={<RegisterSingleRoute path="aged-care-providers" />} />
+      <Route path="/aged-care-providers/:state/:suburb" element={<RegisterSuburbRoute path="aged-care-providers" />} />
       {/* New WordPress-backed dynamic content routes — single-segment,
           so they never collide with the two-segment route above or
           the exact marketing pages. */}

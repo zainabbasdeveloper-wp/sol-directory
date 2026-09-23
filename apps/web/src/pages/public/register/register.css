@@ -1,0 +1,90 @@
+/* Public-register pages (/ndis-providers/…, /aged-care-providers/…).
+   Builds on Home.css + Directory.css (.directory-page-header, .dir-grid,
+   .dir-card, .dir-tag …), so this only adds what those don't have. */
+
+.reg-page { max-width: 1240px; margin: 0 auto; padding: clamp(28px, 4vw, 56px) clamp(20px, 5vw, 56px) clamp(56px, 7vw, 104px); }
+.reg-crumbs { margin: 0 0 22px; font-size: 13.5px; color: color-mix(in srgb, var(--color-text, #10233F) 65%, transparent); }
+.reg-crumbs ol { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.reg-crumbs li + li::before { content: '›'; margin-right: 6px; opacity: 0.6; }
+.reg-crumbs a { color: var(--color-accent-700, #0F4FA8); text-decoration: none; }
+.reg-crumbs a:hover { text-decoration: underline; }
+
+.reg-h2 { margin: clamp(32px, 4vw, 52px) 0 14px; font-size: clamp(21px, 2.2vw, 27px); font-weight: 700; letter-spacing: -0.015em; }
+.reg-lede { margin: 0 0 20px; max-width: 72ch; font-size: 16px; line-height: 1.7; color: color-mix(in srgb, var(--color-text, #10233F) 78%, transparent); }
+.reg-note { margin: 18px 0 0; padding: 14px 16px; max-width: 78ch; font-size: 14px; line-height: 1.6; border-left: 3px solid #72aee6; border-radius: 0 8px 8px 0; background: #f2f7ff; color: var(--color-text, #10233F); }
+.reg-note a { color: var(--color-accent-700, #0F4FA8); font-weight: 600; }
+
+.reg-badge { display: inline-block; padding: 3px 10px; font-size: 12px; font-weight: 700; border-radius: 999px; background: #E9F2FF; color: #0F4FA8; }
+.reg-badge-muted { background: #EEF1F6; color: #4B5B75; }
+.reg-card-link { text-decoration: none; }
+.reg-card h3 a { color: inherit; text-decoration: none; }
+.reg-card h3 a:hover { color: var(--color-accent-700, #0F4FA8); text-decoration: underline; }
+
+/* State / suburb link grids */
+.reg-linkgrid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr)); gap: 10px; }
+.reg-linkgrid a {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px; min-height: 48px; padding: 12px 16px;
+  background: #fff; border: 1px solid var(--color-border, #E8EEF7); border-radius: 12px; color: inherit; text-decoration: none; font-weight: 600;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+.reg-linkgrid a:hover { border-color: #B9D0F3; box-shadow: 0 6px 18px rgba(11,45,92,0.08); }
+.reg-linkgrid .reg-count { font-size: 13px; font-weight: 500; color: color-mix(in srgb, var(--color-text, #10233F) 62%, transparent); }
+
+/* Category chips (filter) */
+.reg-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 18px 0 6px; }
+.reg-chip {
+  min-height: 40px; padding: 0 16px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; border-radius: 999px;
+  background: #fff; color: inherit; border: 1.5px solid var(--color-border-strong, #DDE4EF);
+}
+.reg-chip:hover { border-color: var(--color-accent, #1769E0); }
+.reg-chip[aria-pressed='true'] { background: var(--color-accent-900, #0B2D5C); border-color: var(--color-accent-900, #0B2D5C); color: #fff; }
+.reg-chip:focus-visible { outline: 3px solid #8CB8FF; outline-offset: 2px; }
+.reg-chip small { margin-left: 6px; font-weight: 500; opacity: 0.75; }
+.reg-search { display: flex; gap: 10px; flex-wrap: wrap; margin: 6px 0 4px; }
+.reg-search input { flex: 1 1 260px; min-height: 48px; padding: 0 14px; font: inherit; font-size: 16px; border: 1.5px solid var(--color-border-strong, #DDE4EF); border-radius: 10px; background: #fff; }
+.reg-search input:focus { outline: none; border-color: #1769E0; box-shadow: 0 0 0 3px rgba(23,105,224,0.16); }
+
+/* Provider detail */
+.reg-detail-head { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: center; margin: 0 0 6px; }
+.reg-detail-head h1 { margin: 0; font-size: clamp(28px, 3.4vw, 42px); line-height: 1.15; letter-spacing: -0.025em; }
+.reg-glance { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0; margin: 22px 0 0; background: #fff; border: 1px solid var(--color-border, #E8EEF7); border-radius: 14px; overflow: hidden; }
+.reg-glance > div { padding: 18px 20px; border-left: 1px solid var(--color-border, #E8EEF7); }
+.reg-glance > div:first-child { border-left: 0; }
+.reg-glance dt { font-size: 12.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text, #10233F) 60%, transparent); }
+.reg-glance dd { margin: 6px 0 0; font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
+.reg-glance a { color: var(--color-accent-700, #0F4FA8); }
+
+.reg-services { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.reg-services li { padding: 7px 14px; font-size: 14px; border-radius: 999px; background: var(--color-primary-tint, #F2F7FF); color: #0F4FA8; font-weight: 600; }
+
+.reg-areas { columns: 3 220px; column-gap: 28px; margin: 0; padding: 0; list-style: none; }
+.reg-areas li { break-inside: avoid; padding: 4px 0; font-size: 15px; }
+.reg-areas a { color: var(--color-accent-700, #0F4FA8); }
+.reg-area-group h3 { margin: 18px 0 8px; font-size: 14px; letter-spacing: 0.05em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text, #10233F) 62%, transparent); }
+.reg-area-group:first-of-type h3 { margin-top: 0; }
+
+.reg-checklist { margin: 0; padding-left: 22px; display: grid; gap: 10px; max-width: 78ch; font-size: 16px; line-height: 1.65; }
+
+.reg-cta { display: flex; flex-wrap: wrap; gap: 14px 24px; align-items: center; justify-content: space-between; margin-top: clamp(32px, 4vw, 52px); padding: 22px 26px; border-radius: 14px; background: color-mix(in srgb, var(--color-accent, #1769E0) 9%, #fff); border: 1px solid color-mix(in srgb, var(--color-accent, #1769E0) 22%, transparent); }
+.reg-cta > div { flex: 1 1 340px; display: grid; gap: 4px; }
+.reg-cta strong { font-size: 18px; }
+.reg-cta span { font-size: 15px; line-height: 1.6; color: color-mix(in srgb, var(--color-text, #10233F) 75%, transparent); }
+
+/* Claim box */
+.reg-claim { margin-top: clamp(32px, 4vw, 52px); padding: 22px 26px; border: 1px dashed var(--color-border-strong, #DDE4EF); border-radius: 14px; background: #fff; }
+.reg-claim h2 { margin: 0 0 6px; font-size: 20px; }
+.reg-claim p { margin: 0 0 14px; max-width: 70ch; line-height: 1.65; }
+.reg-form { display: grid; gap: 14px; max-width: 620px; }
+.reg-form .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.reg-form label { display: grid; gap: 6px; font-size: 13.5px; font-weight: 600; }
+.reg-form input, .reg-form select, .reg-form textarea { font: inherit; font-size: 16px; padding: 11px 12px; border: 1.5px solid var(--color-border-strong, #DDE4EF); border-radius: 10px; background: #fff; }
+.reg-form input:focus, .reg-form select:focus, .reg-form textarea:focus { outline: none; border-color: #1769E0; box-shadow: 0 0 0 3px rgba(23,105,224,0.16); }
+.reg-form .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.reg-form-error { color: #9C2430; font-size: 14px; }
+.reg-form-ok { padding: 14px 16px; border-radius: 10px; background: #E4F5EC; color: #146A40; font-weight: 600; }
+
+@media (max-width: 640px) {
+  .reg-glance > div { border-left: 0; border-top: 1px solid var(--color-border, #E8EEF7); }
+  .reg-glance > div:first-child { border-top: 0; }
+  .reg-cta .btn-gradient { width: 100%; }
+}

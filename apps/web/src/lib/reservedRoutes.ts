@@ -23,6 +23,8 @@ export const RESERVED_PATH_PREFIXES = [
   '/services',
   '/locations',
   '/providers',
+  '/ndis-providers',
+  '/aged-care-providers',
   '/login',
   '/signup',
   '/forgot-password',

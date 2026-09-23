@@ -10,6 +10,16 @@
  * and ServiceLocationPage (the service×suburb combo page, which has
  * its own hero and doesn't go through WordPressTemplate).
  */
+/**
+ * The robots value the HTML shell shipped with (index.html's %ROBOTS%,
+ * driven by VITE_ALLOW_INDEXING). Captured once, before any page has
+ * touched it, so an indexable page falls back to the SITE default rather
+ * than hard-coding "index" — otherwise every page that calls
+ * applySeoTags would quietly override a staging site's noindex.
+ */
+const SITE_ROBOTS: string =
+  (typeof document !== 'undefined' && document.querySelector('meta[name="robots"]')?.getAttribute('content')) || 'index, follow';
+
 export interface SeoTags {
   title: string;
   description: string;
@@ -51,7 +61,9 @@ export function applySeoTags(seo: SeoTags): void {
   setMetaTag('link[rel="canonical"]', 'href', seo.canonicalUrl || window.location.href, () => {
     const l = document.createElement('link'); l.setAttribute('rel', 'canonical'); return l;
   });
-  setMetaTag('meta[name="robots"]', 'content', seo.noindex ? 'noindex, nofollow' : 'index, follow', () => {
+  // "noindex, follow": keep the page out of results but let crawlers
+  // still follow its links (thin pages still link to real ones).
+  setMetaTag('meta[name="robots"]', 'content', seo.noindex ? 'noindex, follow' : SITE_ROBOTS, () => {
     const m = document.createElement('meta'); m.setAttribute('name', 'robots'); return m;
   });
 }

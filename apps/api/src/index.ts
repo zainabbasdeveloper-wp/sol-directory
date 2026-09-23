@@ -20,6 +20,8 @@ import wpRoutes from './routes/wp.routes.js';
 import matchRequestsRoutes from './routes/matchRequests.routes.js';
 import notificationsRoutes from './routes/notifications.routes.js';
 import sitemapRoutes from './routes/sitemap.routes.js';
+import registerRoutes from './routes/register.routes.js';
+import { getSitemapPart } from './controllers/sitemap.controller.js';
 import adminRoutes from './routes/admin.routes.js';
 import adminDashboardRoutes from './routes/admin.dashboard.routes.js';
 import adminPlansRoutes from './routes/admin.plans.routes.js';
@@ -66,7 +68,9 @@ app.use('/api/admin/leads', adminLeadsRoutes);
 app.use('/api/admin/email-logs', adminEmailLogsRoutes);
 app.use('/api/capacity', capacityRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/register', registerRoutes);
 app.use('/sitemap.xml', sitemapRoutes);
+app.get('/sitemap-:name.xml', (req, res, next) => { getSitemapPart(req, res).catch(next); });
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);
