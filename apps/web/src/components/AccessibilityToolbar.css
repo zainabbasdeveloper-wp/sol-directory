@@ -186,14 +186,6 @@ html {
   font-size: calc(100% * var(--site-font-scale) * var(--accessibility-scale));
 }
 
-#root {
-  zoom: calc(var(--site-font-scale) * var(--accessibility-scale));
-}
-
-#root .accessibility-toolbar {
-  zoom: calc(1 / (var(--site-font-scale) * var(--accessibility-scale)));
-}
-
 body.a11y-grayscale,
 body.a11y-grayscale * {
   filter: grayscale(1) !important;
