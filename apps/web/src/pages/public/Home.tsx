@@ -9,8 +9,12 @@ import { siteConfig, phoneHref } from '../../config/siteConfig';
 import { providerCountLabel, stateGroupCount } from '../../lib/statsCounts';
 import SupportFinder from '../../components/home/SupportFinder';
 import { useMatchModal } from '../../context/MatchModalContext';
-import { LOCATION_GROUPS } from '../../data/providers';
+import { LOCATION_GROUPS, SERVICES } from '../../data/providers';
+import { slugify } from '../../data/slugHelpers';
 import './Home.css';
+
+const SEO_SERVICE_AREAS = LOCATION_GROUPS.flatMap((group) => group.places).slice(0, 4);
+const SEO_SERVICES = SERVICES.filter((service) => service !== 'All services');
 
 export default function Home() {
   const navigate = useNavigate();
@@ -191,11 +195,11 @@ export default function Home() {
         </div>
         <div className="checks-inner">
           <div className="checks-content">
-          <span className="eyebrow eyebrow-light">
+          <span className="eyebrow checks-eyebrow">
             <span className="eyebrow-rule" />
             How listings work
           </span>
-          <h2 className="section-heading section-heading-light">What every listing tells you</h2>
+          <h2 className="section-heading checks-heading">What every listing tells you</h2>
           <div className="checks-grid">
             {[
               ['Current capacity', 'Providers confirm each week that they are taking referrals. If they do not, the listing is paused.'],
@@ -205,13 +209,54 @@ export default function Home() {
               ['Response times', 'Shown only once enough real enquiries have been answered to report an accurate figure.'],
               ['Registration details', 'Supplied by the provider. Always confirm registration with the provider or the NDIS Commission’s public register.'],
             ].map(([title, body]) => (
-              <div key={title}>
+              <div key={title} className="check-item">
+                <span className="check-item-mark" aria-hidden="true">✓</span>
+                <div>
                 <h3 className="check-title">{title}</h3>
                 <p className="check-body">{body}</p>
+                </div>
               </div>
             ))}
           </div>
           </div>
+        </div>
+      </section>
+
+      <section className="coverage-section" aria-labelledby="coverage-heading">
+        <div className="coverage-inner">
+          <div className="section-header-row">
+            <div>
+              <span className="eyebrow">
+                <span className="eyebrow-rule" />
+                Services and areas we cover
+              </span>
+              <h2 id="coverage-heading" className="section-heading">Explore support by service and location</h2>
+            </div>
+            <Link to="/services" className="btn-white">Browse all services</Link>
+          </div>
+          <p className="coverage-intro">
+            Compare services and search the locations currently represented in the SolDirectory.
+            Each page explains what to look for and helps you find providers who cover that support area.
+          </p>
+          <div className="coverage-grid">
+            {SEO_SERVICES.map((service) => (
+              <div key={service} className="coverage-group">
+                <h3 className="coverage-service-title">
+                  <Link to={`/services/${slugify(service)}/${slugify(SEO_SERVICE_AREAS[0])}`}>{service}</Link>
+                </h3>
+                <ul className="coverage-links">
+                  {SEO_SERVICE_AREAS.map((place) => (
+                    <li key={place}>
+                      <Link to={`/services/${slugify(service)}/${slugify(place)}`}>
+                        {service} in {place}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+          <Link to="/services" className="coverage-all-link">Cannot find your suburb? Search all services and areas →</Link>
         </div>
       </section>
 
