@@ -1,7 +1,8 @@
 .public-header {
   position: sticky;
   top: 0;
-  z-index: 40;
+  z-index: 100;
+  width: 100%;
 }
 .utility-bar { background: var(--color-navy); color: #ffffff; }
 .utility-bar-inner {
@@ -37,7 +38,17 @@ a.utility-item:hover { opacity: 1; text-decoration: underline; }
   row-gap: 12px;
 }
 .public-brand-link { margin-right: auto; display: flex; align-items: center; gap: 12px; color: inherit; }
-.public-brand-logo { display: block; width: clamp(180px, 17vw, 236px); height: auto; background: transparent; }
+.public-brand-logo,
+.public-footer-logo {
+  display: block;
+  height: auto;
+  background: transparent;
+  image-rendering: auto;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+.public-brand-logo { width: clamp(180px, 17vw, 236px); }
 .public-nav-link { color: var(--color-text); font-size: 15px; font-weight: 500; padding: 9px 4px; }
 .public-nav-link:hover { color: var(--color-accent-700); }
 .public-cta-btn {
@@ -68,7 +79,10 @@ a.utility-item:hover { opacity: 1; text-decoration: underline; }
   gap: clamp(28px, 4vw, 56px);
 }
 .public-footer-brand { grid-column: span 2; min-width: 230px; }
-.public-footer-logo { display: block; width: min(100%, 280px); height: auto; margin-bottom: 18px; background: transparent; }
+.public-footer-logo {
+  width: min(100%, 280px);
+  margin-bottom: 18px;
+}
 .public-footer-tagline { margin: 0 0 20px; font-size: 15px; line-height: 1.7; max-width: 34ch; opacity: 0.78; }
 .public-footer-contact { margin: 0; font-size: 15px; line-height: 1.8; opacity: 0.9; }
 .public-footer-contact a { color: inherit; text-decoration: none; }

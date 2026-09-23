@@ -63,7 +63,7 @@ export function PublicFooter() {
     <footer className="public-footer">
       <div className="public-footer-inner">
         <div className="public-footer-brand">
-          <img className="public-footer-logo" src="/images/sol-directory-logo-white-transparent-v2.png" alt="Sol Directory by Sol Business Consultant" />
+          <img className="public-footer-logo" src="/images/sol-directory-logo-black-transparent-v2.png" alt="Sol Directory by Sol Business Consultant" />
           <p className="public-footer-tagline">
             An independent directory and enquiry service for people seeking NDIS
             and aged care provider information in Australia.
