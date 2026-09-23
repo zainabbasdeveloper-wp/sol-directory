@@ -107,9 +107,9 @@ const PLAN_OPTIONS: Option[] = [
 const EMAIL_RE = /.+@.+\..+/;
 
 const NEXT_STEPS = [
-  'We match your request with providers who cover your area and offer the support you need.',
-  'Matched providers are notified and contact you directly.',
-  'You compare your options and choose who you would like to work with. There is no cost or obligation.',
+  'We compare your request with provider service areas, funding arrangements and confirmed capacity.',
+  'Relevant providers may be notified and may contact you directly.',
+  'You can compare providers, verify their credentials and decide whether to enter a service agreement.',
 ];
 
 export default function MatchingWizard() {
@@ -152,7 +152,13 @@ export default function MatchingWizard() {
       const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
       if (!saved) return;
       const parsed = JSON.parse(saved);
-      if (parsed.form) setForm({ ...EMPTY_FORM, ...parsed.form });
+      if (parsed.form) {
+        setForm({
+          ...EMPTY_FORM,
+          ...parsed.form,
+          service: parsed.form.service?.trim() || SERVICE_NOT_SURE,
+        });
+      }
       if (parsed.draftId) setDraftId(parsed.draftId);
       if (typeof parsed.stepIndex === 'number') setStepIndex(parsed.stepIndex);
     } catch { /* corrupt/old localStorage value — just start fresh */ }
@@ -180,7 +186,11 @@ export default function MatchingWizard() {
       const res = await fetch(`${API_URL}/match-requests/draft`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ draftId, ...currentForm }),
+        body: JSON.stringify({
+          draftId,
+          ...currentForm,
+          service: currentForm.service.trim() || SERVICE_NOT_SURE,
+        }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -307,7 +317,11 @@ export default function MatchingWizard() {
       const res = await fetch(`${API_URL}/match-requests`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ draftId, ...form }),
+        body: JSON.stringify({
+          draftId,
+          ...form,
+          service: form.service.trim() || SERVICE_NOT_SURE,
+        }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -331,9 +345,9 @@ export default function MatchingWizard() {
 
         {phase !== 'success' && (
           <aside className="mw-sidebar">
-            <p className="mw-sidebar-eyebrow">Get matched, free</p>
+            <p className="mw-sidebar-eyebrow">Provider enquiry request</p>
             <p className="mw-sidebar-copy">
-              Answer a few short questions about the support you need. It takes about two minutes.
+              Provide the information needed to identify providers serving your area. Submitting a request is free.
             </p>
             <ol className="mw-sidebar-steps">
               {steps.map((id, i) => {
@@ -351,7 +365,7 @@ export default function MatchingWizard() {
               </li>
             </ol>
             <p className="mw-sidebar-reassurance">
-              Your details are never sold. They are shared only with the providers we match you with.
+              Your information is used to process your request and is shared only as described in our Privacy Policy.
             </p>
           </aside>
         )}
@@ -401,7 +415,7 @@ export default function MatchingWizard() {
             <div className="mw-form">
               <div className="mw-scroll">
                 <h2 id="mw-heading" ref={headingRef} tabIndex={-1} className="mw-question">Check your request</h2>
-                <p className="mw-supporting">Make sure everything looks right, then send it to your matched providers.</p>
+                <p className="mw-supporting">Review the information below before submitting your provider enquiry request.</p>
 
                 <div className="mw-review-list">
                   <ReviewRow label="Who the support is for" value={labelFor(CARE_FOR_OPTIONS, form.careFor)} onEdit={() => editField('careFor')} />
@@ -437,7 +451,7 @@ export default function MatchingWizard() {
             <div className="mw-success">
               <span className="mw-success-icon"><IconCheckCircleBig /></span>
               <h2 id="mw-heading" ref={headingRef} tabIndex={-1} className="mw-question">Thank you. Your request has been sent.</h2>
-              <p className="mw-supporting">We are matching you with providers now.</p>
+              <p className="mw-supporting">We are processing your request and identifying relevant providers.</p>
               <div className="mw-next-steps mw-next-steps-center">
                 <p className="mw-next-steps-title">What happens next</p>
                 <ol>{NEXT_STEPS.map((s) => <li key={s}>{s}</li>)}</ol>

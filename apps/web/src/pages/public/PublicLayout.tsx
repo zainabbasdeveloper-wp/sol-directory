@@ -68,8 +68,8 @@ export function PublicFooter() {
         <div className="public-footer-brand">
           <span className="public-footer-name">SolDirectory</span>
           <p className="public-footer-tagline">
-            A Sol Consultancy service connecting Australians with NDIS and aged
-            care providers across every state and territory.
+            An independent directory and enquiry service for people seeking NDIS
+            and aged care provider information in Australia.
           </p>
           {(siteConfig.contactPhone || siteConfig.contactEmail || siteConfig.contactAddress) && (
             <p className="public-footer-contact">

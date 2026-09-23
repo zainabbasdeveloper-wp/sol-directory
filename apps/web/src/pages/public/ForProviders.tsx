@@ -54,11 +54,10 @@ export default function ForProviders() {
             <span className="fp-badge-dot" aria-hidden="true" />
             Now accepting providers
           </span>
-          <h1 className="fp-hero-heading">Connect with NDIS participants and aged care families in your service area</h1>
+          <h1 className="fp-hero-heading">Receive relevant enquiries from people seeking support in your service area</h1>
           <p className="fp-hero-copy">
-            We match your listing against enquiries from people searching in your suburbs, then send the
-            request straight to your inbox or phone. You make contact and take it from there — no bidding
-            for position and no commission on what you earn.
+            SolDirectory compares enquiry information with provider service areas, funding arrangements
+            and confirmed capacity. Relevant enquiries can be delivered by email or SMS for your team to assess.
           </p>
           <div className="fp-hero-actions">
             <button className="btn-gradient btn-lg" onClick={() => navigate('/signup?type=provider')}>
@@ -101,26 +100,26 @@ export default function ForProviders() {
 
       <section className="fp-understand">
         <div className="fp-understand-inner">
-          <h2 className="section-heading">Understand participant leads before you subscribe</h2>
+          <h2 className="section-heading">Understand provider enquiries before you subscribe</h2>
           <p className="section-copy">
-            A lead is an enquiry about support, not an exclusive client or a booked service. Being clear
-            about how matching works helps you decide if this is the right channel for your business.
+            An enquiry is a request for information about support. It is not an exclusive referral,
+            a confirmed client or a service booking. Review the process and plan inclusions before subscribing.
           </p>
           <div className="fp-understand-grid">
             <div className="fp-understand-card">
-              <h3>Match your actual service area and capacity</h3>
-              <p>Keep your service areas, funding types and contact details accurate, and only pursue enquiries you can genuinely support. Confirm timing, registration requirements and fees directly with the person before you agree to work together.</p>
+              <h3>Maintain accurate service and capacity information</h3>
+              <p>Keep your service areas, funding types and contact details current. Before accepting work, confirm support requirements, timing, fees and any registration requirements directly with the person or their representative.</p>
             </div>
             <div className="fp-understand-card">
-              <h3>NDIS and aged care enquiries are different</h3>
+              <h3>Review the funding arrangement for each enquiry</h3>
               <p>We also match aged care families with providers. Check the funding type and support requested in every enquiry — the totals shown across the directory include both, so they are not a count of NDIS-only demand.</p>
             </div>
             <div className="fp-understand-card">
-              <h3>Free notifications, paid contact access</h3>
+              <h3>Listing notifications and contact access</h3>
               <p>Claiming a basic listing is free and you are notified whenever an enquiry matches your service area. Unlocking full contact details is part of the Growth plan. A notification is not the same as a person agreeing to work with you.</p>
             </div>
             <div className="fp-understand-card">
-              <h3>Compare directories on fit, not headline numbers</h3>
+              <h3>Assess whether the service suits your organisation</h3>
               <p>When comparing directories, look at what is actually included — billing terms, covered locations, service categories and how enquiries reach you — rather than the size of the register alone. A larger list does not by itself mean more suitable enquiries for your business.</p>
             </div>
           </div>
@@ -133,19 +132,19 @@ export default function ForProviders() {
         </div>
         <div className="fp-reach-content">
           <h2 className="section-heading">How enquiries reach you</h2>
-          <p className="section-copy">Enquiries are delivered the way you actually check them, as soon as a match is confirmed.</p>
+          <p className="section-copy">Choose how your organisation receives notifications when an enquiry is relevant to your profile.</p>
           <ul className="fp-reach-list">
             <li>
-              <strong>Email to your inbox.</strong> The suburb, service and funding type are sent the moment a matching enquiry comes in.
+              <strong>Email notifications.</strong> Available enquiry details are sent to your nominated intake email address.
             </li>
             <li>
-              <strong>SMS to your phone.</strong> Growth includes text notifications for matched enquiries, so you can review and respond without opening a dashboard.
+              <strong>SMS notifications.</strong> Eligible plans can receive a text alert when a relevant enquiry is available to review.
             </li>
             <li>
-              <strong>No commission, ever.</strong> Your subscription is a flat monthly fee — we never take a cut of what you earn from a job.
+              <strong>Subscription-based access.</strong> SolDirectory does not deduct a percentage from fees agreed between you and a participant.
             </li>
             <li>
-              <strong>Connect directly with families.</strong> Unlocking an enquiry gives you their contact details directly; there is no middle step and no obligation on either side.
+              <strong>Direct communication.</strong> Where your plan permits contact access, you can communicate directly with the person who submitted the enquiry.
             </li>
           </ul>
         </div>
@@ -168,8 +167,8 @@ export default function ForProviders() {
             </div>
             <div className="fp-step-card">
               <span className="fp-step-num">3</span>
-              <h3>Get matched, make contact</h3>
-              <p>When someone requests support in your area, we compare the request to your profile and send you the brief. You make contact directly.</p>
+              <h3>Review relevant enquiries</h3>
+              <p>When an enquiry aligns with your profile, your team can review the available information and decide whether to respond.</p>
             </div>
           </div>
           <button className="btn-gradient" onClick={() => navigate('/signup?type=provider')}>
@@ -182,7 +181,7 @@ export default function ForProviders() {
         <div className="fp-pricing-inner">
           <h2 className="section-heading" style={{ textAlign: 'center', maxWidth: 'none' }}>Free listing vs Growth</h2>
           <p className="section-copy" style={{ textAlign: 'center', maxWidth: '52ch', margin: '0 auto 40px' }}>
-            Every claimed profile is notified for free. Growth adds full contact details and priority matching for a flat monthly fee.
+            A Starter listing provides directory visibility and limited enquiry information. Growth adds contact access and a monthly lead allowance.
           </p>
           <div className="fp-pricing-grid">
             <div className="fp-pricing-card">
@@ -208,8 +207,8 @@ export default function ForProviders() {
       </section>
 
       <section className="fp-cta-band">
-        <h2>Start getting matched</h2>
-        <p>Join the providers already receiving NDIS and aged care enquiries by email and SMS, direct to their team.</p>
+        <h2>Create or claim your provider profile</h2>
+        <p>Publish accurate service information and choose how your team receives relevant NDIS and aged care enquiries.</p>
         <div className="fp-cta-actions">
           <button className="btn-white" onClick={() => navigate('/signup?type=provider')}>List your business →</button>
           <button className="btn-outline-light" onClick={() => navigate('/login')}>Log in</button>

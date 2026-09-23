@@ -238,7 +238,7 @@ export default function SupportFinder({ stats }: Props) {
         {notFound && (
           <p className="sf-hint" role="status">
             We could not find a support called “{query.trim()}”. <Link to="/directory">Browse all providers</Link> or{' '}
-            <button type="button" className="link-btn" onClick={() => openMatchModal()}>tell us what you need</button>.
+            <button type="button" className="link-btn" onClick={() => openMatchModal()}>submit a provider enquiry</button>.
           </p>
         )}
 
@@ -276,10 +276,10 @@ export default function SupportFinder({ stats }: Props) {
 
         <div className="sf-help">
           <div>
-            <strong>Not sure which support you need?</strong>
-            <span>Answer a few questions and we will match you with providers who can help.</span>
+            <strong>Need assistance identifying provider options?</strong>
+            <span>Submit your location, timeframe and funding information for relevant providers to review.</span>
           </div>
-          <button type="button" className="btn-gradient" onClick={() => openMatchModal()}>Get matched</button>
+          <button type="button" className="btn-gradient" onClick={() => openMatchModal()}>Submit an enquiry</button>
         </div>
       </div>
     </section>
