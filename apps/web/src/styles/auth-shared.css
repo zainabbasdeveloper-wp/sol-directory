@@ -20,6 +20,7 @@
   display: block;
   width: clamp(180px, 17vw, 236px);
   height: auto;
+  background: transparent;
 }
 .auth-header-back {
   font-size: 14px;
