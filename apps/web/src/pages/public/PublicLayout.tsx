@@ -49,8 +49,8 @@ export function PublicHeader() {
           <Link to="/locations" className="public-nav-link">
             Locations
           </Link>
-          <Link to="/workers" className="public-nav-link">
-            For workers
+          <Link to="/independent-workers" className="public-nav-link">
+            Independent Workers
           </Link>
           <button onClick={openMatchModal} className="public-cta-btn">
             Get matched free
@@ -98,6 +98,7 @@ export function PublicFooter() {
         <div className="public-footer-col">
           <span className="public-footer-heading">Company</span>
           <Link to="/providers">List your business</Link>
+          <Link to="/independent-workers">Independent Workers</Link>
           {siteConfig.contactEmail && <a href={`mailto:${siteConfig.contactEmail}`}>Contact</a>}
           <Link to="/privacy">Privacy policy</Link>
           <Link to="/terms">Terms of use</Link>

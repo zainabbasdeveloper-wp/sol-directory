@@ -88,7 +88,7 @@ export default function Signup() {
       <h1 className="signup-heading">What are you signing up as?</h1>
       <p className="signup-paragraph">
         Select the account type that reflects how you will use SolDirectory.
-        Workers can maintain a professional listing, provider organisations can manage services and enquiries,
+        Independent Workers can maintain a professional profile, provider organisations can manage services and enquiries,
         and allied health professionals and support coordinators can search provider information.
         Participants, families and representatives do not need an account to <button type="button" className="signup-link" style={{ background: 'none', border: 0, padding: 0, font: 'inherit', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => openMatchModal()}>submit a provider enquiry</button>.
       </p>

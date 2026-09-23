@@ -32,17 +32,18 @@ export interface AccountType {
 // Internal role keys ('worker', 'coordinator', 'participant') stay
 // unchanged for backward compatibility with existing accounts and
 // the database schema — only the user-facing title/labels changed
-// (NDIS Worker terminology confirmed already correct; 'Support
+// ('Independent Worker' is the public label for the existing worker
+// role; 'Support
 // coordinator' -> 'Allied Health'; 'Participant or family' ->
 // 'Participant').
 export const ACCOUNT_TYPES: AccountType[] = [
   {
     key: 'worker',
-    title: 'NDIS Worker',
-    desc: 'Support workers, nurses and allied health assistants who want to be found and contacted for shifts.',
-    meta: 'Builds a searchable worker listing',
-    signupHeading: 'Create your worker account',
-    signupCta: 'Create worker account →',
+    title: 'Independent Worker',
+    desc: 'Independent support workers, nurses and allied health assistants who want to present their services and availability.',
+    meta: 'Creates a searchable professional profile',
+    signupHeading: 'Create your Independent Worker account',
+    signupCta: 'Create Independent Worker account →',
     // Workers can't access /workers themselves (that's the directory
     // OTHER roles use to find them) — /dashboard is their real home.
     postSignupRoute: '/dashboard',
