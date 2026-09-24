@@ -4,6 +4,7 @@ import type { Request, Response } from 'express';
 import RegisterListing from '../models/RegisterListing.js';
 import Provider from '../models/Provider.js';
 import Worker from '../models/Worker.js';
+import WorkerReview from '../models/WorkerReview.js';
 import { MIN_SUBURB_LISTINGS, STATE_CODES, type RegisterType } from '../services/registerNormalise.js';
 import { computeHub } from './register.controller.js';
 import { MIN_INDEXABLE_PROVIDERS, VISIBLE_PROVIDER, areaRows, conditionRows, publicLogoUrl } from './providersPublic.controller.js';
@@ -315,6 +316,11 @@ async function workerProfilePage(site: string, slug: string): Promise<Page> {
     .select('firstName lastName role suburb state services languages conditionExperience bio hasPhoto publicSlug updatedAt').lean();
   if (!w) return notFound();
 
+  // Approved reviews only, same as the page itself.
+  const reviews: any[] = await WorkerReview.find({ workerId: w._id, status: 'approved' }).sort({ createdAt: -1 }).limit(10).select('rating text reviewerName createdAt').lean();
+  const reviewCount = await WorkerReview.countDocuments({ workerId: w._id, status: 'approved' });
+  const average = reviewCount ? Math.round((await WorkerReview.aggregate([{ $match: { workerId: w._id, status: 'approved' } }, { $group: { _id: null, avg: { $avg: '$rating' } } }]))[0].avg * 10) / 10 : null;
+
   const name = workerName(w);
   const where = [w.suburb, w.state].filter(Boolean).join(', ');
   const offers = (w.services ?? []).slice(0, 3).join(', ');
@@ -337,7 +343,11 @@ async function workerProfilePage(site: string, slug: string): Promise<Page> {
       `<nav aria-label="Breadcrumb"><a href="/">Home</a> / <a href="/independent-workers/find">Independent workers</a> / ${esc(name)}</nav>` +
       `<h1>${esc(name)}</h1><p>${esc([w.role, where].filter(Boolean).join(' · '))}</p>` +
       (w.bio ? `<h2>About</h2><p>${esc(w.bio)}</p>` : '') +
-      list('Supports offered', w.services ?? []) + list('Experience supporting', w.conditionExperience ?? []) + list('Languages', w.languages ?? []),
+      list('Supports offered', w.services ?? []) + list('Experience supporting', w.conditionExperience ?? []) + list('Languages', w.languages ?? []) +
+      `<h2>Reviews</h2>` +
+      (reviewCount
+        ? `<p>${average!.toFixed(1)} out of 5 from ${fmt(reviewCount)} ${reviewCount === 1 ? 'review' : 'reviews'}.</p><ul>${reviews.map((r) => `<li>${r.rating}/5 - ${esc(r.text)} (${esc(r.reviewerName)})</li>`).join('')}</ul>`
+        : '<p>No reviews yet.</p>'),
   };
 }
 

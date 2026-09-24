@@ -3,7 +3,8 @@ import { Link, useParams } from 'react-router-dom';
 import { PublicHeader, PublicFooter } from './PublicLayout';
 import Avatar from '../../components/ui/Avatar';
 import { Breadcrumbs, trimTo } from './register/RegisterParts';
-import { getPublicWorker, workerPhotoUrl, type PublicWorker } from '../../api/profilesApi';
+import { getPublicWorker, getPublicWorkerReviews, workerPhotoUrl, type PublicWorker } from '../../api/profilesApi';
+import { ReviewList, Stars } from '../../components/reviews/WorkerReviews';
 import { ApiError } from '../../api/client';
 import { applySeoTags, setJsonLd } from '../../lib/seo';
 import './Home.css';
@@ -91,7 +92,7 @@ export default function WorkerPublicProfile() {
             <p className="pp-sub">
               {w.role && <span>{w.role}</span>}
               {where && <span>{where}</span>}
-              {w.rating !== null && <span>★ {w.rating.toFixed(1)} ({w.reviewCount})</span>}
+              {w.rating !== null && <span><Stars value={w.rating} /> {w.rating.toFixed(1)} ({w.reviewCount} {w.reviewCount === 1 ? 'review' : 'reviews'})</span>}
             </p>
           </div>
         </div>
@@ -111,6 +112,9 @@ export default function WorkerPublicProfile() {
               {w.availableDays.length > 0 && <div><dt>Available</dt><dd>{w.availableDays.join(', ')}</dd></div>}
             </dl>
             {w.availabilityNote && <p className="pp-lede" style={{ marginTop: 14 }}>{w.availabilityNote}</p>}
+
+            <h2 className="reg-h2" id="reviews">Reviews</h2>
+            <ReviewList load={(page) => getPublicWorkerReviews(w.slug, page)} />
 
             <p className="reg-note">
               <strong>Check before you engage.</strong> This profile was written by the worker. Confirm their checks, qualifications,

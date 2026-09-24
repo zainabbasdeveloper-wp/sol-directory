@@ -11,6 +11,7 @@
     "db:seed:admin": "tsx src/seed/seedAdminDemo.ts",
     "import:providers": "tsx src/scripts/importScrapedProviders.ts",
     "import:register": "tsx src/scripts/importRegisterListings.ts",
+    "recompute:worker-ratings": "tsx src/scripts/recomputeWorkerRatings.ts",
     "job:capacity-check": "tsx src/scripts/weeklyCapacityCheck.ts"
   },
   "dependencies": {

@@ -1,0 +1,36 @@
+.rv { display: grid; gap: 14px; }
+.rv-stars { position: relative; display: inline-block; line-height: 1; letter-spacing: 2px; font-size: 17px; white-space: nowrap; vertical-align: middle; }
+.rv-stars-back { color: #D5DCE8; }
+.rv-stars-front { position: absolute; left: 0; top: 0; overflow: hidden; color: #F5A623; }
+.rv-summary { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 15px; }
+.rv-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.rv-item { padding: 14px 16px; background: #fff; border: 1px solid var(--color-border, #E8EEF7); border-radius: 12px; }
+.rv-item-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 13.5px; }
+.rv-by { font-weight: 700; }
+.rv-date { color: var(--color-text-muted, #5A6B84); }
+.rv-text { margin: 8px 0 0; font-size: 15px; line-height: 1.65; white-space: pre-line; overflow-wrap: anywhere; }
+.rv-empty { margin: 0; font-size: 15px; color: var(--color-text-muted, #5A6B84); }
+.rv-note { margin: 0; font-size: 13px; line-height: 1.6; color: var(--color-text-muted, #5A6B84); }
+.rv-pager { display: flex; align-items: center; gap: 14px; font-size: 13.5px; }
+.rv-pager button, .rv-link { border: 0; background: none; padding: 4px 0; font: inherit; font-size: 13.5px; font-weight: 600; color: var(--color-primary, #1769E0); cursor: pointer; }
+.rv-pager button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.rv-form { display: grid; gap: 14px; padding: 18px; background: #fff; border: 1px solid #B9D0F3; border-radius: 14px; }
+.rv-form h3 { margin: 0; font-size: 17px; }
+.rv-rate { border: 0; margin: 0; padding: 0; display: flex; align-items: center; gap: 2px; }
+.rv-rate legend { float: left; margin-right: 12px; padding: 0; font-size: 13px; font-weight: 600; line-height: 30px; }
+.rv-rate label { cursor: pointer; font-size: 28px; line-height: 1; color: #D5DCE8; }
+.rv-rate label.rv-rate-on { color: #F5A623; }
+.rv-rate input { position: absolute; opacity: 0; pointer-events: none; }
+.rv-rate label:focus-within { outline: 2px solid var(--color-primary, #1769E0); outline-offset: 2px; border-radius: 4px; }
+.rv-field { display: grid; gap: 6px; font-size: 13px; font-weight: 600; }
+.rv-field textarea { padding: 10px 12px; border: 1px solid var(--color-border-strong, #DDE4EF); border-radius: 8px; font: inherit; font-size: 14px; font-weight: 400; resize: vertical; }
+.rv-hint { font-size: 12.5px; font-weight: 400; color: var(--color-text-muted, #5A6B84); }
+.rv-check { display: flex; gap: 10px; align-items: flex-start; font-size: 13.5px; cursor: pointer; }
+.rv-check input { margin-top: 3px; width: 17px; height: 17px; flex: none; }
+.rv-error { margin: 0; color: #B4232F; font-size: 14px; }
+.rv-actions { display: flex; align-items: center; gap: 16px; }
+.rv-submit { height: 42px; padding: 0 22px; border: 0; border-radius: 8px; background: linear-gradient(135deg, #1769E0, #2F80ED); color: #fff; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.rv-submit:disabled { opacity: 0.55; cursor: not-allowed; }
+.rv-mine { padding: 14px 16px; background: var(--color-primary-tint, #F2F7FF); border-radius: 12px; font-size: 14px; }
+.rv-mine p { margin: 0 0 6px; }
