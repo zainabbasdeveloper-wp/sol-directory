@@ -22,7 +22,8 @@ import { MIN_INDEXABLE_PROVIDERS, VISIBLE_PROVIDER, areaRows, conditionRows, pub
  * runs the app it replaces #root, so people see the normal page; the
  * content is the same one, not something shown only to bots.
  *
- * The same shell also serves the public provider profile (/directory/:slug)
+ * The same shell also serves WordPress service pages (/services/:slug, content fetched
+ * from WordPress), the public provider profile (/directory/:slug)
  * and the independent-worker pages (/independent-workers/find and
  * /independent-workers/:slug).
  *
@@ -429,6 +430,104 @@ async function conditionsHubPage(site: string): Promise<Page> {
   };
 }
 
+// ---------------------------------------------------------------
+// WordPress service pages - /services/:slug
+// The content lives in WordPress; crawlers get it here as plain HTML.
+// ---------------------------------------------------------------
+class WordPressUnavailable extends Error {}
+
+const WP_TTL_MS = 5 * 60 * 1000;
+const serviceCache = new Map<string, { at: number; item: any | null }>();
+
+/** WordPress returns titles with HTML entities ("&amp;", "&#8217;"). */
+function decodeEntities(s: string): string {
+  return s
+    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)))
+    .replace(/&(amp|lt|gt|quot|apos|nbsp);/g, (_, n) => ({ amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' }[n as string] as string));
+}
+const plain = (html: string) => decodeEntities(String(html ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim());
+
+async function fetchWpService(slug: string): Promise<any | null> {
+  const hit = serviceCache.get(slug);
+  if (hit && Date.now() - hit.at < WP_TTL_MS) return hit.item;
+  const base = process.env.WORDPRESS_URL;
+  if (!base) throw new WordPressUnavailable('WORDPRESS_URL is not set');
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 6000);
+  try {
+    const res = await fetch(`${base.replace(/\/$/, '')}/wp-json/wp/v2/services?slug=${encodeURIComponent(slug)}`, { signal: ctrl.signal });
+    if (!res.ok) throw new WordPressUnavailable(`WordPress responded ${res.status}`);
+    const list = await res.json();
+    if (!Array.isArray(list)) throw new WordPressUnavailable('Unexpected WordPress response');
+    const item = list[0] ?? null;
+    serviceCache.set(slug, { at: Date.now(), item }); // failures are never cached
+    return item;
+  } catch (e) {
+    throw e instanceof WordPressUnavailable ? e : new WordPressUnavailable(String((e as Error).message));
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+const jsonArr = (v: unknown): any[] => {
+  if (Array.isArray(v)) return v;
+  if (typeof v !== 'string' || !v.trim()) return [];
+  try { const d = JSON.parse(v); return Array.isArray(d) ? d : []; } catch { return []; }
+};
+
+async function servicePage(site: string, slug: string): Promise<Page> {
+  if (!SLUG_RE.test(slug)) return notFound();
+  const item = await fetchWpService(slug);
+  if (!item) return { ...notFound(), title: 'Service not found | SolDirectory', body: '<h1>Page not found</h1><p><a href="/services">Browse services</a></p>' };
+
+  const meta = item.meta ?? {};
+  const s = (k: string) => (typeof meta[k] === 'string' ? plain(meta[k]) : '');
+  const title = plain(item.title?.rendered ?? '');
+  const excerpt = plain(item.excerpt?.rendered ?? '');
+  const seoTitle = s('seo_title') || title;
+  const description = trimTo(s('seo_description') || excerpt || `${title} on SolDirectory.`, 160);
+  const path = `/services/${item.slug}`;
+  const faqs = jsonArr(meta.faq_json).filter((f: any) => f?.question && f?.answer);
+  const related = (Array.isArray(meta.related_services) ? meta.related_services : []).filter((r: any) => r?.slug && r?.title);
+  const cards = jsonArr(meta.regulator_cards_json).filter((c: any) => c?.title);
+  const creds = jsonArr(meta.credentials_json).filter((c: any) => c?.title);
+  const noindex = meta.seo_noindex === true || meta.seo_noindex === '1';
+
+  const block = (h: string, text: string) => (text ? `<h2>${esc(h)}</h2><p>${esc(text)}</p>` : '');
+  const body =
+    `<nav aria-label="Breadcrumb"><a href="/">Home</a> / <a href="/services">Services</a> / ${esc(title)}</nav>` +
+    `<h1>${esc(s('hero_headline') || title)}</h1>` +
+    (s('hero_eyebrow') ? `<p>${esc(s('hero_eyebrow'))}</p>` : '') +
+    (s('hero_description') || excerpt ? `<p>${esc(s('hero_description') || excerpt)}</p>` : '') +
+    (plain(item.content?.rendered ?? '') ? `<div>${esc(plain(item.content.rendered))}</div>` : '') +
+    block(s('overview_heading') || `About ${title}`, s('overview_content')) +
+    block('Who is this service for?', s('who_for')) +
+    block('Eligibility', s('eligibility')) +
+    block('Funding', [s('funding_info'), s('plan_management_info')].filter(Boolean).join(' ')) +
+    (creds.length ? `<h2>Checking credentials</h2><ul>${creds.map((c: any) => `<li><strong>${esc(plain(c.title))}</strong> ${esc(plain(c.description ?? ''))}</li>`).join('')}</ul>` : '') +
+    (cards.length ? `<h2>${esc(s('regulations_heading') || 'Regulation and safeguards')}</h2>${s('regulations_intro') ? `<p>${esc(s('regulations_intro'))}</p>` : ''}<ul>${cards.map((c: any) => `<li><strong>${esc(plain(c.title))}</strong> ${esc(plain(c.description ?? ''))}${c.phone ? ` Phone: ${esc(String(c.phone))}.` : ''}</li>`).join('')}</ul>` : '') +
+    (related.length ? `<h2>Related services</h2><ul>${related.map((r: any) => li(`/services/${r.slug}`, plain(r.title))).join('')}</ul>` : '') +
+    (faqs.length ? `<h2>Frequently asked questions</h2>${faqs.map((f: any) => `<h3>${esc(plain(f.question))}</h3><p>${esc(plain(f.answer))}</p>`).join('')}` : '') +
+    `<p><a href="/directory">Browse the provider directory</a></p>`;
+
+  return {
+    status: 200,
+    title: seoTitle,
+    description,
+    canonical: path,
+    noindex,
+    ogImage: typeof meta.seo_og_image === 'string' && meta.seo_og_image ? meta.seo_og_image : undefined,
+    jsonLd: [
+      { ...breadcrumbLd(site, [{ name: 'Home', path: '/' }, { name: 'Services', path: '/services' }, { name: title, path }]), id: 'cpt-breadcrumbs' },
+      ...(faqs.length
+        ? [{ id: 'cpt-faq', data: { '@type': 'FAQPage', mainEntity: faqs.map((f: any) => ({ '@type': 'Question', name: plain(f.question), acceptedAnswer: { '@type': 'Answer', text: plain(f.answer) } })) } }]
+        : []),
+    ],
+    body,
+  };
+}
+
 /** GET /seo-shell/<original path>?<original query> — see the file comment. */
 export async function registerShell(req: Request, res: Response) {
   const url = new URL(req.originalUrl, 'http://x');
@@ -438,7 +537,15 @@ export async function registerShell(req: Request, res: Response) {
 
   let page: Page;
   const root = parts[0];
-  if (root === 'directory' && parts.length === 3 && (parts[1] === 'in' || parts[1] === 'for')) {
+  if (root === 'services' && parts.length === 2) {
+    try {
+      page = await servicePage(site, parts[1]);
+    } catch (e) {
+      // WordPress is down or broken: don't answer 404 (the page may well exist) - nginx then serves the plain app.
+      if (e instanceof WordPressUnavailable) return res.status(502).send('Content service unavailable');
+      throw e;
+    }
+  } else if (root === 'directory' && parts.length === 3 && (parts[1] === 'in' || parts[1] === 'for')) {
     page = await providerFilterPage(site, parts[1] === 'in' ? 'area' : 'condition', parts[2], pageNum);
   } else if (root === 'directory' && parts.length === 2 && parts[1] === 'for') {
     page = await conditionsHubPage(site);
