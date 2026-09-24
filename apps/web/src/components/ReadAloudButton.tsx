@@ -48,6 +48,7 @@ export default function ReadAloudButton({
     if (!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
     setIsSpeaking(false);
+    setOpen(false);
     setActiveWordIndex(null);
     utteranceRef.current = null;
   };
@@ -108,6 +109,11 @@ export default function ReadAloudButton({
       stopSpeaking();
       return;
     }
+    if (open) {
+      setOpen(false);
+      stopSpeaking();
+      return;
+    }
     startSpeaking();
   };
 
@@ -125,6 +131,12 @@ export default function ReadAloudButton({
 
       {open && (
         <div className="read-aloud__panel" role="dialog" aria-label="Read aloud controls">
+          <div className="read-aloud__panel-header">
+            <span>Read aloud</span>
+            <button type="button" className="read-aloud__close" onClick={stopSpeaking} aria-label="Close read aloud controls">
+              ✕
+            </button>
+          </div>
           <div className="read-aloud__controls">
             <button type="button" className="read-aloud__mini" onClick={toggleSpeech}>
               {isSpeaking ? 'Pause' : 'Play'}

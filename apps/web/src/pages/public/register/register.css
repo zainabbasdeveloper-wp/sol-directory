@@ -2,7 +2,7 @@
    Builds on Home.css + Directory.css (.directory-page-header, .dir-grid,
    .dir-card, .dir-tag …), so this only adds what those don't have. */
 
-.reg-page { max-width: 1240px; margin: 0 auto; padding: clamp(28px, 4vw, 56px) clamp(20px, 5vw, 56px) clamp(56px, 7vw, 104px); }
+.reg-page { max-width: var(--layout-content-max-width); margin: 0 auto; padding: clamp(28px, 4vw, 56px) clamp(20px, 5vw, 56px) clamp(56px, 7vw, 104px); }
 .reg-crumbs { margin: 0 0 22px; font-size: 13.5px; color: color-mix(in srgb, var(--color-text, #10233F) 65%, transparent); }
 .reg-crumbs ol { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0; padding: 0; }
 .reg-crumbs li + li::before { content: '›'; margin-right: 6px; opacity: 0.6; }

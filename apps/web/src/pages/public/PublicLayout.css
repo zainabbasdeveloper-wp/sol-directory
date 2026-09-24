@@ -9,7 +9,7 @@
 }
 .utility-bar { background: var(--color-navy); color: #ffffff; }
 .utility-bar-inner {
-  max-width: 1240px;
+  max-width: var(--layout-content-max-width);
   margin: 0 auto;
   padding: 10px clamp(20px, 5vw, 56px);
   display: flex;
@@ -31,7 +31,7 @@ a.utility-item:hover { opacity: 1; text-decoration: underline; }
   box-shadow: 0 1px 0 color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 .public-nav-inner {
-  max-width: 1240px;
+  max-width: var(--layout-content-max-width);
   margin: 0 auto;
   padding: 16px clamp(20px, 5vw, 56px);
   display: flex;
@@ -74,7 +74,7 @@ a.utility-item:hover { opacity: 1; text-decoration: underline; }
 
 .public-footer { background: var(--color-navy); color: #ffffff; position: relative; }
 .public-footer-inner {
-  max-width: 1240px;
+  max-width: var(--layout-content-max-width);
   margin: 0 auto;
   padding: clamp(56px, 7vw, 88px) clamp(20px, 5vw, 56px) 32px;
   display: grid;
@@ -116,7 +116,7 @@ a.utility-item:hover { opacity: 1; text-decoration: underline; }
 .public-footer-col a { color: #ffffff; opacity: 0.85; }
 .public-footer-col a:hover { opacity: 1; }
 .public-footer-legal {
-  max-width: 1240px;
+  max-width: var(--layout-content-max-width);
   margin: 0 auto;
   padding: 20px clamp(20px, 5vw, 56px) 44px;
   font-size: 13.5px;
