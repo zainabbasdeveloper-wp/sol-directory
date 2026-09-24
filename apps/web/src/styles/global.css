@@ -11,14 +11,15 @@ body {
   background: var(--color-page-bg);
   color: var(--color-text);
   font-family: var(--font-family);
-  font-size: 1rem;
-  font-weight: 400;
+  font-size: 15px;
+  font-weight: 500;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
 
-p, li, dd, dt, label, input, select, textarea, button {
-  font-weight: 400;
+p, li, dd, dt, label, input, select, textarea, button, a, span {
+  font-size: 15px;
+  font-weight: 500;
 }
 
 a {
