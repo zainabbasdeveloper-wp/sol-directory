@@ -1,14 +1,21 @@
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { PublicHeader, PublicFooter } from './PublicLayout';
 import { LOCATION_GROUPS } from '../../data/providers';
+import { STATES } from '../../lib/registerMeta';
+import { listPublicAreas, type CountRow } from '../../api/profilesApi';
 import { useSiteStats } from '../../hooks/useSiteStats';
 import { providerCountLabel, stateGroupCount } from '../../lib/statsCounts';
 import './Directory.css';
 import './Home.css';
+import './register/register.css';
 
 export default function Locations() {
   const navigate = useNavigate();
   const stats = useSiteStats();
+  // Suburbs where real providers say they work, from live data (none shown if there are none yet).
+  const [areas, setAreas] = useState<CountRow[]>([]);
+  useEffect(() => { listPublicAreas().then((r) => setAreas(r.items.slice(0, 36))).catch(() => {}); }, []);
 
   return (
     <>
@@ -38,7 +45,7 @@ export default function Locations() {
               )}
               <div className="location-places">
                 {g.places.map((place) => (
-                  <button key={place} className="location-link" onClick={() => navigate('/directory')}>
+                  <button key={place} className="location-link" onClick={() => navigate(`/directory?suburb=${encodeURIComponent(place)}`)}>
                     {place}
                   </button>
                 ))}
@@ -46,6 +53,31 @@ export default function Locations() {
             </div>
           ))}
         </div>
+
+        {areas.length > 0 && (
+          <>
+            <h2 className="reg-h2">Areas with providers on SolDirectory</h2>
+            <ul className="reg-linkgrid">
+              {areas.map((a) => (
+                <li key={a.slug}><Link to={`/directory/in/${a.slug}`}>{a.name}<span>{a.count}</span></Link></li>
+              ))}
+            </ul>
+          </>
+        )}
+
+        <h2 className="reg-h2">Browse the public registers by state</h2>
+        <p className="reg-lede">
+          Providers listed on the NDIS and My Aged Care registers, by state and suburb. These are register listings — they don’t show
+          who has capacity right now.
+        </p>
+        <ul className="reg-linkgrid">
+          {STATES.map((s) => (
+            <li key={`ndis-${s.code}`}><Link to={`/ndis-providers/${s.slug}`}>NDIS providers in {s.name}</Link></li>
+          ))}
+          {STATES.map((s) => (
+            <li key={`aged-${s.code}`}><Link to={`/aged-care-providers/${s.slug}`}>Aged care providers in {s.name}</Link></li>
+          ))}
+        </ul>
       </section>
 
       <PublicFooter />

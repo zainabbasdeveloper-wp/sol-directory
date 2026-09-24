@@ -1,19 +1,39 @@
 import type { Request, Response } from 'express';
 import Provider from '../models/Provider.js';
+import Worker from '../models/Worker.js';
+import RegisterListing from '../models/RegisterListing.js';
+import { computeHub } from './register.controller.js';
+import { MIN_INDEXABLE_PROVIDERS, areaRows, conditionRows } from './providersPublic.controller.js';
+import { REGISTER_TYPES, STATE_CODES, type RegisterType } from '../services/registerNormalise.js';
 
 // Real sitemap — every URL here is either a genuinely static public
-// route, a real provider slug from the database, or (best-effort)
-// real WordPress content fetched at request time. Nothing invented.
-// Cached briefly in-memory since a sitemap doesn't need to be
-// millisecond-fresh and crawlers can request it frequently.
+// route, a real provider slug from the database, a public-register page
+// that actually has content, or (best-effort) real WordPress content
+// fetched at request time. Nothing invented.
+//
+// /sitemap.xml is an INDEX pointing at:
+//   /sitemap-pages.xml          — the marketing/CMS pages and real providers
+//   /sitemap-register-N.xml     — register listing pages, 10,000 per file
+// A single sitemap file is capped at 50,000 URLs / 50 MB, and register
+// pages alone are in the tens of thousands, so they're split up front
+// rather than left to break later.
 
-const STATIC_PUBLIC_ROUTES = ['/', '/directory', '/services', '/locations', '/providers'];
-
-let cached: { xml: string; at: number } | null = null;
+const STATIC_PUBLIC_ROUTES = ['/', '/directory', '/services', '/locations', '/providers', '/independent-workers', '/independent-workers/find', '/ndis-providers', '/aged-care-providers'];
+const REGISTER_PATH: Record<RegisterType, string> = { ndis: '/ndis-providers', aged_care: '/aged-care-providers' };
+const REGISTER_CHUNK = 10_000;
 const CACHE_MS = 10 * 60 * 1000; // 10 minutes
+const REGISTER_CACHE_MS = 30 * 60 * 1000;
+
+interface UrlEntry { path: string; lastmod?: Date }
+
+let pagesCache: { urls: UrlEntry[]; at: number } | null = null;
+let registerCache: { urls: UrlEntry[]; at: number } | null = null;
+
+const xmlEscape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+const siteUrlFor = (req: Request) => (process.env.SITE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
 
 // Skips anything an editor has flagged "Hide from search engines"
-// (the SEO field group's seo_noindex toggle, acf-fields.php) — a
+// (the SEO field group's seo_noindex toggle, custom-fields.php) — a
 // sitemap entry for a page that also tells crawlers not to index it
 // would just waste crawl budget on a contradiction.
 async function fetchWpSlugs(base: string, path: string): Promise<string[]> {
@@ -63,21 +83,30 @@ async function fetchServiceAreaPaths(base: string): Promise<string[]> {
   }
 }
 
-export async function getSitemap(req: Request, res: Response) {
-  if (cached && Date.now() - cached.at < CACHE_MS) {
-    res.set('Content-Type', 'application/xml');
-    return res.send(cached.xml);
-  }
+async function buildPageUrls(): Promise<UrlEntry[]> {
+  if (pagesCache && Date.now() - pagesCache.at < CACHE_MS) return pagesCache.urls;
 
-  const siteUrl = process.env.SITE_URL || `${req.protocol}://${req.get('host')}`;
+  const paths = [...STATIC_PUBLIC_ROUTES];
   const wpUrl = process.env.WORDPRESS_URL; // server-side var, separate from the frontend's VITE_WORDPRESS_URL
-
-  const urls = [...STATIC_PUBLIC_ROUTES];
 
   // Real provider slugs — only accounts that actually completed
   // onboarding far enough to have one, active accounts only.
-  const providers = await Provider.find({ accountStatus: 'active', slug: { $exists: true, $ne: null } }).select('slug').lean();
-  for (const p of providers) urls.push(`/providers/${(p as any).slug}`);
+  // These are the PUBLIC profile pages (/directory/:slug); /providers/:slug
+  // is login-gated, so it never belongs in a sitemap. Same visibility
+  // rule as the public directory: active and not paused.
+  const providers = await Provider.find({ accountStatus: 'active', listingPaused: { $ne: true }, slug: { $exists: true, $ne: null } }).select('slug').lean();
+  for (const p of providers) paths.push(`/directory/${(p as any).slug}`);
+
+  // Location and "experience supporting" pages - only those with enough real providers to be more than a keyword page.
+  const [areas, conditions] = await Promise.all([areaRows(), conditionRows()]);
+  for (const a of areas) if (a.count >= MIN_INDEXABLE_PROVIDERS) paths.push(`/directory/in/${a.slug}`);
+  const goodConditions = conditions.filter((c) => c.count >= MIN_INDEXABLE_PROVIDERS);
+  for (const c of goodConditions) paths.push(`/directory/for/${c.slug}`);
+  if (goodConditions.length) paths.push('/directory/for');
+
+  // Independent workers who opted in to a public profile and were approved.
+  const workers = await Worker.find({ publicProfile: true, published: true, accountStatus: 'active', publicSlug: { $exists: true, $ne: null } }).select('publicSlug').lean();
+  for (const w of workers) paths.push(`/independent-workers/${(w as any).publicSlug}`);
 
   // Real WordPress content, best-effort — a WordPress outage
   // shouldn't take the whole sitemap down, it just means those URLs
@@ -90,19 +119,81 @@ export async function getSitemap(req: Request, res: Response) {
       fetchWpSlugs(wpUrl, '/wp-json/wp/v2/guides'),
       fetchServiceAreaPaths(wpUrl),
     ]);
-    pages.forEach((slug) => urls.push(`/${slug}`));
-    services.forEach((slug) => urls.push(`/services/${slug}`));
-    locations.forEach((slug) => urls.push(`/locations/${slug}`));
-    guides.forEach((slug) => urls.push(`/guides/${slug}`));
-    urls.push(...serviceAreaPaths);
+    // WordPress ships a placeholder "Sample Page"; it's never real content.
+    pages.filter((slug) => slug !== 'sample-page').forEach((slug) => paths.push(`/${slug}`));
+    services.forEach((slug) => paths.push(`/services/${slug}`));
+    locations.forEach((slug) => paths.push(`/locations/${slug}`));
+    guides.forEach((slug) => paths.push(`/guides/${slug}`));
+    paths.push(...serviceAreaPaths);
   }
 
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls.map((u) => `  <url><loc>${siteUrl}${u}</loc></url>`).join('\n')}
-</urlset>`;
+  const urls = [...new Set(paths)].map((path) => ({ path }));
+  pagesCache = { urls, at: Date.now() };
+  return urls;
+}
 
-  cached = { xml, at: Date.now() };
+/**
+ * Register pages worth indexing: every provider page that has at least
+ * one recognised service, each state hub, and only those suburb hubs
+ * with enough real listings (MIN_SUBURB_LISTINGS) to be more than a
+ * keyword page. Providers with nothing but a name are left out — they
+ * stay reachable and noindex, they just aren't advertised to crawlers.
+ */
+async function buildRegisterUrls(): Promise<UrlEntry[]> {
+  if (registerCache && Date.now() - registerCache.at < REGISTER_CACHE_MS) return registerCache.urls;
+
+  const urls: UrlEntry[] = [];
+  for (const type of REGISTER_TYPES) {
+    const base = REGISTER_PATH[type];
+    const hub = await computeHub(type);
+    // A state with no listings is a noindex empty page — don't advertise it.
+    for (const state of STATE_CODES) if (hub.states[state]) urls.push({ path: `${base}/${state.toLowerCase()}` });
+    for (const s of hub.suburbs) urls.push({ path: `${base}/${s.state.toLowerCase()}/${s.slug}` });
+
+    const cursor = RegisterListing.find({ type, 'services.0': { $exists: true } }).select('slug updatedAt').lean().cursor();
+    for await (const d of cursor) urls.push({ path: `${base}/${d.slug}`, lastmod: (d as any).updatedAt });
+  }
+  registerCache = { urls, at: Date.now() };
+  return urls;
+}
+
+const urlsetXml = (site: string, urls: UrlEntry[]) =>
+  `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+  urls.map((u) => `  <url><loc>${xmlEscape(site + u.path)}</loc>${u.lastmod ? `<lastmod>${u.lastmod.toISOString()}</lastmod>` : ''}</url>`).join('\n') +
+  `\n</urlset>`;
+
+function sendXml(res: Response, xml: string) {
   res.set('Content-Type', 'application/xml');
+  res.set('Cache-Control', 'public, max-age=600');
   res.send(xml);
+}
+
+/** GET /sitemap.xml — the index. */
+export async function getSitemap(req: Request, res: Response) {
+  const site = siteUrlFor(req);
+  const register = await buildRegisterUrls().catch(() => [] as UrlEntry[]);
+  const chunks = Math.ceil(register.length / REGISTER_CHUNK);
+  const entries = ['sitemap-pages.xml', ...Array.from({ length: chunks }, (_, i) => `sitemap-register-${i + 1}.xml`)];
+  sendXml(
+    res,
+    `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+      entries.map((e) => `  <sitemap><loc>${xmlEscape(`${site}/${e}`)}</loc></sitemap>`).join('\n') +
+      `\n</sitemapindex>`
+  );
+}
+
+/** GET /sitemap-pages.xml and /sitemap-register-N.xml */
+export async function getSitemapPart(req: Request, res: Response) {
+  const site = siteUrlFor(req);
+  const name = String(req.params.name ?? '');
+
+  if (name === 'pages') return sendXml(res, urlsetXml(site, await buildPageUrls()));
+
+  const match = /^register-(\d+)$/.exec(name);
+  if (!match) return res.status(404).send('Not found');
+  const n = Number(match[1]);
+  const register = await buildRegisterUrls();
+  const slice = register.slice((n - 1) * REGISTER_CHUNK, n * REGISTER_CHUNK);
+  if (n < 1 || !slice.length) return res.status(404).send('Not found');
+  sendXml(res, urlsetXml(site, slice));
 }

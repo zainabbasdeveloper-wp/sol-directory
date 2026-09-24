@@ -1,0 +1,42 @@
+/* Public provider and independent-worker profile pages + the worker finder.
+   Builds on Home.css + Directory.css (.dir-card, .dir-tag, .dir-status …)
+   and register.css (.reg-page, .reg-crumbs, .reg-h2, .reg-note). */
+
+.pp-head { display: flex; flex-wrap: wrap; align-items: center; gap: 18px 22px; margin: 0 0 8px; }
+.pp-head-text { min-width: 0; }
+.pp-head h1 { margin: 0 0 6px; font-size: clamp(28px, 3.4vw, 42px); line-height: 1.15; letter-spacing: -0.025em; overflow-wrap: anywhere; }
+.pp-head-h1 { margin: 0 0 10px; font-size: clamp(28px, 3.4vw, 42px); line-height: 1.15; letter-spacing: -0.025em; overflow-wrap: anywhere; }
+.pp-sub { margin: 0; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 15px; color: color-mix(in srgb, var(--color-text, #10233F) 75%, transparent); }
+
+.pp-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: clamp(24px, 4vw, 48px); align-items: start; margin-top: 18px; }
+.pp-main > .reg-h2:first-child { margin-top: 8px; }
+.pp-lede { margin: 0 0 8px; max-width: 70ch; font-size: 16px; line-height: 1.7; color: color-mix(in srgb, var(--color-text, #10233F) 80%, transparent); white-space: pre-line; overflow-wrap: anywhere; }
+
+.pp-chips { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.pp-chip { padding: 6px 13px; font-size: 14px; font-weight: 600; color: #0F4FA8; background: var(--color-primary-tint, #F2F7FF); border-radius: 999px; }
+.pp-chip-plain { color: var(--color-text, #10233F); background: #EEF1F6; font-weight: 500; }
+.pp-chip a { color: inherit; text-decoration: none; }
+.pp-chip a:hover { text-decoration: underline; }
+
+.pp-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px 24px; margin: 20px 0 0; padding: 18px 20px; background: #fff; border: 1px solid var(--color-border, #E8EEF7); border-radius: 14px; }
+.pp-facts dt { font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text, #10233F) 60%, transparent); }
+.pp-facts dd { margin: 3px 0 0; font-size: 15.5px; font-weight: 600; overflow-wrap: anywhere; }
+
+.pp-aside { position: sticky; top: 92px; padding: 22px; background: #fff; border: 1px solid var(--color-border, #E8EEF7); border-radius: 16px; box-shadow: 0 10px 26px rgba(11,45,92,0.06); }
+.pp-aside h2 { margin: 0 0 8px; font-size: 19px; }
+.pp-aside p { margin: 0 0 14px; font-size: 14.5px; line-height: 1.6; color: color-mix(in srgb, var(--color-text, #10233F) 78%, transparent); }
+.pp-aside .btn-gradient { width: 100%; justify-content: center; }
+.pp-aside-alt { display: block; margin-top: 12px; text-align: center; font-size: 14px; font-weight: 600; color: var(--color-accent-700, #0F4FA8); }
+
+/* Worker finder cards reuse .dir-card; these add the person-specific bits. */
+.pp-meta { margin: 0; font-size: 14px; color: color-mix(in srgb, var(--color-text, #10233F) 75%, transparent); }
+.pp-meta strong { color: var(--color-text, #10233F); }
+.pp-card-name a { color: inherit; text-decoration: none; }
+.pp-card-name a:hover { color: var(--color-accent-700, #0F4FA8); text-decoration: underline; }
+
+.pp-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+
+@media (max-width: 900px) {
+  .pp-layout { grid-template-columns: 1fr; }
+  .pp-aside { position: static; }
+}

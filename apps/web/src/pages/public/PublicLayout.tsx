@@ -108,6 +108,8 @@ export function PublicFooter() {
           <Link to="/directory">Provider finder</Link>
           <Link to="/services">Browse services</Link>
           <Link to="/locations">Browse locations</Link>
+          <Link to="/ndis-providers">NDIS provider register</Link>
+          <Link to="/aged-care-providers">Aged care provider register</Link>
           <Link to="/#about">How it works</Link>
         </div>
         <div className="public-footer-col">
@@ -121,6 +123,7 @@ export function PublicFooter() {
           <span className="public-footer-heading">Company</span>
           <Link to="/providers">List your business</Link>
           <Link to="/independent-workers">Independent Workers</Link>
+          <Link to="/independent-workers/find">Find a worker</Link>
           {siteConfig.contactEmail && <a href={`mailto:${siteConfig.contactEmail}`}>Contact</a>}
           <Link to="/privacy">Privacy policy</Link>
           <Link to="/terms">Terms of use</Link>

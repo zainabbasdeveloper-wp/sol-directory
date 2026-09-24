@@ -82,3 +82,6 @@
   .dir-help { flex-direction: column; align-items: flex-start; }
   .dir-help .btn-gradient { width: 100%; }
 }
+
+.dir-card h3 a { color: inherit; text-decoration: none; }
+.dir-card h3 a:hover { color: var(--color-accent-700, #0F4FA8); text-decoration: underline; }
