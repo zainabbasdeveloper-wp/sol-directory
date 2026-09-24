@@ -46,6 +46,31 @@
   padding: 12px;
 }
 
+.read-aloud__panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 2px 4px 6px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent-700, #0F4FA8);
+}
+
+.read-aloud__close {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(23, 105, 224, 0.08);
+  color: var(--color-text, #10233F);
+  font-size: 16px;
+  cursor: pointer;
+}
+
 .read-aloud__controls {
   display: flex;
   flex-wrap: wrap;
