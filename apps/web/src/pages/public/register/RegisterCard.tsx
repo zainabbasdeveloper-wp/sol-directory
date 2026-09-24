@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import Avatar from '../../../components/ui/Avatar';
 import type { RegisterListItem } from '../../../api/registerApi';
 import { KIND_BY_TYPE, areaLabel, registerPath } from '../../../lib/registerMeta';
 import '../Directory.css';
@@ -10,11 +11,15 @@ export default function RegisterCard({ item }: { item: RegisterListItem }) {
   const more = item.areaCount - item.areas.length;
   return (
     <li className="dir-card reg-card">
-      <div className="dir-card-title">
-        <h3>
-          <Link to={registerPath(kind, item.slug)}>{item.name}</Link>
-        </h3>
-        <span className="reg-badge">Listed on the {kind.label} register</span>
+      <div className="dir-card-top">
+        {/* The registers publish no logos, so this is the business's initials, never a stock image. */}
+        <Avatar name={item.name} shape="square" />
+        <div className="dir-card-title">
+          <h3>
+            <Link to={registerPath(kind, item.slug)}>{item.name}</Link>
+          </h3>
+          <span className="reg-badge">Listed on the {kind.label} register</span>
+        </div>
       </div>
 
       {item.supportCategories.length > 0 && (

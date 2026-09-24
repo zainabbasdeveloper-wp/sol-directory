@@ -63,6 +63,7 @@ export default function IndependentWorkers() {
             <div className="iw-actions">
               <button className="btn-gradient btn-lg" onClick={() => navigate('/signup?type=worker')}>Create a worker profile</button>
               <button className="btn-outline-light btn-lg" onClick={() => navigate('/login')}>Worker login</button>
+              <button className="btn-outline-light btn-lg" onClick={() => navigate('/independent-workers/find')}>Browse worker profiles</button>
             </div>
             <p className="iw-hero-note">Creating an account does not guarantee work or an engagement.</p>
           </div>

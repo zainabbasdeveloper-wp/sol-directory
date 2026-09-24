@@ -42,6 +42,19 @@ export interface WorkerDoc extends Document {
   phone: string;
   verificationStatus: 'awaiting_review' | 'expiring_soon' | 'approved' | 'rejected';
   published: boolean;
+  /** State code for the suburb (NSW, VIC, …) — shown on the public profile as "Suburb, STATE". */
+  state?: string;
+  /**
+   * The worker's own opt-in to a PUBLIC profile page (visible to anyone
+   * and to search engines). Separate from `published`, which is admin
+   * approval for the login-gated directory: a public page needs both, so
+   * nobody is listed publicly without having chosen to be.
+   */
+  publicProfile: boolean;
+  /** Stable URL slug, generated the first time the worker opts in. */
+  publicSlug?: string;
+  /** True when a profile photo is stored (see WorkerPhoto). */
+  hasPhoto: boolean;
   // Admin-controlled account state — distinct from verificationStatus
   // (which tracks the ONE-TIME approval workflow) and published
   // (which the worker/system toggles for directory visibility).
@@ -101,6 +114,10 @@ const workerSchema = new Schema<WorkerDoc>(
       default: 'awaiting_review',
     },
     published: { type: Boolean, default: false },
+    state: String,
+    publicProfile: { type: Boolean, default: false },
+    publicSlug: { type: String, unique: true, sparse: true },
+    hasPhoto: { type: Boolean, default: false },
     accountStatus: { type: String, enum: ['active', 'suspended'], default: 'active' },
   },
   { timestamps: true }
@@ -109,6 +126,7 @@ const workerSchema = new Schema<WorkerDoc>(
 workerSchema.index({ location: '2dsphere' });
 workerSchema.index({ services: 1, suburb: 1, published: 1 });
 workerSchema.index({ published: 1, rating: -1 });
+workerSchema.index({ publicProfile: 1, published: 1, suburb: 1 });
 
 export const MASKED_PROJECTION =
   'firstName role employer yearsExperience suburb gender hasCar hourlyRate rating reviewCount services languages conditionExperience availability availableDays availabilityNote bio feedback';

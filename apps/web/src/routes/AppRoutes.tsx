@@ -31,6 +31,10 @@ import AdminServices from '../pages/admin/AdminServices';
 import AdminConditions from '../pages/admin/AdminConditions';
 import AdminDiagnostics from '../pages/admin/AdminDiagnostics';
 import AdminClaims from '../pages/admin/AdminClaims';
+import ProviderPublicPage from '../pages/public/ProviderPublicPage';
+import WorkerFinder from '../pages/public/WorkerFinder';
+import WorkerPublicProfile from '../pages/public/WorkerPublicProfile';
+import MyWorkerProfilePage from '../pages/workers/MyWorkerProfile';
 import ProviderDirectory from '../pages/providers/ProviderDirectory';
 import ProviderProfilePage from '../pages/providers/ProviderProfilePage';
 import SavedProviders from '../pages/providers/SavedProviders';
@@ -111,6 +115,9 @@ export default function AppRoutes() {
       <Route path="/locations" element={<Locations />} />
       <Route path="/providers" element={<ForProviders />} />
       <Route path="/independent-workers" element={<IndependentWorkers />} />
+      <Route path="/independent-workers/find" element={<WorkerFinder />} />
+      <Route path="/independent-workers/:slug" element={<WorkerPublicProfile />} />
+      <Route path="/directory/:slug" element={<ProviderPublicPage />} />
       <Route path="/services/:serviceSlug/:suburb" element={<ServiceLocationPage />} />
       {/* Public-register pages (data from the NDIS Commission / My Aged Care registers). */}
       <Route path="/ndis-providers" element={<RegisterHubRoute path="ndis-providers" />} />
@@ -167,6 +174,7 @@ export default function AppRoutes() {
             </RequireAdminOrProProvider>
           }
         />
+        <Route path="/worker/profile" element={<RequireRole roles={['worker']}><MyWorkerProfilePage /></RequireRole>} />
         <Route path="/leads" element={<RequireRole roles={['provider']}><Leads /></RequireRole>} />
         <Route path="/leads/:id" element={<RequireRole roles={['provider']}><LeadDetailPage /></RequireRole>} />
         <Route path="/plans" element={<RequireRole roles={['provider']}><Plans /></RequireRole>} />

@@ -2,6 +2,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { Request, Response } from 'express';
 import RegisterListing from '../models/RegisterListing.js';
+import Provider from '../models/Provider.js';
+import Worker from '../models/Worker.js';
 import { MIN_SUBURB_LISTINGS, STATE_CODES, type RegisterType } from '../services/registerNormalise.js';
 import { computeHub } from './register.controller.js';
 
@@ -18,8 +20,13 @@ import { computeHub } from './register.controller.js';
  * runs the app it replaces #root, so people see the normal page; the
  * content is the same one, not something shown only to bots.
  *
+ * The same shell also serves the public provider profile (/directory/:slug)
+ * and the independent-worker pages (/independent-workers/find and
+ * /independent-workers/:slug).
+ *
  * Every rule here (titles, noindex, thin-page threshold) mirrors the
- * client pages in apps/web/src/pages/public/register — keep them in step.
+ * client pages in apps/web/src/pages/public (register/*, ProviderPublicPage,
+ * WorkerFinder, WorkerPublicProfile) — keep them in step.
  */
 
 const KINDS = {
@@ -85,6 +92,7 @@ interface Page {
   noindex: boolean;
   jsonLd: { id: string; data: Record<string, unknown> }[];
   body: string;
+  ogImage?: string; // absolute URL
 }
 
 const li = (href: string, text: string, extra = '') => `<li><a href="${esc(href)}">${esc(text)}</a>${extra ? ` ${esc(extra)}` : ''}</li>`;
@@ -231,7 +239,8 @@ function render(html: string, req: Request, page: Page, site: string): string {
     page.canonical ? `<link rel="canonical" href="${esc(site + page.canonical)}" />` : '',
     `<meta property="og:title" content="${esc(page.title)}" />`,
     `<meta property="og:description" content="${esc(page.description)}" />`,
-    '<meta name="twitter:card" content="summary" />',
+    page.ogImage ? `<meta property="og:image" content="${esc(page.ogImage)}" />` : '',
+    `<meta name="twitter:card" content="${page.ogImage ? 'summary_large_image' : 'summary'}" />`,
     ...page.jsonLd.map((j) =>
       // "<" is escaped so a business name can never close the script tag.
       `<script type="application/ld+json" id="jsonld-${j.id}">${JSON.stringify({ '@context': 'https://schema.org', ...j.data }).replace(/</g, '\\u003c')}</script>`
@@ -249,21 +258,136 @@ function render(html: string, req: Request, page: Page, site: string): string {
   return out.replace('<div id="root"></div>', () => `<div id="root">${style}<main data-seo-shell>${page.body}</main></div>`);
 }
 
+// ---------------------------------------------------------------
+// Provider directory profile — /directory/:slug
+// ---------------------------------------------------------------
+const LEVEL_PAGE = 12;
+
+async function providerProfilePage(site: string, slug: string): Promise<Page> {
+  if (!SLUG_RE.test(slug)) return notFound();
+  const p: any = await Provider.findOne({ slug, accountStatus: 'active', listingPaused: { $ne: true } })
+    .select('legalEntityName tradingName slug registrationGroups acceptedFunding conditionExperience languages ageGroups serviceSuburbs businessAddress.suburb businessAddress.state logoUrl')
+    .lean();
+  if (!p) return notFound();
+
+  const name: string = p.tradingName || p.legalEntityName;
+  const groups: string[] = p.registrationGroups ?? [];
+  const suburbs: string[] = p.serviceSuburbs ?? [];
+  const where = p.businessAddress?.suburb && p.businessAddress?.state ? `${p.businessAddress.suburb}, ${p.businessAddress.state}` : suburbs[0] ?? 'Australia';
+  const offers = groups.slice(0, 3).join(', ');
+  const path = `/directory/${p.slug}`;
+  const section = (h: string, items: string[]) => (items.length ? `<h2>${esc(h)}</h2><ul>${items.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>` : '');
+
+  return {
+    status: 200,
+    title: `${trimTo(name, 44)} | Provider in ${where}`,
+    description: trimTo(
+      `${name}${offers ? ` offers ${offers}` : ' is listed on SolDirectory'}${suburbs.length ? ` and supports people in ${suburbs.slice(0, 3).join(', ')}` : ''}. See supports, funding accepted and service areas, then get matched for free.`,
+      158
+    ),
+    canonical: path,
+    noindex: groups.length === 0,
+    jsonLd: [
+      { id: 'directory-provider', data: { '@type': 'Organization', name, ...(p.logoUrl ? { logo: p.logoUrl } : {}), ...(suburbs.length ? { areaServed: suburbs.slice(0, 20).map((s) => ({ '@type': 'Place', name: s })) } : {}) } },
+      { id: 'directory-breadcrumbs', data: { '@type': 'BreadcrumbList', itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: `${site}/` },
+        { '@type': 'ListItem', position: 2, name: 'Provider directory', item: `${site}/directory` },
+        { '@type': 'ListItem', position: 3, name, item: `${site}${path}` },
+      ] } },
+    ],
+    body:
+      `<nav aria-label="Breadcrumb"><a href="/">Home</a> / <a href="/directory">Provider directory</a> / ${esc(name)}</nav><h1>${esc(name)}</h1>` +
+      section('Supports offered', groups) + section('Service areas', suburbs) + section('Funding accepted', p.acceptedFunding ?? []) +
+      section('Experience supporting', p.conditionExperience ?? []) + section('Age groups', p.ageGroups ?? []) + section('Languages', p.languages ?? []),
+  };
+}
+
+// ---------------------------------------------------------------
+// Independent workers — /independent-workers/find and /:slug
+// ---------------------------------------------------------------
+const workerVisible = () => ({ publicProfile: true, published: true, accountStatus: 'active', publicSlug: { $exists: true, $ne: null } });
+const workerName = (w: any) => `${w.firstName}${w.lastName ? ` ${String(w.lastName).charAt(0).toUpperCase()}.` : ''}`;
+
+async function workerProfilePage(site: string, slug: string): Promise<Page> {
+  if (!SLUG_RE.test(slug)) return notFound();
+  const w: any = await Worker.findOne({ ...workerVisible(), publicSlug: slug })
+    .select('firstName lastName role suburb state services languages conditionExperience bio hasPhoto publicSlug updatedAt').lean();
+  if (!w) return notFound();
+
+  const name = workerName(w);
+  const where = [w.suburb, w.state].filter(Boolean).join(', ');
+  const offers = (w.services ?? []).slice(0, 3).join(', ');
+  const path = `/independent-workers/${w.publicSlug}`;
+  const list = (h: string, items: string[]) => (items.length ? `<h2>${esc(h)}</h2><ul>${items.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>` : '');
+
+  return {
+    status: 200,
+    title: `${name}${w.role ? `, ${trimTo(w.role, 30)}` : ''} | Independent worker${where ? ` in ${where}` : ''}`,
+    description: trimTo(`${name} is an independent ${w.role ? String(w.role).toLowerCase() : 'support worker'}${where ? ` in ${where}` : ''}${offers ? ` offering ${offers}` : ''}. See supports, languages and availability.`, 158),
+    canonical: path,
+    noindex: false,
+    ogImage: w.hasPhoto ? `${site}/api/workers/public/${w.publicSlug}/photo?v=${new Date(w.updatedAt).getTime()}` : undefined,
+    jsonLd: [{ id: 'worker-breadcrumbs', data: { '@type': 'BreadcrumbList', itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: `${site}/` },
+      { '@type': 'ListItem', position: 2, name: 'Independent workers', item: `${site}/independent-workers/find` },
+      { '@type': 'ListItem', position: 3, name, item: `${site}${path}` },
+    ] } }],
+    body:
+      `<nav aria-label="Breadcrumb"><a href="/">Home</a> / <a href="/independent-workers/find">Independent workers</a> / ${esc(name)}</nav>` +
+      `<h1>${esc(name)}</h1><p>${esc([w.role, where].filter(Boolean).join(' · '))}</p>` +
+      (w.bio ? `<h2>About</h2><p>${esc(w.bio)}</p>` : '') +
+      list('Supports offered', w.services ?? []) + list('Experience supporting', w.conditionExperience ?? []) + list('Languages', w.languages ?? []),
+  };
+}
+
+async function workerListPage(site: string, page: number, filtered: boolean): Promise<Page> {
+  const filter = workerVisible();
+  const [docs, total] = await Promise.all([
+    Worker.find(filter).select('firstName lastName role suburb state services publicSlug').sort({ firstName: 1, _id: 1 }).skip((page - 1) * LEVEL_PAGE).limit(LEVEL_PAGE).lean(),
+    Worker.countDocuments(filter),
+  ]);
+  const base = '/independent-workers/find';
+  const totalPages = Math.max(1, Math.ceil(total / LEVEL_PAGE));
+  const pager =
+    (page > 1 ? `<a rel="prev" href="${esc(page === 2 ? base : `${base}?page=${page - 1}`)}">Previous page</a> ` : '') +
+    (page < totalPages ? `<a rel="next" href="${esc(`${base}?page=${page + 1}`)}">Next page</a>` : '');
+  return {
+    status: 200,
+    title: `Independent support workers${page > 1 ? ` (page ${page})` : ''} | SolDirectory`,
+    description: 'Browse independent support workers who have created a public profile: their supports, suburb, languages and availability.',
+    canonical: page > 1 && !filtered ? `${base}?page=${page}` : base,
+    noindex: filtered || total === 0,
+    jsonLd: [],
+    body:
+      `<h1>Find an independent support worker</h1><p>${fmt(total)} ${total === 1 ? 'worker has' : 'workers have'} a public profile.</p>` +
+      `<ul>${(docs as any[]).map((w) => li(`/independent-workers/${w.publicSlug}`, workerName(w), `– ${[w.role, [w.suburb, w.state].filter(Boolean).join(', ')].filter(Boolean).join(', ')}`)).join('')}</ul><p>${pager}</p>`,
+  };
+}
+
 /** GET /seo-shell/<original path>?<original query> — see the file comment. */
 export async function registerShell(req: Request, res: Response) {
   const url = new URL(req.originalUrl, 'http://x');
   const parts = url.pathname.replace(/^\/seo-shell/, '').split('/').filter(Boolean).map((p) => p.toLowerCase());
-  const kindPath = parts[0] as KindPath;
-  if (!(kindPath in KINDS) || parts.length > 3) return res.status(404).send('Not found');
-
   const site = siteUrl(req);
   const pageNum = /^\d{1,4}$/.test(url.searchParams.get('page') ?? '') ? Math.max(1, Number(url.searchParams.get('page'))) : 1;
-  const filtered = ['category', 'q'].some((k) => url.searchParams.has(k));
 
   let page: Page;
-  if (parts.length === 1) page = await hubPage(site, kindPath);
-  else if (parts.length === 3 || STATE_CODES.includes(parts[1].toUpperCase() as never)) page = await listPage(site, kindPath, parts[1], parts[2] ?? null, pageNum, filtered);
-  else page = await providerPage(site, kindPath, parts[1]);
+  const root = parts[0];
+  if (root === 'directory' && parts.length === 2) {
+    page = await providerProfilePage(site, parts[1]);
+  } else if (root === 'independent-workers' && parts.length === 2) {
+    page = parts[1] === 'find'
+      ? await workerListPage(site, pageNum, ['service', 'suburb', 'q'].some((k) => url.searchParams.has(k)))
+      : await workerProfilePage(site, parts[1]);
+  } else if (root in KINDS && parts.length <= 3) {
+    const kindPath = root as KindPath;
+    const filtered = ['category', 'q'].some((k) => url.searchParams.has(k));
+    if (parts.length === 1) page = await hubPage(site, kindPath);
+    else if (parts.length === 3 || STATE_CODES.includes(parts[1].toUpperCase() as never)) page = await listPage(site, kindPath, parts[1], parts[2] ?? null, pageNum, filtered);
+    else page = await providerPage(site, kindPath, parts[1]);
+  } else {
+    return res.status(404).send('Not found');
+  }
 
   let html: string;
   try { html = await loadShell(); } catch { return res.status(503).send('Web build not found'); }

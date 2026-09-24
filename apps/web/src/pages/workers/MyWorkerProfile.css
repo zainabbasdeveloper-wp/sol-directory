@@ -1,0 +1,31 @@
+.mwp { max-width: 820px; }
+.mwp-intro { margin: 0 0 22px; font-size: 14.5px; line-height: 1.6; color: var(--color-text-muted, #5A6B84); }
+.mwp-form { display: grid; gap: 18px; }
+.mwp-card { background: #fff; border: 1px solid var(--color-border, #E8EEF7); border-radius: 14px; padding: 20px 22px; }
+.mwp-card h2 { margin: 0 0 14px; font-size: 16px; }
+.mwp-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 18px; }
+.mwp-grid label, .mwp-full-label { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; font-weight: 600; }
+.mwp-full { grid-column: 1 / -1; }
+.mwp-full-label { margin-top: 14px; }
+.mwp-card input:not([type='checkbox']):not([type='file']), .mwp-card select, .mwp-card textarea {
+  padding: 10px 12px; border: 1px solid var(--color-border-strong, #DDE4EF); border-radius: 8px; font: inherit; font-size: 14px; font-weight: 400; background: #fff; width: 100%;
+}
+.mwp-card textarea { resize: vertical; }
+.mwp-hint { display: block; font-size: 12.5px; font-weight: 400; line-height: 1.5; color: var(--color-text-muted, #5A6B84); }
+.mwp-check { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; font-weight: 500; cursor: pointer; }
+.mwp-check input { margin-top: 3px; width: 18px; height: 18px; flex: none; }
+.mwp-fieldset { margin: 16px 0 0; padding: 0; border: 0; }
+.mwp-fieldset legend { padding: 0; margin-bottom: 8px; font-size: 12.5px; font-weight: 600; }
+.mwp-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.mwp-chip { padding: 7px 14px; border-radius: 999px; border: 1px solid var(--color-border-strong, #DDE4EF); background: #fff; font: inherit; font-size: 13.5px; cursor: pointer; }
+.mwp-chip-on { background: var(--color-primary-tint, #F2F7FF); border-color: var(--color-primary, #1769E0); color: #0F4FA8; font-weight: 600; }
+.mwp-photo { display: flex; align-items: center; gap: 18px; }
+.mwp-btn, .mwp-save { height: 40px; padding: 0 18px; border-radius: 8px; border: 0; background: linear-gradient(135deg, #1769E0, #2F80ED); color: #fff; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+.mwp-save { justify-self: start; height: 44px; padding: 0 26px; }
+.mwp-btn:disabled, .mwp-save:disabled { opacity: 0.6; cursor: not-allowed; }
+.mwp-link { margin-left: 12px; border: 0; background: none; font: inherit; font-size: 13px; color: #B4232F; cursor: pointer; }
+.mwp-status { margin: 14px 0 0; font-size: 14px; font-weight: 600; }
+.mwp-status a { color: var(--color-primary, #1769E0); }
+.mwp-error { margin: 0; color: #B4232F; font-size: 14px; }
+.mwp-public { border-color: #B9D0F3; }
+@media (max-width: 640px) { .mwp-grid { grid-template-columns: 1fr; } .mwp-photo { flex-direction: column; align-items: flex-start; } }

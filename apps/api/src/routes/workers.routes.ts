@@ -1,6 +1,8 @@
-import { Router } from 'express';
+import express, { Router } from 'express';
 import type { Response, NextFunction } from 'express';
 import { listWorkers, getWorkerProfile, requestContact } from '../controllers/workers.controller.js';
+import { listPublicWorkers, getPublicWorker, getPublicWorkerPhoto } from '../controllers/workersPublic.controller.js';
+import { getMyWorker, updateMyWorker, putMyPhoto, deleteMyPhoto, getMyPhoto } from '../controllers/workersSelf.controller.js';
 import { requireAuth, type AuthedRequest } from '../middleware/auth.middleware.js';
 import Provider from '../models/Provider.js';
 
@@ -31,6 +33,23 @@ async function requireAdminOrProProvider(req: AuthedRequest, res: Response, next
   }
   res.status(403).json({ error: 'Not authorized for this action' });
 }
+
+// Express 4 doesn't forward a rejected promise from an async handler.
+const safe = (fn: (req: any, res: Response) => Promise<unknown>) =>
+  (req: any, res: Response, next: NextFunction) => { fn(req, res).catch(next); };
+
+// Public opt-in listings (no login) and a worker's own profile. These
+// fixed paths must stay ABOVE the '/:id' routes below, or '/me' and
+// '/public' would be read as worker ids.
+router.get('/public', safe(listPublicWorkers));
+router.get('/public/:slug', safe(getPublicWorker));
+router.get('/public/:slug/photo', safe(getPublicWorkerPhoto));
+router.get('/me', requireAuth, safe(getMyWorker));
+router.put('/me', requireAuth, safe(updateMyWorker));
+router.get('/me/photo', requireAuth, safe(getMyPhoto));
+// The browser sends the cropped JPEG as the raw request body.
+router.put('/me/photo', requireAuth, express.raw({ type: 'image/jpeg', limit: '300kb' }), safe(putMyPhoto));
+router.delete('/me/photo', requireAuth, safe(deleteMyPhoto));
 
 router.get('/', requireAuth, requireAdminOrProProvider, listWorkers);
 router.get('/:id', requireAuth, requireAdminOrProProvider, getWorkerProfile);

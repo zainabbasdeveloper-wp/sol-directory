@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Pagination from '../../components/ui/Pagination';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { PublicHeader, PublicFooter } from './PublicLayout';
 import Combobox, { type ComboItem } from '../../components/ui/Combobox';
 import { listPublicProviders, type PublicProviderRow } from '../../api/providerResources';
@@ -323,7 +323,7 @@ export default function Directory() {
                     ? <img className="dir-logo" src={p.logoUrl} alt="" loading="lazy" />
                     : <span className="dir-logo dir-logo-fallback" aria-hidden="true">{initials(name)}</span>}
                   <div className="dir-card-title">
-                    <h3>{name}</h3>
+                    <h3>{p.slug ? <Link to={`/directory/${p.slug}`}>{name}</Link> : name}</h3>
                     {status && <span className={`dir-status dir-status-${status.tone}`}>{status.label}</span>}
                   </div>
                 </div>
@@ -341,6 +341,7 @@ export default function Directory() {
                     : 'Service areas not listed'}
                 </p>
 
+                {p.slug && <Link className="dir-card-cta" to={`/directory/${p.slug}`}>View profile →</Link>}
                 <button type="button" className="dir-card-cta" onClick={() => openMatchModal()}>
                   Get matched with providers like this →
                 </button>

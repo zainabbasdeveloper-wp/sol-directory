@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { listProviders, listPublicProviders, getProviderProfile, requestProviderContact, getProviderBySlug } from '../controllers/providers.controller.js';
+import { getPublicProvider } from '../controllers/providersPublic.controller.js';
 import { requireAuth, requireRole } from '../middleware/auth.middleware.js';
 
 const router = Router();
@@ -14,6 +15,7 @@ const canBrowseProviders = requireRole('coordinator', 'participant', 'admin');
 
 // Public, minimal-field search — must be declared before the /:id route below.
 router.get('/public', listPublicProviders);
+router.get('/public/:slug', (req, res, next) => { getPublicProvider(req, res).catch(next); });
 router.get('/', requireAuth, canBrowseProviders, listProviders);
 router.get('/slug/:slug', requireAuth, canBrowseProviders, getProviderBySlug);
 router.get('/:id', requireAuth, canBrowseProviders, getProviderProfile);

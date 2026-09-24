@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import Provider from '../models/Provider.js';
+import Worker from '../models/Worker.js';
 import RegisterListing from '../models/RegisterListing.js';
 import { computeHub } from './register.controller.js';
 import { REGISTER_TYPES, STATE_CODES, type RegisterType } from '../services/registerNormalise.js';
@@ -16,7 +17,7 @@ import { REGISTER_TYPES, STATE_CODES, type RegisterType } from '../services/regi
 // pages alone are in the tens of thousands, so they're split up front
 // rather than left to break later.
 
-const STATIC_PUBLIC_ROUTES = ['/', '/directory', '/services', '/locations', '/providers', '/ndis-providers', '/aged-care-providers'];
+const STATIC_PUBLIC_ROUTES = ['/', '/directory', '/services', '/locations', '/providers', '/independent-workers', '/independent-workers/find', '/ndis-providers', '/aged-care-providers'];
 const REGISTER_PATH: Record<RegisterType, string> = { ndis: '/ndis-providers', aged_care: '/aged-care-providers' };
 const REGISTER_CHUNK = 10_000;
 const CACHE_MS = 10 * 60 * 1000; // 10 minutes
@@ -89,8 +90,15 @@ async function buildPageUrls(): Promise<UrlEntry[]> {
 
   // Real provider slugs — only accounts that actually completed
   // onboarding far enough to have one, active accounts only.
-  const providers = await Provider.find({ accountStatus: 'active', slug: { $exists: true, $ne: null } }).select('slug').lean();
-  for (const p of providers) paths.push(`/providers/${(p as any).slug}`);
+  // These are the PUBLIC profile pages (/directory/:slug); /providers/:slug
+  // is login-gated, so it never belongs in a sitemap. Same visibility
+  // rule as the public directory: active and not paused.
+  const providers = await Provider.find({ accountStatus: 'active', listingPaused: { $ne: true }, slug: { $exists: true, $ne: null } }).select('slug').lean();
+  for (const p of providers) paths.push(`/directory/${(p as any).slug}`);
+
+  // Independent workers who opted in to a public profile and were approved.
+  const workers = await Worker.find({ publicProfile: true, published: true, accountStatus: 'active', publicSlug: { $exists: true, $ne: null } }).select('publicSlug').lean();
+  for (const w of workers) paths.push(`/independent-workers/${(w as any).publicSlug}`);
 
   // Real WordPress content, best-effort — a WordPress outage
   // shouldn't take the whole sitemap down, it just means those URLs

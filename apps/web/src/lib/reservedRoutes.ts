@@ -27,6 +27,7 @@ export const RESERVED_PATH_PREFIXES = [
   '/aged-care-providers',
   '/independent-workers',
   '/workers',
+  '/worker',
   '/login',
   '/signup',
   '/forgot-password',

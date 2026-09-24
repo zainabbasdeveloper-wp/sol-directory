@@ -123,6 +123,7 @@ export function PublicFooter() {
           <span className="public-footer-heading">Company</span>
           <Link to="/providers">List your business</Link>
           <Link to="/independent-workers">Independent Workers</Link>
+          <Link to="/independent-workers/find">Find a worker</Link>
           {siteConfig.contactEmail && <a href={`mailto:${siteConfig.contactEmail}`}>Contact</a>}
           <Link to="/privacy">Privacy policy</Link>
           <Link to="/terms">Terms of use</Link>
