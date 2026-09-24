@@ -129,6 +129,55 @@ export async function categoryCounts(req: Request, res: Response) {
 }
 
 // ---------------------------------------------------------------
+// GET /api/register/category-overview?type=&category=
+// Everything a service page needs about one support category on the register:
+// the total, listings per state, the suburbs with the most listings, and the
+// listings with the widest service area. Facts only - counts and names from the
+// register data, no ranking of quality. Cached: it aggregates over every area.
+// ---------------------------------------------------------------
+const overviewCache = new Map<string, { at: number; value: unknown }>();
+
+export async function computeCategoryOverview(type: RegisterType, category: string) {
+  const [byState, total, suburbs, widest] = await Promise.all([
+    RegisterListing.aggregate([{ $match: { type, supportCategories: category } }, { $unwind: '$states' }, { $group: { _id: '$states', n: { $sum: 1 } } }]),
+    RegisterListing.countDocuments({ type, supportCategories: category }),
+    RegisterListing.aggregate([
+      { $match: { type, supportCategories: category } },
+      { $unwind: '$areas' },
+      { $group: { _id: { state: '$areas.state', slug: '$areas.suburbSlug', suburb: '$areas.suburb' }, n: { $sum: 1 } } },
+      { $sort: { n: -1, '_id.suburb': 1 } },
+      { $limit: 24 },
+    ]),
+    RegisterListing.find({ type, supportCategories: category })
+      .select('slug name states areaCount')
+      .sort({ areaCount: -1, nameLower: 1 })
+      .limit(10)
+      .lean(),
+  ]);
+  return {
+    total,
+    states: Object.fromEntries((byState as { _id: string; n: number }[]).map((s) => [s._id, s.n])),
+    topSuburbs: (suburbs as { _id: { state: string; slug: string; suburb: string }; n: number }[]).map((s) => ({ state: s._id.state, slug: s._id.slug, suburb: s._id.suburb, count: s.n })),
+    widest: widest.map((w) => ({ slug: w.slug, name: w.name, states: w.states, areaCount: w.areaCount })),
+  };
+}
+
+export async function getCategoryOverview(req: Request, res: Response) {
+  const type = parseType(req.query.type);
+  if (!type) return res.status(400).json({ error: 'type must be "ndis" or "aged_care".' });
+  const category = str(req.query.category);
+  if (!(REGISTER_SUPPORT_CATEGORIES as readonly string[]).includes(category)) return res.status(400).json({ error: 'Unknown category.' });
+
+  const key = `${type}|${category}`;
+  const hit = overviewCache.get(key);
+  if (hit && Date.now() - hit.at < HUB_TTL_MS) { res.set('Cache-Control', 'public, max-age=600'); return res.json(hit.value); }
+  const value = await computeCategoryOverview(type, category);
+  overviewCache.set(key, { at: Date.now(), value });
+  res.set('Cache-Control', 'public, max-age=600');
+  res.json(value);
+}
+
+// ---------------------------------------------------------------
 // GET /api/register/hub?type=
 // State counts, category counts and the suburbs that have enough real
 // listings to deserve their own page. Computed from the collection and

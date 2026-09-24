@@ -19,13 +19,13 @@
  * HOW IT RUNS: once, on the first wp-admin load after deploy; and on demand from
  * Tools > Service content (fills anything still blank, e.g. after you delete a
  * duplicate post or clear a field). Every post it touches is marked
- * (_sd_content_v2). Editing anything afterwards is safe.
+ * (_sd_content_v3). Editing anything afterwards is safe.
  */
 
 if (!defined('ABSPATH')) exit;
 
-const SOLDIRECTORY_CONTENT_VERSION = '2';
-const SOLDIRECTORY_CONTENT_OPTION = 'soldirectory_service_content_v2';
+const SOLDIRECTORY_CONTENT_VERSION = '3';
+const SOLDIRECTORY_CONTENT_OPTION = 'soldirectory_service_content_v3';
 
 /** Title => [group, who, [[q, a] x3]] */
 function soldirectory_service_editorial(): array {
@@ -37,6 +37,44 @@ function soldirectory_service_editorial(): array {
         if (is_array($part)) $all = array_merge($all, $part);
     }
     return $all;
+}
+
+/** Title => long-form guide content (overview paragraphs, how to choose, getting started, extra FAQs, register category). */
+function soldirectory_service_long(): array {
+    static $all = null;
+    if ($all !== null) return $all;
+    $all = [];
+    foreach ([1, 2, 3, 4, 5, 6, 7, 8] as $n) {
+        $part = require __DIR__ . "/content-long-{$n}.php";
+        if (is_array($part)) $all = array_merge($all, $part);
+    }
+    return $all;
+}
+
+/** Official pages the content relies on. Root sites only, so a link can never go stale. */
+function soldirectory_source_links(array $keys): array {
+    $all = [
+        'ndis' => ['title' => 'NDIS: how the NDIS works, plans and price limits', 'url' => 'https://www.ndis.gov.au'],
+        'ndiscommission' => ['title' => 'NDIS Quality and Safeguards Commission: find a registered provider, make a complaint', 'url' => 'https://www.ndiscommission.gov.au'],
+        'ahpra' => ['title' => 'AHPRA: check a health practitioner\'s registration', 'url' => 'https://www.ahpra.gov.au'],
+        'jobaccess' => ['title' => 'JobAccess: workplace adjustments and employment support', 'url' => 'https://www.jobaccess.gov.au'],
+    ];
+    $out = [];
+    foreach (array_unique(array_merge(['ndis', 'ndiscommission'], $keys)) as $k) if (isset($all[$k])) $out[] = $all[$k];
+    return $out;
+}
+
+/** How costs work, in general terms only - never a price. */
+function soldirectory_cost_text(string $group, string $name): string {
+    $quote = ' Before you start, ask for a written quote that lists each support, the hours and the price, and check it against the current NDIS Pricing Arrangements and Price Limits on the NDIS website. A provider may charge less than a limit. If you pay privately, the provider sets its own fees. Plan-managed and self-managed participants can also use providers who are not registered, and those providers set their own prices.';
+    switch ($group) {
+        case 'capital':
+            return "Higher-cost items such as home modifications, vehicle modifications and specialist housing are usually priced by quote rather than by the hour. Ask for itemised quotes so that you can see exactly what {$name} includes, and expect to compare more than one." . $quote;
+        case 'at':
+            return "Equipment prices vary widely with the type of item and how it is set up for you. Ask for a written quote that separates the item, fitting and training, and for information about warranty and servicing for {$name}." . $quote;
+        default:
+            return "Supports such as {$name} that are funded by the NDIS are paid at rates that follow the NDIS Pricing Arrangements and Price Limits, which the NDIA reviews regularly. Many items have a maximum price, and some prices are higher in remote areas." . $quote;
+    }
 }
 
 function soldirectory_group_label(string $group): string {
@@ -91,22 +129,44 @@ function soldirectory_seo_description_for(string $overview): string {
     return strlen($first . $tail) <= 158 ? $first . $tail : soldirectory_fit($first, 158);
 }
 
-/** Every field this feature writes, for one service. $relatedIds are post IDs of sibling services. */
-function soldirectory_service_fields(string $title, array $entry, string $overview, array $relatedIds): array {
-    [$group, $who, $faqs] = $entry;
-
-    $faqRows = [];
-    foreach ($faqs as [$q, $a]) $faqRows[] = ['question' => $q, 'answer' => $a];
-    $faqRows[] = [
+/** The FAQ rows this feature writes. $long null = the earlier (short-only) set, used to recognise it. */
+function soldirectory_machine_faq_rows(string $title, array $entry, ?array $long): array {
+    $rows = [];
+    foreach ($entry[2] as [$q, $a]) $rows[] = ['question' => $q, 'answer' => $a];
+    if ($long) foreach ($long['faq'] as [$q, $a]) $rows[] = ['question' => $q, 'answer' => $a];
+    $rows[] = [
         'question' => "Can I use my NDIS plan to pay for {$title}?",
         'answer' => "If {$title} is in your NDIS plan and is reasonable and necessary for you, then yes. Check with your planner, Local Area Coordinator or support coordinator. You can also arrange it privately.",
     ];
-    $faqRows[] = [
+    $rows[] = [
         'question' => "How do I find a {$title} provider near me?",
         'answer' => "Browse providers on SolDirectory, or send a free enquiry with your location and what you need and suitable providers will review it. Then ask each one about availability, a quote and a service agreement before you decide. Details come from providers and registers, so confirm them directly.",
     ];
+    return $rows;
+}
 
-    return [
+/** Every field this feature writes, for one service. $relatedIds are post IDs of sibling services. */
+function soldirectory_service_fields(string $title, array $entry, string $overview, array $relatedIds, ?array $long = null): array {
+    [$group, $who, $faqs] = $entry;
+
+    // FAQ order: the three short ones, then the three from the long guide, then the two shared ones.
+    $faqRows = soldirectory_machine_faq_rows($title, $entry, $long);
+
+    $extra = [];
+    if ($long) {
+        $extra = [
+            'short_answer' => $long['short'],
+            'overview_content' => $long['overview'],
+            'how_to_choose' => implode("\n", $long['choose']),
+            'getting_started' => implode("\n", $long['start']),
+            'cost_info' => soldirectory_cost_text($group, $title),
+            'register_category' => $long['cat'],
+            'sources_repeater' => soldirectory_source_links($long['src'] ?? []),
+        ];
+    }
+
+    return $extra + [
+        'overview_heading' => "About {$title}",
         'who_for' => $who,
         'eligibility' => soldirectory_eligibility_text($title),
         'funding_info' => soldirectory_funding_text($group, $title),
@@ -156,17 +216,22 @@ function soldirectory_is_blank_or_placeholder($value, bool $allowPlaceholder = f
  * Writes the fields into one service post where they are blank. Returns the
  * names of the fields it wrote.
  */
-function soldirectory_fill_service_post(int $id, array $fields): array {
+function soldirectory_fill_service_post(int $id, array $fields, array $replaceable = []): array {
     $written = [];
     $prose = ['who_for', 'eligibility', 'funding_info', 'plan_management_info'];
     foreach ($fields as $name => $value) {
-        if (is_array($value) && !$value) continue; // nothing to write (e.g. a service with no siblings to link to)
+        if ((is_array($value) && !$value) || $value === '') continue; // nothing to write (e.g. no siblings to link to, or no register category)
         $current = get_post_meta($id, $name, true);
         if (is_string($current) && $current !== '' && ($current[0] === '[' || $current[0] === '{')) {
             $decoded = json_decode($current, true);
             if (is_array($decoded)) $current = $decoded;
         }
-        if (!soldirectory_is_blank_or_placeholder($current, in_array($name, $prose, true))) continue;
+        $isMachine = false;
+        foreach ($replaceable[$name] ?? [] as $old) {
+            // Text this feature wrote earlier and nobody has touched: safe to upgrade.
+            if ($current === $old || (is_array($current) && is_array($old) && $current == $old)) { $isMachine = true; break; }
+        }
+        if (!$isMachine && !soldirectory_is_blank_or_placeholder($current, in_array($name, $prose, true))) continue;
         $isJson = is_array($value);
         update_post_meta($id, $name, $isJson ? wp_json_encode($value) : $value);
         $written[] = $name;
@@ -206,7 +271,7 @@ function soldirectory_apply_service_content(bool $force = false): array {
         try {
             $t = $titles[$id];
             if (!isset($editorial[$t])) continue;
-            if (!$force && get_post_meta($id, '_sd_content_v2', true)) { $summary['skipped']++; continue; }
+            if (!$force && get_post_meta($id, '_sd_content_v3', true)) { $summary['skipped']++; continue; }
 
             $group = $editorial[$t][0];
             $list = $siblings[$group] ?? [];
@@ -221,10 +286,16 @@ function soldirectory_apply_service_content(bool $force = false): array {
             }
 
             $overview = (string) ($overviews[$t] ?? '');
-            $fields = soldirectory_service_fields($t, $editorial[$t], $overview, $related);
-            $written = soldirectory_fill_service_post($id, $fields);
+            $long = soldirectory_service_long()[$t] ?? null;
+            $fields = soldirectory_service_fields($t, $editorial[$t], $overview, $related, $long);
+            // Earlier machine-written text (the short overview and the short FAQ set) may be upgraded to the long guide.
+            $replaceable = [
+                'overview_content' => [trim($overview)],
+                'faq_repeater' => [soldirectory_machine_faq_rows($t, $editorial[$t], null)],
+            ];
+            $written = soldirectory_fill_service_post($id, $fields, $replaceable);
             if ($written) {
-                update_post_meta($id, '_sd_content_v2', SOLDIRECTORY_CONTENT_VERSION);
+                update_post_meta($id, '_sd_content_v3', SOLDIRECTORY_CONTENT_VERSION);
                 $summary['posts']++;
                 $summary['fields'] += count($written);
             }
@@ -268,12 +339,12 @@ add_action('admin_post_soldirectory_apply_service_content', function () {
 function soldirectory_render_service_content_page(): void {
     if (!current_user_can('manage_options')) return;
     $total = count(get_posts(['post_type' => 'service', 'post_status' => 'any', 'numberposts' => -1, 'fields' => 'ids', 'no_found_rows' => true]));
-    $marked = count(get_posts(['post_type' => 'service', 'post_status' => 'any', 'numberposts' => -1, 'fields' => 'ids', 'no_found_rows' => true, 'meta_key' => '_sd_content_v2']));
+    $marked = count(get_posts(['post_type' => 'service', 'post_status' => 'any', 'numberposts' => -1, 'fields' => 'ids', 'no_found_rows' => true, 'meta_key' => '_sd_content_v3']));
     echo '<div class="wrap"><h1>Service content</h1>';
     if (isset($_GET['done'])) {
         echo '<div class="notice notice-success"><p>Filled ' . (int) $_GET['fields'] . ' blank fields on ' . (int) $_GET['done'] . ' service posts.</p></div>';
     }
-    echo '<p>Fills the <strong>blank</strong> fields on service posts with descriptions, eligibility and funding guidance, FAQs, SEO title and description, regulator information and related links. Anything you have written yourself is never changed.</p>';
+    echo '<p>Fills the <strong>blank</strong> fields on service posts with a long-form guide (short answer, overview, how to choose a provider, getting started), eligibility, funding and cost guidance, eight FAQs, SEO title and description, regulator information, sources and related links. Anything you have written yourself is never changed; text this tool wrote earlier is upgraded.</p>';
     echo '<p>' . (int) $marked . ' of ' . (int) $total . ' service posts have had content applied.</p>';
     echo '<p>It does not write prices, typical costs, waiting times or availability. Add those per service if you want them.</p>';
     echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';

@@ -55,6 +55,16 @@ export interface RegisterHub {
 }
 export const getRegisterHub = (type: RegisterType): Promise<RegisterHub> => request(`/hub?type=${type}`);
 
+export interface CategoryOverview {
+  total: number;
+  states: Record<string, number>;
+  topSuburbs: { state: string; slug: string; suburb: string; count: number }[];
+  widest: { slug: string; name: string; states: string[]; areaCount: number }[];
+}
+/** Counts, top suburbs and widest-coverage listings for one support category on the register. */
+export const getCategoryOverview = (type: RegisterType, category: string): Promise<CategoryOverview> =>
+  request(`/category-overview?type=${type}&category=${encodeURIComponent(category)}`);
+
 export interface CategoryCounts { total: number; states: Record<string, number> }
 /** How many register listings list a support category, per state. */
 export const getCategoryCounts = (type: RegisterType, category: string): Promise<CategoryCounts> =>
