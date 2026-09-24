@@ -143,3 +143,21 @@ Housekeeping worth doing in wp-admin: "Vision and orientation & mobility" exists
 three times (delete the two with slugs ending -2 / -3), and two service posts hold
 test values ("ABC", "eleigible") in Eligibility / Funding that are visible on the
 public pages - clear or replace them.
+
+## Service content and SEO fields (Tools > Service content)
+
+`includes/content-services.php` (+ `content-services-1/2/3.php` and `baseline-services.php`)
+fills the blank fields of every service post: overview, who it may suit, eligibility, funding,
+plan-management note, five FAQs, credential checks, regulator cards (NDIS Commission and NDIA),
+finder/CTA copy, related services (internal links), and the SEO title and description.
+It runs once on the first wp-admin load after deploy, and again from **Tools > Service content**
+("Fill blank fields now"). It only fills blanks or obvious placeholders such as "ABC" - anything
+an editor wrote is never changed. It writes no prices, typical costs, waiting times, hours or
+availability. Eligibility and funding are described in general terms ("if it is in your plan..."),
+never as a promise that someone qualifies. Read it over and edit freely; edits are never undone.
+
+SEO on the site side: each service page emits FAQPage and BreadcrumbList JSON-LD from those
+fields, uses `seo_title` / `seo_description` for the title and meta description, and is served to
+crawlers as full HTML from the API (`/seo-shell/services/<slug>`, wired in
+`deploy/nginx-soldirectory.conf`). If WordPress is down the shell answers 502 so nginx serves the
+normal app instead of a false 404. `seo_noindex` on a post is honoured.

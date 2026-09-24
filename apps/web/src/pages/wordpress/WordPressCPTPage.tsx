@@ -8,6 +8,7 @@ import WordPressTemplate from '../../components/wordpress/WordPressTemplate';
 import ProviderMap from '../../components/ProviderMap';
 import ServiceRegisterBlock from './ServiceRegisterBlock';
 import { categoryForService } from '../../lib/registerMeta';
+import { setJsonLd } from '../../lib/seo';
 import NotFound from './NotFound';
 import type { CPTRouteConfig } from '../../lib/cptRouteConfig';
 import { runAction } from '../../lib/runAction';
@@ -81,6 +82,28 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
       .catch(() => setError('Unable to reach the content service.'))
       .finally(() => setLoading(false));
   }, [config, slug]);
+
+  // Structured data for search engines: breadcrumbs, plus the FAQ when the page has one.
+  // Written only from what is really on the page (never invented) and cleared on the way out.
+  // NOTE: this hook must stay above the early return below (rules of hooks).
+  useEffect(() => {
+    if (!content) return;
+    const origin = window.location.origin;
+    const path = `/${config.pathPrefix}/${content.slug}`;
+    setJsonLd('cpt-breadcrumbs', {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: `${origin}/` },
+        { '@type': 'ListItem', position: 2, name: config.pathPrefix.charAt(0).toUpperCase() + config.pathPrefix.slice(1), item: `${origin}/${config.pathPrefix}` },
+        { '@type': 'ListItem', position: 3, name: content.title, item: `${origin}${path}` },
+      ],
+    });
+    const faqRows = safeParseJson<FAQItem[]>(content.meta.faq_json, []).filter((f) => f.question && f.answer);
+    setJsonLd('cpt-faq', faqRows.length
+      ? { '@type': 'FAQPage', mainEntity: faqRows.map((f) => ({ '@type': 'Question', name: f.question, acceptedAnswer: { '@type': 'Answer', text: f.answer } })) }
+      : null);
+    return () => { setJsonLd('cpt-breadcrumbs', null); setJsonLd('cpt-faq', null); };
+  }, [content, config.pathPrefix]);
 
   if (!loading && !error && notFound) return (<><PublicHeader /><NotFound /><PublicFooter /></>);
 

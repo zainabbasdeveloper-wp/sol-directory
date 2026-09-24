@@ -54,6 +54,7 @@ require $PLUGIN . '/includes/acf-compat.php';
 require $PLUGIN . '/includes/custom-fields-engine.php';
 require $PLUGIN . '/includes/custom-fields-rest.php';
 require $PLUGIN . '/includes/baseline-services.php';
+require $PLUGIN . '/includes/content-services.php';
 
 $pass = 0; $fail = 0;
 function check($label, $ok, $extra = '') { global $pass, $fail; $ok ? $pass++ : $fail++; echo ($ok ? 'PASS' : 'FAIL') . "  $label" . ($ok ? '' : "  -> $extra") . "\n"; }
@@ -227,5 +228,62 @@ $bad = array_filter($all, fn($t) => preg_match('/(?<![-\w])(eligible|eligibility
 check('baseline text makes no eligibility/cost/wait-time claims', !$bad, implode(', ', array_keys($bad)));
 check('baseline has 89 descriptions (one per unique service title)', count($all) === 89, (string) count($all));
 if (getenv('SD_DUMP_BASELINE_KEYS')) file_put_contents(getenv('SD_DUMP_BASELINE_KEYS'), json_encode(array_keys($all)));
+
+
+// 10) Service content (eligibility/funding/FAQ/SEO/related) -----------------------------------
+$editorial = soldirectory_service_editorial();
+check('content: 89 services have editorial text', count($editorial) === 89, (string) count($editorial));
+check('content: every baseline title has editorial text and vice versa', array_keys($editorial) == array_keys(soldirectory_baseline_service_text()) || !array_diff(array_keys(soldirectory_baseline_service_text()), array_keys($editorial)) && !array_diff(array_keys($editorial), array_keys(soldirectory_baseline_service_text())));
+$badShape = []; $badGroup = []; $numbers = [];
+foreach ($editorial as $t => $e) {
+    if (count($e) !== 3 || !is_string($e[1]) || strlen($e[1]) < 30 || !is_array($e[2]) || count($e[2]) !== 3) $badShape[] = $t;
+    foreach (($e[2] ?? []) as $qa) if (count($qa) !== 2 || substr(trim($qa[0]), -1) !== '?' || strlen($qa[1]) < 40) $badShape[] = "$t (faq)";
+    if (!in_array($e[0], ['core', 'cb', 'capital', 'at', 'general'], true)) $badGroup[] = $t;
+    // no prices, dollar figures, or specific timeframes/percentages stated as fact
+    $blob = $e[1] . ' ' . implode(' ', array_map(fn($qa) => $qa[0] . ' ' . $qa[1], $e[2]));
+    if (preg_match('/\$|\d+\s*(%|percent|weeks|months|years|days)|\b\d{2,}\b/i', $blob)) $numbers[] = $t;
+}
+check('content: every entry has who + exactly 3 well-formed FAQs', !$badShape, implode('; ', array_slice($badShape, 0, 4)));
+check('content: every entry has a valid group', !$badGroup, implode('; ', $badGroup));
+check('content: editorial text states no prices, percentages or timeframes', !$numbers, implode('; ', $numbers));
+$questions = []; foreach ($editorial as $t => $e) foreach ($e[2] as $qa) $questions[] = strtolower($qa[0]);
+check('content: FAQ questions are unique across services', count($questions) === count(array_unique($questions)), 'dupes: ' . implode(' | ', array_slice(array_keys(array_filter(array_count_values($questions), fn($n) => $n > 1)), 0, 3)));
+
+$GLOBALS['POSTS'] = []; $GLOBALS['OPTIONS'] = []; $GLOBALS['META'] = [];
+$mk = function ($id, $title) { $p = new WP_Post($id, 'service', $title); $GLOBALS['POSTS'][$id] = $p; $GLOBALS['TYPES'][$id] = 'service'; };
+$mk(601, 'Physiotherapy'); $mk(602, 'Occupational therapy'); $mk(603, 'Psychology'); $mk(604, 'Speech pathology'); $mk(605, 'Podiatry'); $mk(606, 'Dietitian');
+$mk(607, 'Specialist Disability Accommodation (SDA)'); $mk(608, 'Vision and orientation &amp; mobility'); $mk(609, 'Vision and orientation &amp; mobility'); $mk(610, 'Not a known service');
+$GLOBALS['META'][607]['eligibility'] = 'ABC';                       // placeholder -> replaced
+$GLOBALS['META'][607]['funding_info'] = 'Funding text written by an editor that is definitely not a placeholder.';   // kept
+$GLOBALS['META'][601]['seo_title'] = 'My own SEO title';             // kept
+$GLOBALS['META'][602]['faq_repeater'] = json_encode([['question' => 'Editor Q?', 'answer' => 'Editor A.']]);   // kept
+$sum = soldirectory_apply_service_content(false);
+check('content: applies to known services only', $sum['posts'] === 9 && !isset($GLOBALS['META'][610]['who_for']), json_encode($sum));
+$m601 = $GLOBALS['META'][601];
+check('content: SEO title/description within search limits', strlen($GLOBALS['META'][603]['seo_title']) <= 60 && strlen($GLOBALS['META'][603]['seo_description']) <= 158 && strlen($GLOBALS['META'][603]['seo_description']) >= 70, ($GLOBALS['META'][603]['seo_title'] ?? '') . ' / ' . ($GLOBALS['META'][603]['seo_description'] ?? ''));
+check('content: an editor-written SEO title is never replaced', $GLOBALS['META'][601]['seo_title'] === 'My own SEO title');
+check('content: editor FAQ is never replaced', json_decode($GLOBALS['META'][602]['faq_repeater'], true)[0]['question'] === 'Editor Q?' && count(json_decode($GLOBALS['META'][602]['faq_repeater'], true)) === 1);
+check('content: placeholder "ABC" eligibility is replaced', strpos($GLOBALS['META'][607]['eligibility'], 'reasonable and necessary') !== false);
+check('content: real editor funding text is kept', strpos($GLOBALS['META'][607]['funding_info'], 'written by an editor') !== false);
+$faq = json_decode($GLOBALS['META'][603]['faq_repeater'], true);
+check('content: FAQ has 5 rows of {question, answer} incl. the find-a-provider one', count($faq) === 5 && isset($faq[0]['question'], $faq[0]['answer']) && strpos($faq[4]['question'], 'provider near me') !== false);
+$cred = json_decode($GLOBALS['META'][603]['credentials_repeater'], true); $reg = json_decode($GLOBALS['META'][603]['regulator_cards_repeater'], true);
+check('content: credentials + regulator cards have the row shapes the frontend reads', count($cred) === 3 && isset($cred[0]['title'], $cred[0]['description']) && count($reg) === 2 && isset($reg[0]['title'], $reg[0]['phone'], $reg[0]['website'], $reg[0]['cta']));
+$rel = json_decode($GLOBALS['META'][603]['related_services'], true);
+check('content: related services are real sibling post ids, not self, no duplicates-of-titles', is_array($rel) && count($rel) >= 1 && !in_array(603, $rel, true) && count($rel) === count(array_unique($rel)) && !array_diff($rel, array_keys($GLOBALS['POSTS'])), json_encode($rel));
+check('content: hero + CTA use action keys the frontend understands', $GLOBALS['META'][603]['hero_cta_url'] === 'get_matched' && $GLOBALS['META'][603]['cta_primary_action'] === 'get_matched' && $GLOBALS['META'][603]['cta_secondary_action'] === '/directory');
+check('content: no cost / wait / hours / availability fields are written', !isset($GLOBALS['META'][603]['typical_cost']) && !isset($GLOBALS['META'][603]['wait_time']) && !isset($GLOBALS['META'][603]['hours']) && !isset($GLOBALS['META'][603]['availability']));
+check('content: the two duplicate posts both get content but related links use ONE post per title', isset($GLOBALS['META'][608]['who_for']) && isset($GLOBALS['META'][609]['who_for']));
+check('content: marked with the version', ($GLOBALS['META'][603]['_sd_content_v2'] ?? '') === '2');
+$before = $GLOBALS['META'][603];
+$sum2 = soldirectory_apply_service_content(false);
+check('content: second run without force is a no-op', $sum2['posts'] === 0 && $GLOBALS['META'][603] === $before);
+$GLOBALS['META'][603]['who_for'] = '';
+$snap = $GLOBALS['META'];
+$sum3 = soldirectory_apply_service_content(true);
+$changedKeys = []; foreach ($GLOBALS['META'] as $pid => $mm) foreach ($mm as $k => $v) if (($snap[$pid][$k] ?? null) !== $v) $changedKeys[] = "$pid:$k";
+check('content: forced run re-fills only what is blank', $sum3['fields'] === 1 && $GLOBALS['META'][603]['who_for'] !== '' && $changedKeys === ['603:who_for'], json_encode($changedKeys));
+$phones = []; foreach ($GLOBALS['META'] as $mm) if (isset($mm['regulator_cards_repeater'])) foreach (json_decode($mm['regulator_cards_repeater'], true) as $c) $phones[$c['phone']] = 1;
+check('content: only the two known regulator phone numbers appear', array_keys($phones) == ['1800 035 544', '1800 800 110']);
 
 echo "\n$pass passed, $fail failed\n";
