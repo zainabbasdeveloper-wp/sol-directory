@@ -55,6 +55,11 @@ export interface RegisterHub {
 }
 export const getRegisterHub = (type: RegisterType): Promise<RegisterHub> => request(`/hub?type=${type}`);
 
+export interface CategoryCounts { total: number; states: Record<string, number> }
+/** How many register listings list a support category, per state. */
+export const getCategoryCounts = (type: RegisterType, category: string): Promise<CategoryCounts> =>
+  request(`/category-counts?type=${type}&category=${encodeURIComponent(category)}`);
+
 export interface RegisterListing {
   type: RegisterType;
   slug: string;

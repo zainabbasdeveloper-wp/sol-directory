@@ -122,3 +122,24 @@ a response with no `meta` key - the case that once fatalled every services
 endpoint) and the mega-menu endpoint. Needs only the PHP CLI:
 
     php apps/cms/tests/plugin-harness.php apps/cms/wp-content/plugins/soldirectory-content
+
+## Service pages: baseline text and live data
+
+The 89 service posts were created with a title only, so their pages were empty.
+`includes/baseline-services.php` adds a short "what is this support?" description
+(overview + excerpt) to each, once, on the first wp-admin load after deploy. It
+only fills BLANK fields, never overwrites an editor, makes no eligibility / funding /
+cost / wait-time claims, and marks each post it touched (`_sd_baseline_content`).
+Replace the text freely - it is never re-applied. Eligibility, funding, cost, FAQs
+and the rest are left for an editor.
+
+On top of the WordPress copy, each service page shows live data from the app:
+providers on SolDirectory who offer it (when there are any) and how many providers
+list its support category on the public NDIS / My Aged Care register, by state.
+Categories are matched from the service name in `apps/web/src/lib/registerMeta.ts`;
+a service that fits no category honestly simply shows no register block.
+
+Housekeeping worth doing in wp-admin: "Vision and orientation & mobility" exists
+three times (delete the two with slugs ending -2 / -3), and two service posts hold
+test values ("ABC", "eleigible") in Eligibility / Funding that are visible on the
+public pages - clear or replace them.

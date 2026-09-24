@@ -6,11 +6,11 @@ import { useMatchModal } from '../../context/MatchModalContext';
 import { PublicHeader, PublicFooter } from '../public/PublicLayout';
 import WordPressTemplate from '../../components/wordpress/WordPressTemplate';
 import ProviderMap from '../../components/ProviderMap';
+import ServiceRegisterBlock from './ServiceRegisterBlock';
+import { categoryForService } from '../../lib/registerMeta';
 import NotFound from './NotFound';
 import type { CPTRouteConfig } from '../../lib/cptRouteConfig';
 import { runAction } from '../../lib/runAction';
-import { useAuth } from '../../context/AuthContext';
-import { canViewProviderProfiles } from '../../lib/profileAccess';
 import './WordPressCPTPage.css';
 
 interface FAQItem { question: string; answer: string }
@@ -35,8 +35,6 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
   const { slug = '' } = useParams<{ slug: string }>();
   const { openMatchModal } = useMatchModal();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const canOpenProfiles = canViewProviderProfiles(user?.role);
   // Every WP-controlled button goes through the shared interpreter
   // (lib/runAction.ts) with a REAL navigate — this page used to pass a
   // no-op, so any button whose ACF URL was a path did nothing.
@@ -59,7 +57,7 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
         // this route is configured to show them, and only for the
         // real count wp-admin asked for (finder_count) — never more
         // than configured, never fabricated.
-        if (config.showRelatedProviders || item.meta.finder_heading || item.meta.finder_show_map !== undefined) {
+        if (config.showRelatedProviders || config.pathPrefix === 'services' || item.meta.finder_heading || item.meta.finder_show_map !== undefined) {
           const count = Number(item.meta.finder_count) > 0 ? Number(item.meta.finder_count) : 6;
           // A Location page filters providers by that suburb; a Service
           // page filters by the service itself (optionally narrowed by
@@ -69,10 +67,15 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
           const query = config.pathPrefix === 'services'
             ? { service: item.title, ...(defaultLocation ? { suburb: defaultLocation } : {}) }
             : { suburb: item.title };
-          return listPublicProviders(query).then((res) => {
-            setProviders(res.items.slice(0, count));
-            setProvidersTotal(res.total);
-          }).catch(() => {});
+          // WordPress service names ("Physiotherapy") aren't always the names providers pick ("Therapy services"): if the exact title matches nobody, try the category it belongs to.
+          const category = config.pathPrefix === 'services' ? categoryForService(item.title) : undefined;
+          return listPublicProviders(query)
+            .then((res) => (res.total === 0 && category && category !== item.title ? listPublicProviders({ ...query, service: category }) : res))
+            .then((res) => {
+              setProviders(res.items.slice(0, count));
+              setProvidersTotal(res.total);
+            })
+            .catch(() => {});
         }
       })
       .catch(() => setError('Unable to reach the content service.'))
@@ -282,7 +285,7 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
               <section id="wp-cpt-providers" className="wp-cpt-section">
                 <h2>{finderHeading}</h2>
                 {finderDescription && <p className="wp-cpt-finder-desc">{finderDescription}</p>}
-                {finderShowCount && <p className="wp-cpt-showing">Showing {providers.length} of {providersTotal} real registered providers</p>}
+                {finderShowCount && <p className="wp-cpt-showing">Showing {providers.length} of {providersTotal} {providersTotal === 1 ? 'provider' : 'providers'} on SolDirectory</p>}
                 {finderShowMap && (
                   <div style={{ marginBottom: 20 }}>
                     <ProviderMap
@@ -299,12 +302,12 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
                 )}
                 <div className="wp-cpt-provider-grid">
                   {providers.map((p) => (
-                    p.slug && canOpenProfiles ? (
-                      <Link key={p.id} to={`/providers/${p.slug}`} className="wp-cpt-provider-card">
+                    p.slug ? (
+                      // The public profile page (/directory/:slug) - no login needed.
+                      <Link key={p.id} to={`/directory/${p.slug}`} className="wp-cpt-provider-card">
                         {p.tradingName || p.legalEntityName}
                       </Link>
                     ) : (
-                      // Profiles are login-gated; don't send anonymous visitors to a login wall.
                       <div key={p.id} className="wp-cpt-provider-card">{p.tradingName || p.legalEntityName}</div>
                     )
                   ))}
@@ -312,6 +315,8 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
                 <button type="button" className="btn-gradient" style={{ marginTop: 16 }} onClick={() => openMatchModal()}>{finderCtaLabel}</button>
               </section>
             )}
+
+            {config.pathPrefix === 'services' && content && <ServiceRegisterBlock serviceName={content.title} />}
 
             {regulatorCards.length > 0 && (
               <section id="wp-cpt-regulations" className="wp-cpt-section">
