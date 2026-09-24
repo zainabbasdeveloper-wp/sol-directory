@@ -97,3 +97,28 @@ with a new slug (e.g. `provider_profile` for content-managed
 provider marketing pages). The CORS and read-only enforcement in
 `rest-api.php` already applies to every post type automatically —
 nothing to change there.
+
+## Content saved while ACF was active
+
+The custom meta boxes replaced ACF/SCF, but content created under ACF is stored
+differently (repeaters as a row COUNT plus `columns_0_title`-style keys, groups
+as `cost_group_title`-style keys, relationships as serialized ID arrays, images
+as attachment IDs). `includes/acf-compat.php` reads that format and converts each
+post once into this plugin's JSON storage: the first time the post is read
+through REST / the mega-menu endpoint / the editor, and for every post on the
+first wp-admin page load after deploy. The old ACF meta is left untouched.
+
+After deploying, check the API is healthy (should be JSON, never a PHP error):
+
+    curl -s "http://<wordpress-host>/wp-json/wp/v2/services?per_page=1&_fields=slug,meta"
+    curl -s "http://<wordpress-host>/wp-json/soldirectory/v1/mega-menu"
+
+## Testing the plugin without WordPress
+
+`tests/plugin-harness.php` loads the real plugin files against a small fake
+WordPress (in-memory post meta) and, for every post type, writes sample content
+in ACF's flattened format, then checks the migration, the REST injection (including
+a response with no `meta` key - the case that once fatalled every services
+endpoint) and the mega-menu endpoint. Needs only the PHP CLI:
+
+    php apps/cms/tests/plugin-harness.php apps/cms/wp-content/plugins/soldirectory-content

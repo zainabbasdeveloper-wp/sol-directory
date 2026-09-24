@@ -15,12 +15,26 @@ function soldirectory_meta_json(int $post_id, string $name) {
     $raw = get_post_meta($post_id, $name, true);
     if ($raw === '' || $raw === false) return null;
     $decoded = json_decode((string) $raw, true);
-    return $decoded;
+    // json_decode('3') is the integer 3, not an array: ACF stored repeater row COUNTS
+    // under the same key (see acf-compat.php). Callers get an array or null, never a scalar.
+    return is_array($decoded) ? $decoded : null;
 }
 
 function soldirectory_inject_custom_fields_meta(array $response_data, WP_Post $post): array {
     $groups = soldirectory_field_groups()[$post->post_type] ?? null;
     if (!$groups) return $response_data;
+
+    // Content saved while ACF was active is converted the first time it is read.
+    soldirectory_migrate_post_from_acf((int) $post->ID);
+
+    // WordPress only includes a `meta` key when the post type has registered
+    // meta, and may hand it back as an object when empty. Everything below
+    // writes into it, and soldirectory_inject_group_meta() takes it by
+    // reference as an array - a missing key became null there and threw a
+    // TypeError that took down the whole REST response (every /services/*
+    // page 404'd). Normalise it once, here.
+    $meta = $response_data['meta'] ?? [];
+    $response_data['meta'] = is_array($meta) ? $meta : (array) $meta;
 
     foreach ($groups as $group) {
         soldirectory_inject_group_meta($response_data['meta'], $group['fields'], $post->ID);
@@ -154,9 +168,15 @@ function soldirectory_inject_group_meta(array &$meta, array $fields, int $post_i
 
 foreach (['service', 'location', 'guide', 'service_area_page', 'mega_menu_tab', 'provider'] as $post_type) {
     add_filter("rest_prepare_{$post_type}", function ($response, $post) {
-        $data = $response->get_data();
-        $data = soldirectory_inject_custom_fields_meta($data, $post);
-        $response->set_data($data);
+        // Adding these fields is decoration. If it ever fails, the page must
+        // still be served (without the extras) rather than fatal the endpoint.
+        try {
+            $data = $response->get_data();
+            $data = soldirectory_inject_custom_fields_meta($data, $post);
+            $response->set_data($data);
+        } catch (\Throwable $e) {
+            error_log('[soldirectory] custom fields REST injection failed for post ' . $post->ID . ': ' . $e->getMessage());
+        }
         return $response;
     }, 10, 2);
 }
@@ -182,6 +202,9 @@ add_action('rest_api_init', function () {
 
             $result = [];
             foreach ($tabs as $tab) {
+              // One malformed tab must not take the whole menu down: skip it and log.
+              try {
+                soldirectory_migrate_post_from_acf((int) $tab->ID);
                 if (!get_post_meta($tab->ID, 'active', true)) continue; // inactive tabs are skipped, not just hidden client-side
 
                 $columns = soldirectory_meta_json($tab->ID, 'columns') ?: [];
@@ -192,13 +215,16 @@ add_action('rest_api_init', function () {
                     'icon' => get_post_meta($tab->ID, 'icon', true),
                     'cta' => soldirectory_meta_json($tab->ID, 'cta'),
                     'columns' => array_map(function ($col) {
-                        $links = array_filter($col['links'] ?? [], fn($l) => !empty($l['active']));
+                        $links = array_filter(is_array($col['links'] ?? null) ? $col['links'] : [], fn($l) => !empty($l['active']));
                         return [
                             'title' => $col['title'] ?? '',
                             'links' => array_values($links),
                         ];
-                    }, $columns),
+                    }, array_values(array_filter($columns, 'is_array'))),
                 ];
+              } catch (\Throwable $e) {
+                error_log('[soldirectory] mega-menu tab ' . $tab->ID . ' skipped: ' . $e->getMessage());
+              }
             }
 
             return new WP_REST_Response(['tabs' => $result], 200);
