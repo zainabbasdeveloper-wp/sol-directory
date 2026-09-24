@@ -1,17 +1,29 @@
 import { Link } from 'react-router-dom';
+import './NotFound.css';
 
 export default function NotFound() {
   return (
-    <div style={{ maxWidth: 480, margin: '80px auto', textAlign: 'center' }}>
-      <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 10 }}>Page not found</h1>
-      <p style={{ color: 'var(--color-text-muted, #5A6B84)', marginBottom: 28 }}>
-        We couldn't find what you were looking for.
-      </p>
-      <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap', fontSize: 14 }}>
-        <Link to="/" style={{ color: 'var(--color-primary, #1769E0)', fontWeight: 600 }}>Home</Link>
-        <Link to="/find-providers" style={{ color: 'var(--color-primary, #1769E0)', fontWeight: 600 }}>Find providers</Link>
-        <Link to="/services" style={{ color: 'var(--color-primary, #1769E0)', fontWeight: 600 }}>Browse services</Link>
-        <Link to="/locations" style={{ color: 'var(--color-primary, #1769E0)', fontWeight: 600 }}>Browse locations</Link>
+    <div className="not-found-page" aria-live="polite">
+      <div className="not-found-page__inner">
+        <div className="not-found-page__eyebrow">Page missing</div>
+        <span className="not-found-page__code" aria-hidden="true">404</span>
+        <h1 className="not-found-page__title">This page can’t be found</h1>
+        <p className="not-found-page__copy">
+          The page you’re looking for may have moved, been removed, or the link may be outdated.
+          Try heading back to the main directory or browse the most popular options below.
+        </p>
+
+        <div className="not-found-page__actions">
+          <Link to="/" className="not-found-page__primary">Go home</Link>
+          <Link to="/directory" className="not-found-page__secondary">Find a provider</Link>
+        </div>
+
+        <div className="not-found-page__meta">
+          <Link to="/services">Browse services</Link>
+          <Link to="/locations">Locations</Link>
+          <Link to="/providers">For providers</Link>
+          <Link to="/independent-workers">Independent Workers</Link>
+        </div>
       </div>
     </div>
   );

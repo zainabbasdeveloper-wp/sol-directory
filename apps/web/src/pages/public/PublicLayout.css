@@ -91,8 +91,8 @@ a.utility-item:hover { opacity: 1; text-decoration: underline; }
   right: 22px;
   bottom: 92px;
   z-index: 1500;
-  width: 52px;
-  height: 52px;
+  width: 45px;
+  height: 45px;
   border: 0;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-500) 100%);

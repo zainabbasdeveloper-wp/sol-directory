@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import MegaMenu from '../../components/MegaMenu';
+import ReadAloudButton from '../../components/ReadAloudButton';
 import { useMatchModal } from '../../context/MatchModalContext';
 import { siteConfig, phoneHref } from '../../config/siteConfig';
 import './PublicLayout.css';
@@ -77,6 +78,7 @@ export function PublicHeader() {
           <button onClick={openMatchModal} className="public-cta-btn">
             Get matched free
           </button>
+          <ReadAloudButton selector="main" label="Listen" compact />
         </div>
       </nav>
     </header>
