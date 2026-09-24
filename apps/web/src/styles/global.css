@@ -17,7 +17,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-p, li, dd, dt, label, input, select, textarea, button, a, span {
+p, li, dd, dt, label, input, select, textarea, button {
   font-size: 15px;
   font-weight: 500;
 }
