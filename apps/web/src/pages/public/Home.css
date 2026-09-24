@@ -455,7 +455,7 @@
 .providers-photo-wrap::before {
   content: '';
   position: absolute;
-  inset: 18px 0 0 48px;
+  inset: 18px 0 0 38px;
   border-radius: 28px;
   background: linear-gradient(135deg, rgba(23, 105, 224, 0.10), rgba(11, 45, 92, 0.04));
   border: 1px solid rgba(11, 45, 92, 0.06);
