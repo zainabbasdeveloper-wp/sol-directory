@@ -404,7 +404,7 @@
 .providers-cta-section {
   position: relative;
   max-width: none;
-  background: linear-gradient(135deg, #ecf5ff 0%, #f9fbff 42%, #edf6f7 100%);
+  background: #f3f5f6;
   padding: clamp(72px, 8vw, 120px) max(20px, calc((100% - 1240px) / 2));
 }
 
@@ -429,20 +429,22 @@
 }
 
 .providers-cta-section .section-heading {
-  max-width: 15ch;
-  font-size: clamp(34px, 4vw, 52px);
-  font-weight: 700;
-  line-height: 1.08;
+  max-width: 10.5ch;
+  margin: 0;
+  font-size: clamp(52px, 4.15vw, 84px);
+  font-weight: 800;
+  line-height: 0.94;
+  letter-spacing: -0.06em;
   color: #0b2d5c;
 }
 
 .providers-cta-section .section-copy {
-  max-width: 50ch;
-  margin-top: 22px;
+  max-width: 46ch;
+  margin-top: 24px;
   color: #203956;
-  font-size: 17px;
+  font-size: clamp(18px, 1.5vw, 22px);
   font-weight: 500;
-  line-height: 1.7;
+  line-height: 1.6;
 }
 
 .providers-cta-actions {
@@ -485,36 +487,36 @@
 
 .providers-steps-card {
   position: absolute;
-  left: 18px;
-  bottom: 8px;
+  left: 42px;
+  bottom: 12px;
   z-index: 2;
-  width: min(76%, 360px);
+  width: min(75%, 390px);
   background: rgba(255, 255, 255, 0.96);
   border: 1px solid rgba(11, 45, 92, 0.07);
-  border-radius: 22px;
+  border-radius: 24px;
   box-shadow: 0 28px 52px rgba(11, 45, 92, 0.16);
   backdrop-filter: blur(4px);
-  padding: 24px 22px 18px;
+  padding: 26px 24px 20px;
 }
 
 .providers-steps-label {
   display: block;
   margin-bottom: 18px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 800;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: #295581;
 }
 
 .providers-steps {
   display: grid;
-  gap: 14px;
+  gap: 16px;
 }
 
 .providers-step {
   display: grid;
-  grid-template-columns: 28px 1fr;
+  grid-template-columns: 30px 1fr;
   gap: 12px;
   align-items: start;
 }
@@ -522,7 +524,7 @@
 .providers-step p {
   margin: 0;
   color: #203956;
-  font-size: 15px;
+  font-size: clamp(17px, 1.4vw, 19px);
   line-height: 1.55;
   font-weight: 500;
 }
@@ -531,8 +533,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   background: linear-gradient(135deg, rgba(23, 105, 224, 0.12), rgba(23, 105, 224, 0.18));
   color: var(--color-accent);
