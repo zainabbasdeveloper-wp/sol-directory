@@ -3,6 +3,8 @@ import { useParams, Link } from 'react-router-dom';
 import { getWorkerProfile, requestContact } from '../../api/resources';
 import { ApiError } from '../../api/client';
 import { useToast } from '../../components/ui/Toast';
+import { ReviewForm, ReviewList, Stars } from '../../components/reviews/WorkerReviews';
+import { getWorkerReviewsForOrg, submitWorkerReview, type OrgReviewList } from '../../api/profilesApi';
 import { isUnlocked, type WorkerProfile as WorkerProfileType } from '@soldirectory/shared-types';
 import './WorkerProfile.css';
 
@@ -14,6 +16,9 @@ export default function WorkerProfile() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [requested, setRequested] = useState(false);
+  // Review state comes from the same request that loads the list, so the form and list never disagree.
+  const [rv, setRv] = useState<Pick<OrgReviewList, 'eligible' | 'mine' | 'average' | 'total'> | null>(null);
+  const [rvKey, setRvKey] = useState(0);
   const showToast = useToast();
 
   useEffect(() => {
@@ -29,6 +34,7 @@ export default function WorkerProfile() {
     try {
       await requestContact(id);
       setRequested(true);
+      setRvKey((k) => k + 1); // contacting the worker is what unlocks reviewing them
       showToast('Request sent. You will be notified if they accept.');
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : 'Could not send that request.');
@@ -108,21 +114,34 @@ export default function WorkerProfile() {
         )}
 
         <section className="profile-section">
-          <h2 className="profile-section-title">Feedback</h2>
-          <div className="feedback-list">
-            {worker.feedback.map((f, i) => (
-              <div key={i} className="feedback-card">
-                <p className="feedback-text">&ldquo;{f.text}&rdquo;</p>
-                <p className="feedback-by">— {f.by}</p>
-              </div>
-            ))}
-          </div>
+          <h2 className="profile-section-title">Reviews</h2>
+          <ReviewList
+            refreshKey={rvKey}
+            load={(page) => getWorkerReviewsForOrg(id!, page).then((r) => { setRv({ eligible: r.eligible, mine: r.mine, average: r.average, total: r.total }); return r; })}
+          />
+          {rv && (
+            <div style={{ marginTop: 16 }}>
+              <ReviewForm
+                key={`${rv.mine?.status ?? 'none'}-${rv.eligible}`}
+                workerFirstName={worker.firstName}
+                eligible={rv.eligible}
+                mine={rv.mine}
+                onSubmit={async (input) => {
+                  await submitWorkerReview(id!, input);
+                  showToast('Thanks — your review is with us for checking.');
+                  setRvKey((k) => k + 1);
+                }}
+              />
+            </div>
+          )}
         </section>
       </div>
 
       <aside className="profile-contact-panel">
         <p className="profile-rate">${worker.hourlyRate}<span>/hr</span></p>
-        <p className="profile-rating-line">★ {worker.rating} ({worker.reviewCount} reviews)</p>
+        {rv && rv.total > 0 && rv.average !== null && (
+          <p className="profile-rating-line"><Stars value={rv.average} /> {rv.average.toFixed(1)} ({rv.total} {rv.total === 1 ? 'review' : 'reviews'})</p>
+        )}
 
         <div className="profile-contact-card">
           <p className="profile-contact-title">Contact</p>

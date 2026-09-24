@@ -3,6 +3,7 @@ import type { Response, NextFunction } from 'express';
 import { listWorkers, getWorkerProfile, requestContact } from '../controllers/workers.controller.js';
 import { listPublicWorkers, getPublicWorker, getPublicWorkerPhoto } from '../controllers/workersPublic.controller.js';
 import { getMyWorker, updateMyWorker, putMyPhoto, deleteMyPhoto, getMyPhoto } from '../controllers/workersSelf.controller.js';
+import { getPublicWorkerReviews, getWorkerReviewsForOrg, submitWorkerReview, getMyReviews } from '../controllers/workersReviews.controller.js';
 import { requireAuth, type AuthedRequest } from '../middleware/auth.middleware.js';
 import Provider from '../models/Provider.js';
 
@@ -44,7 +45,9 @@ const safe = (fn: (req: any, res: Response) => Promise<unknown>) =>
 router.get('/public', safe(listPublicWorkers));
 router.get('/public/:slug', safe(getPublicWorker));
 router.get('/public/:slug/photo', safe(getPublicWorkerPhoto));
+router.get('/public/:slug/reviews', safe(getPublicWorkerReviews));
 router.get('/me', requireAuth, safe(getMyWorker));
+router.get('/me/reviews', requireAuth, safe(getMyReviews));
 router.put('/me', requireAuth, safe(updateMyWorker));
 router.get('/me/photo', requireAuth, safe(getMyPhoto));
 // The browser sends the cropped JPEG as the raw request body.
@@ -53,5 +56,8 @@ router.delete('/me/photo', requireAuth, safe(deleteMyPhoto));
 
 router.get('/', requireAuth, requireAdminOrProProvider, listWorkers);
 router.get('/:id', requireAuth, requireAdminOrProProvider, getWorkerProfile);
+// Reviews: organisations read them and (after contacting the worker) write one. Only admin-approved reviews are ever shown.
+router.get('/:id/reviews', requireAuth, requireAdminOrProProvider, safe(getWorkerReviewsForOrg));
+router.post('/:id/reviews', requireAuth, safe(submitWorkerReview));
 router.post('/:id/contact-request', requireAuth, requireAdminOrProProvider, requestContact);
 export default router;

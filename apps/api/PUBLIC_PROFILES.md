@@ -56,3 +56,28 @@ no supports listed, suspended).
   their own profiles and these pages make no clinical claims.
 - Provider slugs `in`, `for`, `conditions`, `areas`, `find`, `new` are
   reserved so they can't collide with these paths.
+
+## Worker reviews
+- **Who can review:** a logged-in, active provider organisation that has sent
+  the worker a contact request through SolDirectory. That proves they used the
+  platform to reach the worker, not that they later worked together - so the
+  form makes them confirm they have, and the public label says "provider
+  organisation", never "verified engagement".
+- **What's shown:** only reviews an admin has approved (Admin > Worker reviews,
+  `/admin/worker-reviews`), with the reviewer's business name. One review per
+  organisation per worker; editing an approved review sends it back to
+  moderation and it stops counting until re-approved.
+- **Ratings** are always computed from approved reviews. The public API never
+  reads `Worker.rating` / `reviewCount`; those stored fields (used by the gated
+  worker directory) are rewritten on every moderation decision.
+- **One-off after deploy:** `npm run recompute:worker-ratings`. The demo seeds
+  (`src/seed`) write random ratings into those stored fields; this resets every
+  worker to what their approved reviews say (zero when none).
+- **Not built:** worker replies to reviews, reporting a review, and review
+  structured data (Google restricts self-hosted review markup).
+- API: `GET /api/workers/public/:slug/reviews`; organisations
+  `GET/POST /api/workers/:id/reviews`; workers `GET /api/workers/me/reviews`;
+  admin `GET/PATCH /api/admin/worker-reviews`. New reviews email
+  `ADMIN_NOTIFY_EMAIL` (or `ADMIN_NOTIFICATION_EMAIL`) if set.
+- The old "Feedback" list on the gated worker page (seed-only testimonials) is
+  replaced by real reviews.

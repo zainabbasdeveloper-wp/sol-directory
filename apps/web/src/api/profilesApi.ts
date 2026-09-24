@@ -172,3 +172,20 @@ export async function uploadMyLogo(jpeg: Blob): Promise<MyListing> {
   if (!res.ok) throw new ApiError((body as { error?: string }).error ?? 'Could not upload that logo.', res.status);
   return body as MyListing;
 }
+
+// ---------------------------------------------------------------
+// Worker reviews (approved ones only are ever returned)
+// ---------------------------------------------------------------
+export interface ReviewItem { rating: number; text: string; by: string; at: string }
+export interface ReviewList { items: ReviewItem[]; page: number; pageSize: number; total: number; average: number | null }
+export interface OrgReviewList extends ReviewList {
+  /** True once this organisation has contacted the worker through SolDirectory. */
+  eligible: boolean;
+  mine: { rating: number; text: string; status: 'pending' | 'approved' | 'rejected' } | null;
+}
+
+export const getPublicWorkerReviews = (slug: string, page = 1) => publicGet<ReviewList>(`/workers/public/${encodeURIComponent(slug)}/reviews${qs({ page })}`);
+export const getWorkerReviewsForOrg = (id: string, page = 1) => apiFetch<OrgReviewList>(`/workers/${id}/reviews${qs({ page })}`);
+export const getMyReviews = (page = 1) => apiFetch<ReviewList>(`/workers/me/reviews${qs({ page })}`);
+export const submitWorkerReview = (id: string, body: { rating: number; text: string; workedWith: boolean }) =>
+  apiFetch<{ status: string }>(`/workers/${id}/reviews`, { method: 'POST', body: JSON.stringify(body) });

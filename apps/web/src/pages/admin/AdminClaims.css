@@ -1,5 +1,7 @@
 .claims-note { margin: 0 0 16px; font-size: 13.5px; color: var(--color-text-muted, #5A6B84); max-width: 720px; }
 
+.claims-note-input { width: 100%; margin-top: 12px; padding: 9px 12px; border: 1px solid var(--color-border-strong, #DDE4EF); border-radius: 8px; font: inherit; font-size: 13.5px; }
+
 .claims-list { display: grid; gap: 12px; margin-bottom: 20px; }
 .claims-card {
   display: flex; gap: 20px; justify-content: space-between; align-items: flex-start;

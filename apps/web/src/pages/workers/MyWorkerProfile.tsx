@@ -7,6 +7,8 @@ import { deleteMyPhoto, fetchMyPhotoUrl, getMyWorker, saveMyWorker, uploadMyPhot
 import { listActiveServices } from '../../api/serviceCatalogue';
 import { listActiveConditions } from '../../api/conditionCatalogue';
 import { toJpeg } from '../../lib/imageJpeg';
+import { ReviewList } from '../../components/reviews/WorkerReviews';
+import { getMyReviews } from '../../api/profilesApi';
 import './MyWorkerProfile.css';
 
 const STATES = ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'];
@@ -219,6 +221,11 @@ export default function MyWorkerProfilePage() {
         {error && <p className="mwp-error" role="alert">{error}</p>}
         <button className="mwp-save" type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save profile'}</button>
       </form>
+
+      <section className="mwp-card" style={{ marginTop: 18 }}>
+        <h2>Reviews of you</h2>
+        <ReviewList load={getMyReviews} />
+      </section>
     </div>
   );
 }

@@ -66,6 +66,8 @@ add_action('admin_enqueue_scripts', function ($hook) {
 // =============================================================
 
 function soldirectory_render_meta_box(WP_Post $post, array $box): void {
+    // An older post saved through ACF shows its content instead of empty fields.
+    soldirectory_migrate_post_from_acf((int) $post->ID);
     $group = $box['args']['group'];
     wp_nonce_field(SOLDIRECTORY_NONCE_ACTION, SOLDIRECTORY_NONCE_NAME);
     echo '<div class="sdmb-box">';
