@@ -5,6 +5,7 @@ import ProviderView from '../models/ProviderView.js';
 import ContactRequest from '../models/ContactRequest.js';
 import { logActivity } from '../models/AdminActivity.js';
 import { EmailService } from '../services/email.service.js';
+import { publicLogoUrl } from './providersPublic.controller.js';
 
 const MAX_LIMIT = 50;
 
@@ -40,7 +41,8 @@ export function buildProviderFilter(query: Request['query']): Record<string, unk
     // Case-insensitive: "bankstown" must find "Bankstown". When the caller
     // also supplies coordinates, a provider who lists a nearby suburb (or
     // is based within range) counts too — not only an exact suburb name.
-    const bySuburb = { serviceSuburbs: new RegExp(`^${escapeRegex(suburb)}$`, 'i') };
+    // \s* on both sides: a stored "Parramatta " must match, the same way the area counts (which trim) treat it.
+    const bySuburb = { serviceSuburbs: new RegExp(`^\\s*${escapeRegex(suburb)}\\s*$`, 'i') };
     and.push(hasRadius ? { $or: [bySuburb, withinRadius] } : bySuburb);
   } else if (hasRadius) {
     and.push(withinRadius);
@@ -48,6 +50,10 @@ export function buildProviderFilter(query: Request['query']): Record<string, unk
 
   if (typeof query.service === 'string' && query.service.trim()) {
     filter.registrationGroups = new RegExp(`^${escapeRegex(query.service.trim())}$`, 'i');
+  }
+  // "Experience supporting..." - powers the /directory/for/:condition pages.
+  if (typeof query.condition === 'string' && query.condition.trim()) {
+    filter.conditionExperience = new RegExp(`^\\s*${escapeRegex(query.condition.trim())}\\s*$`, 'i');
   }
   if (typeof query.q === 'string' && query.q.trim()) {
     const rx = new RegExp(escapeRegex(query.q.trim()), 'i');
@@ -234,7 +240,7 @@ export async function getProviderBySlug(req: AuthedRequest, res: Response) {
 // everything else. Map positions are rounded to ~1 km so a sole trader
 // working from home isn't pinpointed.
 // ---------------------------------------------------------------
-const PUBLIC_LIST_PROJECTION = 'legalEntityName tradingName slug registrationGroups serviceSuburbs intakeStatus location logoUrl';
+const PUBLIC_LIST_PROJECTION = 'legalEntityName tradingName slug registrationGroups serviceSuburbs intakeStatus location logoUrl hasLogoUpload updatedAt';
 const PUBLIC_MAX_LIMIT = 30;
 const MAX_SUBURBS_SHOWN = 6;
 
@@ -269,7 +275,7 @@ export async function listPublicProviders(req: Request, res: Response) {
       location: p.location?.coordinates
         ? { lat: roundCoord(p.location.coordinates[1]), lng: roundCoord(p.location.coordinates[0]) }
         : null,
-      logoUrl: p.logoUrl ?? null,
+      logoUrl: publicLogoUrl(p),
     })),
     page,
     limit,

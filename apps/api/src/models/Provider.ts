@@ -99,6 +99,8 @@ export interface ProviderDoc extends Document {
   // the WP webhook pushes the resulting URL back here.
   wpPostId?: number;
   logoUrl?: string;
+  /** The provider uploaded their own logo (see ProviderLogo). Used only when there's no WordPress logo. */
+  hasLogoUpload?: boolean;
   // Weekly capacity confirmation (developer brief, Phase 3: "SMS/email
   // every Monday, one-tap confirm. Unconfirmed after 7 days = listing
   // marked paused and dropped from results" — the specific mechanism
@@ -188,6 +190,7 @@ const providerSchema = new Schema<ProviderDoc>(
     periodResetsAt: Date,
     wpPostId: { type: Number, index: true },
     logoUrl: String,
+    hasLogoUpload: { type: Boolean, default: false },
     lastCapacityConfirmedAt: Date,
     listingPaused: { type: Boolean, default: false },
     smsNotifications: { type: Boolean, default: false },

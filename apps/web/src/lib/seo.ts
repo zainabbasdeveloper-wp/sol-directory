@@ -11,14 +11,38 @@
  * its own hero and doesn't go through WordPressTemplate).
  */
 /**
- * The robots value the HTML shell shipped with (index.html's %ROBOTS%,
- * driven by VITE_ALLOW_INDEXING). Captured once, before any page has
- * touched it, so an indexable page falls back to the SITE default rather
- * than hard-coding "index" — otherwise every page that calls
- * applySeoTags would quietly override a staging site's noindex.
+ * The site-wide robots value: same rule as vite.config.ts fills into
+ * index.html's %ROBOTS% (VITE_ALLOW_INDEXING). An indexable page falls back
+ * to this rather than hard-coding "index", so a staging build stays noindex.
+ * Computed from the build flag, NOT read back from the document: the server
+ * may already have swapped in a page-specific value (e.g. "noindex, follow"
+ * on a thin register page), which must not become the default for every
+ * page the visitor navigates to next.
  */
-const SITE_ROBOTS: string =
-  (typeof document !== 'undefined' && document.querySelector('meta[name="robots"]')?.getAttribute('content')) || 'index, follow';
+const SITE_ROBOTS: string = import.meta.env.VITE_ALLOW_INDEXING === 'true' ? 'index, follow' : 'noindex, nofollow';
+
+// The defaults in index.html - keep in step with it. Not read from the
+// document for the same reason as SITE_ROBOTS above.
+const SHELL_TITLE = 'SolDirectory — Find NDIS and aged care providers';
+const SHELL_DESCRIPTION =
+  'Find disability and aged care providers who have capacity, matched to your suburb, funding and support needs. Free for families, participants and coordinators.';
+
+/**
+ * Puts the <head> back to what the HTML shell shipped with. Called on every
+ * route change, BEFORE the new page sets its own tags, so a page that never
+ * calls applySeoTags (e.g. /locations) doesn't inherit the previous page's
+ * title, canonical or noindex when someone navigates within the app.
+ */
+export function resetSeoTags(): void {
+  if (typeof document === 'undefined') return;
+  document.title = SHELL_TITLE;
+  document.querySelector('meta[name="description"]')?.setAttribute('content', SHELL_DESCRIPTION);
+  document.querySelector('meta[name="robots"]')?.setAttribute('content', SITE_ROBOTS);
+  document.querySelector('link[rel="canonical"]')?.remove();
+  for (const sel of ['meta[property="og:title"]', 'meta[property="og:description"]', 'meta[property="og:image"]', 'meta[name="twitter:card"]']) {
+    document.querySelector(sel)?.remove();
+  }
+}
 
 export interface SeoTags {
   title: string;

@@ -120,3 +120,55 @@ export async function uploadMyPhoto(jpeg: Blob): Promise<MyWorkerProfile> {
   if (!res.ok) throw new ApiError((body as { error?: string }).error ?? 'Could not upload that photo.', res.status);
   return body as MyWorkerProfile;
 }
+
+// ---------------------------------------------------------------
+// Location and "experience supporting" pages
+// ---------------------------------------------------------------
+export interface CountRow { name: string; slug: string; count: number }
+export const listPublicAreas = () => publicGet<{ items: CountRow[]; minIndexable: number }>('/providers/public/areas');
+export const listPublicConditions = () => publicGet<{ items: CountRow[]; minIndexable: number }>('/providers/public/conditions');
+
+export interface PublicProviderCard {
+  id: string; slug: string | null; legalEntityName: string; tradingName: string;
+  registrationGroups: string[]; serviceSuburbs: string[]; serviceSuburbCount: number;
+  intakeStatus: string; logoUrl: string | null;
+}
+export const listProvidersBy = (p: { suburb?: string; condition?: string; page?: number; limit?: number }) =>
+  publicGet<{ items: PublicProviderCard[]; page: number; limit: number; total: number; hasMore: boolean }>(`/providers/public${qs(p)}`);
+
+// ---------------------------------------------------------------
+// A provider looking after their own public listing
+// ---------------------------------------------------------------
+export interface MyListing {
+  name: string;
+  slug: string | null;
+  live: boolean;
+  issues: string[];
+  supportCount: number;
+  areaCount: number;
+  intakeStatus: string;
+  hasLogo: boolean;
+  hasUploadedLogo: boolean;
+  logoManagedElsewhere: boolean;
+  logoUrl: string | null;
+}
+export const getMyListing = () => apiFetch<MyListing>('/providers/me/listing');
+export const deleteMyLogo = () => apiFetch<MyListing>('/providers/me/logo', { method: 'DELETE' });
+
+export async function fetchMyLogoUrl(): Promise<string | null> {
+  const token = localStorage.getItem('sd_token');
+  const res = await fetch(`${API_URL}/providers/me/logo`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  return res.ok ? URL.createObjectURL(await res.blob()) : null;
+}
+
+export async function uploadMyLogo(jpeg: Blob): Promise<MyListing> {
+  const token = localStorage.getItem('sd_token');
+  const res = await fetch(`${API_URL}/providers/me/logo`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'image/jpeg', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    body: jpeg,
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ApiError((body as { error?: string }).error ?? 'Could not upload that logo.', res.status);
+  return body as MyListing;
+}

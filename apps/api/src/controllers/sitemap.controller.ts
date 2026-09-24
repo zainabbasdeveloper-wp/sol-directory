@@ -3,6 +3,7 @@ import Provider from '../models/Provider.js';
 import Worker from '../models/Worker.js';
 import RegisterListing from '../models/RegisterListing.js';
 import { computeHub } from './register.controller.js';
+import { MIN_INDEXABLE_PROVIDERS, areaRows, conditionRows } from './providersPublic.controller.js';
 import { REGISTER_TYPES, STATE_CODES, type RegisterType } from '../services/registerNormalise.js';
 
 // Real sitemap — every URL here is either a genuinely static public
@@ -95,6 +96,13 @@ async function buildPageUrls(): Promise<UrlEntry[]> {
   // rule as the public directory: active and not paused.
   const providers = await Provider.find({ accountStatus: 'active', listingPaused: { $ne: true }, slug: { $exists: true, $ne: null } }).select('slug').lean();
   for (const p of providers) paths.push(`/directory/${(p as any).slug}`);
+
+  // Location and "experience supporting" pages - only those with enough real providers to be more than a keyword page.
+  const [areas, conditions] = await Promise.all([areaRows(), conditionRows()]);
+  for (const a of areas) if (a.count >= MIN_INDEXABLE_PROVIDERS) paths.push(`/directory/in/${a.slug}`);
+  const goodConditions = conditions.filter((c) => c.count >= MIN_INDEXABLE_PROVIDERS);
+  for (const c of goodConditions) paths.push(`/directory/for/${c.slug}`);
+  if (goodConditions.length) paths.push('/directory/for');
 
   // Independent workers who opted in to a public profile and were approved.
   const workers = await Worker.find({ publicProfile: true, published: true, accountStatus: 'active', publicSlug: { $exists: true, $ne: null } }).select('publicSlug').lean();

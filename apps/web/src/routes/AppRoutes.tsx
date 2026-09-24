@@ -1,5 +1,6 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
-import type { ReactElement } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useLayoutEffect, type ReactElement } from 'react';
+import { resetSeoTags } from '../lib/seo';
 import AppShell from '../components/layout/AppShell';
 import Home from '../pages/public/Home';
 import Directory from '../pages/public/Directory';
@@ -35,6 +36,8 @@ import ProviderPublicPage from '../pages/public/ProviderPublicPage';
 import WorkerFinder from '../pages/public/WorkerFinder';
 import WorkerPublicProfile from '../pages/public/WorkerPublicProfile';
 import MyWorkerProfilePage from '../pages/workers/MyWorkerProfile';
+import MyListingPage from '../pages/providers/MyListing';
+import ProviderListingPage, { ConditionsHubPage } from '../pages/public/ProviderListingPage';
 import ProviderDirectory from '../pages/providers/ProviderDirectory';
 import ProviderProfilePage from '../pages/providers/ProviderProfilePage';
 import SavedProviders from '../pages/providers/SavedProviders';
@@ -106,6 +109,11 @@ function RequireAdminOrProProvider({ children }: { children: ReactElement }) {
 }
 
 export default function AppRoutes() {
+  // Layout effects run before every child's useEffect, so this reset lands
+  // before the new page writes its own tags.
+  const { pathname } = useLocation();
+  useLayoutEffect(() => { resetSeoTags(); }, [pathname]);
+
   return (
     <Routes>
       {/* Public marketing pages */}
@@ -117,6 +125,9 @@ export default function AppRoutes() {
       <Route path="/independent-workers" element={<IndependentWorkers />} />
       <Route path="/independent-workers/find" element={<WorkerFinder />} />
       <Route path="/independent-workers/:slug" element={<WorkerPublicProfile />} />
+      <Route path="/directory/in/:suburb" element={<ProviderListingPage mode="area" />} />
+      <Route path="/directory/for" element={<ConditionsHubPage />} />
+      <Route path="/directory/for/:condition" element={<ProviderListingPage mode="condition" />} />
       <Route path="/directory/:slug" element={<ProviderPublicPage />} />
       <Route path="/services/:serviceSlug/:suburb" element={<ServiceLocationPage />} />
       {/* Public-register pages (data from the NDIS Commission / My Aged Care registers). */}
@@ -174,6 +185,7 @@ export default function AppRoutes() {
             </RequireAdminOrProProvider>
           }
         />
+        <Route path="/provider/listing" element={<RequireRole roles={['provider']}><MyListingPage /></RequireRole>} />
         <Route path="/worker/profile" element={<RequireRole roles={['worker']}><MyWorkerProfilePage /></RequireRole>} />
         <Route path="/leads" element={<RequireRole roles={['provider']}><Leads /></RequireRole>} />
         <Route path="/leads/:id" element={<RequireRole roles={['provider']}><LeadDetailPage /></RequireRole>} />

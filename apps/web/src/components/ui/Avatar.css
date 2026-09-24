@@ -3,5 +3,5 @@
 .avatar-md { width: 56px; height: 56px; font-size: 18px; }
 .avatar-lg { width: 96px; height: 96px; font-size: 32px; }
 .avatar-round { border-radius: 50%; }
-.avatar-square { border-radius: 14px; }
+.avatar-square { border-radius: 14px; object-fit: contain; } /* logos keep their whole shape; photos (round) are cropped */
 .avatar-fallback { display: inline-grid; place-items: center; font-weight: 700; color: #0F4FA8; background: var(--color-primary-tint, #F2F7FF); border: 0; }

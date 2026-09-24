@@ -6,6 +6,7 @@ import Provider from '../models/Provider.js';
 import Worker from '../models/Worker.js';
 import { MIN_SUBURB_LISTINGS, STATE_CODES, type RegisterType } from '../services/registerNormalise.js';
 import { computeHub } from './register.controller.js';
+import { MIN_INDEXABLE_PROVIDERS, VISIBLE_PROVIDER, areaRows, conditionRows, publicLogoUrl } from './providersPublic.controller.js';
 
 /**
  * Crawler-readable HTML for the public-register pages.
@@ -266,7 +267,7 @@ const LEVEL_PAGE = 12;
 async function providerProfilePage(site: string, slug: string): Promise<Page> {
   if (!SLUG_RE.test(slug)) return notFound();
   const p: any = await Provider.findOne({ slug, accountStatus: 'active', listingPaused: { $ne: true } })
-    .select('legalEntityName tradingName slug registrationGroups acceptedFunding conditionExperience languages ageGroups serviceSuburbs businessAddress.suburb businessAddress.state logoUrl')
+    .select('legalEntityName tradingName slug registrationGroups acceptedFunding conditionExperience languages ageGroups serviceSuburbs businessAddress.suburb businessAddress.state logoUrl hasLogoUpload updatedAt')
     .lean();
   if (!p) return notFound();
 
@@ -288,7 +289,7 @@ async function providerProfilePage(site: string, slug: string): Promise<Page> {
     canonical: path,
     noindex: groups.length === 0,
     jsonLd: [
-      { id: 'directory-provider', data: { '@type': 'Organization', name, ...(p.logoUrl ? { logo: p.logoUrl } : {}), ...(suburbs.length ? { areaServed: suburbs.slice(0, 20).map((s) => ({ '@type': 'Place', name: s })) } : {}) } },
+      { id: 'directory-provider', data: { '@type': 'Organization', name, ...(publicLogoUrl(p) ? { logo: publicLogoUrl(p)!.startsWith('/') ? `${site}${publicLogoUrl(p)}` : publicLogoUrl(p) } : {}), ...(suburbs.length ? { areaServed: suburbs.slice(0, 20).map((s) => ({ '@type': 'Place', name: s })) } : {}) } },
       { id: 'directory-breadcrumbs', data: { '@type': 'BreadcrumbList', itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Home', item: `${site}/` },
         { '@type': 'ListItem', position: 2, name: 'Provider directory', item: `${site}/directory` },
@@ -364,6 +365,60 @@ async function workerListPage(site: string, page: number, filtered: boolean): Pr
   };
 }
 
+// ---------------------------------------------------------------
+// Real-provider location and "experience supporting" pages
+//   /directory/in/:suburb      /directory/for/:condition      /directory/for
+// ---------------------------------------------------------------
+async function providerFilterPage(site: string, mode: 'area' | 'condition', slug: string, page: number): Promise<Page> {
+  const rows = mode === 'area' ? await areaRows() : await conditionRows();
+  const row = rows.find((r) => r.slug === slug);
+  if (!row) return notFound();
+
+  const field = mode === 'area' ? 'serviceSuburbs' : 'conditionExperience';
+  const filter = { ...VISIBLE_PROVIDER, slug: { $exists: true, $ne: null }, [field]: new RegExp(`^\\s*${row.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'i') };
+  const [docs, total] = await Promise.all([
+    Provider.find(filter).select('legalEntityName tradingName slug registrationGroups').sort({ tradingName: 1, legalEntityName: 1, _id: 1 }).skip((page - 1) * LEVEL_PAGE).limit(LEVEL_PAGE).lean(),
+    Provider.countDocuments(filter),
+  ]);
+
+  const base = `/directory/${mode === 'area' ? 'in' : 'for'}/${row.slug}`;
+  const totalPages = Math.max(1, Math.ceil(total / LEVEL_PAGE));
+  const heading = mode === 'area' ? `Providers supporting people in ${row.name}` : `Providers with experience supporting ${row.name}`;
+  const pager =
+    (page > 1 ? `<a rel="prev" href="${esc(page === 2 ? base : `${base}?page=${page - 1}`)}">Previous page</a> ` : '') +
+    (page < totalPages ? `<a rel="next" href="${esc(`${base}?page=${page + 1}`)}">Next page</a>` : '');
+
+  return {
+    status: 200,
+    title: `${heading}${page > 1 ? ` (page ${page})` : ''} | SolDirectory`,
+    description: trimTo(`${fmt(total)} ${total === 1 ? 'provider lists' : 'providers list'} ${mode === 'area' ? `${row.name} as an area they support` : `experience supporting ${row.name}`} on SolDirectory. See their supports and service areas, then get matched for free.`, 158),
+    canonical: page > 1 ? `${base}?page=${page}` : base,
+    noindex: total < MIN_INDEXABLE_PROVIDERS,
+    jsonLd: [{ id: 'directory-breadcrumbs', data: { '@type': 'BreadcrumbList', itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: `${site}/` },
+      { '@type': 'ListItem', position: 2, name: 'Provider directory', item: `${site}/directory` },
+      { '@type': 'ListItem', position: 3, name: row.name, item: `${site}${base}` },
+    ] } }],
+    body:
+      `<nav aria-label="Breadcrumb"><a href="/">Home</a> / <a href="/directory">Provider directory</a> / ${esc(row.name)}</nav><h1>${esc(heading)}</h1>` +
+      `<p>${fmt(total)} ${total === 1 ? 'provider' : 'providers'} on SolDirectory.</p>` +
+      `<ul>${(docs as any[]).map((p) => li(`/directory/${p.slug}`, p.tradingName || p.legalEntityName, (p.registrationGroups ?? []).length ? `– ${(p.registrationGroups as string[]).slice(0, 3).join(', ')}` : '')).join('')}</ul><p>${pager}</p>`,
+  };
+}
+
+async function conditionsHubPage(site: string): Promise<Page> {
+  const rows = await conditionRows();
+  return {
+    status: 200,
+    title: 'Providers by experience supporting a condition or need | SolDirectory',
+    description: 'Browse providers by the conditions and needs they say they have experience supporting. Providers write their own profiles.',
+    canonical: '/directory/for',
+    noindex: rows.length === 0,
+    jsonLd: [],
+    body: `<h1>Find providers by experience</h1><ul>${rows.map((r) => li(`/directory/for/${r.slug}`, r.name, `(${fmt(r.count)})`)).join('')}</ul>`,
+  };
+}
+
 /** GET /seo-shell/<original path>?<original query> — see the file comment. */
 export async function registerShell(req: Request, res: Response) {
   const url = new URL(req.originalUrl, 'http://x');
@@ -373,7 +428,11 @@ export async function registerShell(req: Request, res: Response) {
 
   let page: Page;
   const root = parts[0];
-  if (root === 'directory' && parts.length === 2) {
+  if (root === 'directory' && parts.length === 3 && (parts[1] === 'in' || parts[1] === 'for')) {
+    page = await providerFilterPage(site, parts[1] === 'in' ? 'area' : 'condition', parts[2], pageNum);
+  } else if (root === 'directory' && parts.length === 2 && parts[1] === 'for') {
+    page = await conditionsHubPage(site);
+  } else if (root === 'directory' && parts.length === 2) {
     page = await providerProfilePage(site, parts[1]);
   } else if (root === 'independent-workers' && parts.length === 2) {
     page = parts[1] === 'find'

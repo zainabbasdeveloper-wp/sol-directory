@@ -1,7 +1,9 @@
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PublicHeader, PublicFooter } from './PublicLayout';
 import { LOCATION_GROUPS } from '../../data/providers';
 import { STATES } from '../../lib/registerMeta';
+import { listPublicAreas, type CountRow } from '../../api/profilesApi';
 import { useSiteStats } from '../../hooks/useSiteStats';
 import { providerCountLabel, stateGroupCount } from '../../lib/statsCounts';
 import './Directory.css';
@@ -11,6 +13,9 @@ import './register/register.css';
 export default function Locations() {
   const navigate = useNavigate();
   const stats = useSiteStats();
+  // Suburbs where real providers say they work, from live data (none shown if there are none yet).
+  const [areas, setAreas] = useState<CountRow[]>([]);
+  useEffect(() => { listPublicAreas().then((r) => setAreas(r.items.slice(0, 36))).catch(() => {}); }, []);
 
   return (
     <>
@@ -48,6 +53,17 @@ export default function Locations() {
             </div>
           ))}
         </div>
+
+        {areas.length > 0 && (
+          <>
+            <h2 className="reg-h2">Areas with providers on SolDirectory</h2>
+            <ul className="reg-linkgrid">
+              {areas.map((a) => (
+                <li key={a.slug}><Link to={`/directory/in/${a.slug}`}>{a.name}<span>{a.count}</span></Link></li>
+              ))}
+            </ul>
+          </>
+        )}
 
         <h2 className="reg-h2">Browse the public registers by state</h2>
         <p className="reg-lede">

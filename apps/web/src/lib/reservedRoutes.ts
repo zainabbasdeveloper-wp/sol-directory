@@ -28,6 +28,7 @@ export const RESERVED_PATH_PREFIXES = [
   '/independent-workers',
   '/workers',
   '/worker',
+  '/provider',
   '/login',
   '/signup',
   '/forgot-password',

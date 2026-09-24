@@ -3,7 +3,8 @@ import { Link, useParams } from 'react-router-dom';
 import { PublicHeader, PublicFooter } from './PublicLayout';
 import Avatar from '../../components/ui/Avatar';
 import { Breadcrumbs, trimTo } from './register/RegisterParts';
-import { getPublicProvider, type PublicProviderProfile } from '../../api/profilesApi';
+import { getPublicProvider, listPublicConditions, type PublicProviderProfile } from '../../api/profilesApi';
+import { slugify } from '../../lib/slugify';
 import { ApiError } from '../../api/client';
 import { applySeoTags, setJsonLd } from '../../lib/seo';
 import { useMatchModal } from '../../context/MatchModalContext';
@@ -19,6 +20,7 @@ const STATUS: Record<string, { label: string; tone: 'ok' | 'limited' | 'wait' | 
   Closed: { label: 'Not accepting referrals', tone: 'closed' },
 };
 
+
 const list = (items: string[]) => (
   <ul className="pp-chips">{items.map((i) => <li key={i} className="pp-chip pp-chip-plain">{i}</li>)}</ul>
 );
@@ -29,6 +31,11 @@ export default function ProviderPublicPage() {
   const { openMatchModal } = useMatchModal();
   const [p, setP] = useState<PublicProviderProfile | null>(null);
   const [status, setStatus] = useState<'loading' | 'ok' | 'missing' | 'error'>('loading');
+  // Conditions that have their own page (only catalogue conditions do) - link just those.
+  const [conditionSlugs, setConditionSlugs] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    listPublicConditions().then((r) => setConditionSlugs(new Set(r.items.map((c) => c.slug)))).catch(() => {});
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -62,7 +69,7 @@ export default function ProviderPublicPage() {
     setJsonLd('directory-provider', {
       '@type': 'Organization',
       name: p.name,
-      ...(p.logoUrl ? { logo: p.logoUrl } : {}),
+      ...(p.logoUrl ? { logo: p.logoUrl.startsWith('/') ? `${window.location.origin}${p.logoUrl}` : p.logoUrl } : {}),
       ...(p.serviceSuburbs.length ? { areaServed: p.serviceSuburbs.slice(0, 20).map((s) => ({ '@type': 'Place', name: s })) } : {}),
     });
     setJsonLd('directory-breadcrumbs', {
@@ -131,14 +138,21 @@ export default function ProviderPublicPage() {
               <>
                 <h2 className="reg-h2">Where {p.name} supports people</h2>
                 <ul className="pp-chips">{p.serviceSuburbs.map((s) => (
-                  <li key={s} className="pp-chip pp-chip-plain"><Link to={`/directory?suburb=${encodeURIComponent(s)}`}>{s}</Link></li>
+                  <li key={s} className="pp-chip pp-chip-plain"><Link to={`/directory/in/${slugify(s)}`}>{s}</Link></li>
                 ))}</ul>
                 {p.travelRadiusKm ? <p className="pp-lede">Travels up to {p.travelRadiusKm} km from its base.</p> : null}
               </>
             )}
 
             {p.acceptedFunding.length > 0 && (<><h2 className="reg-h2">Funding accepted</h2>{list(p.acceptedFunding)}</>)}
-            {p.conditionExperience.length > 0 && (<><h2 className="reg-h2">Experience supporting</h2>{list(p.conditionExperience)}</>)}
+            {p.conditionExperience.length > 0 && (
+              <>
+                <h2 className="reg-h2">Experience supporting</h2>
+                <ul className="pp-chips">{p.conditionExperience.map((c) => (
+                  <li key={c} className="pp-chip pp-chip-plain">{conditionSlugs.has(slugify(c)) ? <Link to={`/directory/for/${slugify(c)}`}>{c}</Link> : c}</li>
+                ))}</ul>
+              </>
+            )}
             {p.ageGroups.length > 0 && (<><h2 className="reg-h2">Age groups</h2>{list(p.ageGroups)}</>)}
             {p.languages.length > 0 && (<><h2 className="reg-h2">Languages</h2>{list(p.languages)}</>)}
 

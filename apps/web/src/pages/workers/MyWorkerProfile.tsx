@@ -6,33 +6,13 @@ import { ApiError } from '../../api/client';
 import { deleteMyPhoto, fetchMyPhotoUrl, getMyWorker, saveMyWorker, uploadMyPhoto, type MyWorkerProfile } from '../../api/profilesApi';
 import { listActiveServices } from '../../api/serviceCatalogue';
 import { listActiveConditions } from '../../api/conditionCatalogue';
+import { toJpeg } from '../../lib/imageJpeg';
 import './MyWorkerProfile.css';
 
 const STATES = ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'];
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const PHOTO_SIZE = 480;
 
 const toggle = (list: string[], v: string) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
-
-/** Crops to a centred square, scales down and re-encodes as JPEG, so uploads are small and always a real JPEG. */
-function toSquareJpeg(file: File): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      const side = Math.min(img.naturalWidth, img.naturalHeight);
-      const canvas = document.createElement('canvas');
-      canvas.width = canvas.height = PHOTO_SIZE;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) { URL.revokeObjectURL(url); return reject(new Error('no canvas')); }
-      ctx.drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, PHOTO_SIZE, PHOTO_SIZE);
-      URL.revokeObjectURL(url);
-      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('encode failed'))), 'image/jpeg', 0.85);
-    };
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('unreadable image')); };
-    img.src = url;
-  });
-}
 
 /** /worker/profile — a worker builds their own profile and chooses whether it's public. */
 export default function MyWorkerProfilePage() {
@@ -100,7 +80,7 @@ export default function MyWorkerProfilePage() {
     if (!file.type.startsWith('image/')) { showToast('Please choose an image file.'); return; }
     setPhotoBusy(true);
     try {
-      const saved = await uploadMyPhoto(await toSquareJpeg(file));
+      const saved = await uploadMyPhoto(await toJpeg(file, 'cover', 480));
       setMe(saved);
       setForm((f) => (f ? { ...f, hasPhoto: saved.hasPhoto, photoVersion: saved.photoVersion } : f));
       showToast('Photo updated.');

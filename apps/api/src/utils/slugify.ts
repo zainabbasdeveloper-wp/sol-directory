@@ -1,5 +1,8 @@
 import Provider from '../models/Provider.js';
 
+// Public paths under /directory that a provider slug must never collide with.
+const RESERVED_SLUGS = new Set(['in', 'for', 'conditions', 'areas', 'find', 'new']);
+
 export function slugify(input: string): string {
   return input
     .toLowerCase()
@@ -14,7 +17,8 @@ export function slugify(input: string): string {
  * slug, never throws on a collision.
  */
 export async function generateUniqueProviderSlug(name: string): Promise<string> {
-  const base = slugify(name) || 'provider';
+  let base = slugify(name) || 'provider';
+  if (RESERVED_SLUGS.has(base)) base = `${base}-provider`;
   let candidate = base;
   let suffix = 2;
   while (await Provider.exists({ slug: candidate })) {

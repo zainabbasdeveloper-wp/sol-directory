@@ -5,6 +5,7 @@
 .pp-head { display: flex; flex-wrap: wrap; align-items: center; gap: 18px 22px; margin: 0 0 8px; }
 .pp-head-text { min-width: 0; }
 .pp-head h1 { margin: 0 0 6px; font-size: clamp(28px, 3.4vw, 42px); line-height: 1.15; letter-spacing: -0.025em; overflow-wrap: anywhere; }
+.pp-head-h1 { margin: 0 0 10px; font-size: clamp(28px, 3.4vw, 42px); line-height: 1.15; letter-spacing: -0.025em; overflow-wrap: anywhere; }
 .pp-sub { margin: 0; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 15px; color: color-mix(in srgb, var(--color-text, #10233F) 75%, transparent); }
 
 .pp-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: clamp(24px, 4vw, 48px); align-items: start; margin-top: 18px; }
