@@ -80,6 +80,7 @@
 
   /* Layout */
   --layout-app-max-width: 1400px;
+  --layout-content-max-width: 1440px;
   --layout-signup-max-width: 1040px;
   --layout-login-max-width: 1280px;
   --layout-plan-max-width: 1240px;

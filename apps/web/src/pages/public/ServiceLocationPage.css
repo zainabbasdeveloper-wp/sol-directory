@@ -1,5 +1,5 @@
 .svc-breadcrumb {
-  max-width: 1240px;
+  max-width: var(--layout-content-max-width);
   margin: 0 auto;
   padding: 20px clamp(20px, 5vw, 56px) 0;
   display: flex;
@@ -13,7 +13,7 @@
 .svc-breadcrumb a:hover { color: var(--color-accent); }
 .svc-breadcrumb strong { color: var(--color-text); font-weight: 500; }
 
-.svc-hero-section { max-width: 1240px; margin: 0 auto; padding: 22px clamp(20px, 5vw, 56px) 0; }
+.svc-hero-section { max-width: var(--layout-content-max-width); margin: 0 auto; padding: 22px clamp(20px, 5vw, 56px) 0; }
 .svc-hero-card {
   position: relative;
   border-radius: 26px;
@@ -72,7 +72,7 @@
 .svc-hero-check { display: flex; align-items: flex-start; gap: 10px; font-size: 14.5px; line-height: 1.4; }
 .svc-hero-panel-note { margin: 12px 0 0; text-align: center; font-size: 12.5px; color: color-mix(in srgb, var(--color-text) 62%, transparent); }
 
-.svc-body { max-width: 1240px; margin: 0 auto; padding: clamp(44px, 6vw, 76px) clamp(20px, 5vw, 56px) clamp(56px, 8vw, 92px); display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: clamp(24px, 4vw, 56px); align-items: start; }
+.svc-body { max-width: var(--layout-content-max-width); margin: 0 auto; padding: clamp(44px, 6vw, 76px) clamp(20px, 5vw, 56px) clamp(56px, 8vw, 92px); display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: clamp(24px, 4vw, 56px); align-items: start; }
 @media (max-width: 900px) { .svc-body { grid-template-columns: 1fr; } .svc-toc { display: none; } }
 
 .svc-toc { position: sticky; top: 88px; }
@@ -256,7 +256,7 @@
 .svc-cta-band-secondary:hover { background: rgba(255,255,255,0.12); }
 
 .svc-related-section { background: #fff; }
-.svc-related-inner { max-width: 1240px; margin: 0 auto; padding: clamp(48px, 6vw, 76px) clamp(20px, 5vw, 56px); }
+.svc-related-inner { max-width: var(--layout-content-max-width); margin: 0 auto; padding: clamp(48px, 6vw, 76px) clamp(20px, 5vw, 56px); }
 .svc-related-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 20px; }
 .svc-related-link {
   border: 1px solid var(--color-border); border-radius: 10px; padding: 15px 18px; font-size: 14px; font-weight: 500;
