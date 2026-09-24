@@ -78,15 +78,27 @@ export const SUPPORT_CATEGORIES = [
 ] as const;
 
 // Service-page names that aren't spelled exactly like a register category.
+// ORDER MATTERS - the first match wins - so specific names come before broad
+// words ("tenancy skills" is a life skill, plain "tenancy" is housing;
+// "Personal care and safety equipment" is equipment, not personal care).
+// Anything that fits no category honestly is left out rather than forced.
 const CATEGORY_ALIASES: [RegExp, (typeof SUPPORT_CATEGORIES)[number]][] = [
   [/plan management/i, 'Plan management'],
-  [/support coordination/i, 'Support coordination'],
-  [/community access|social/i, 'Community access'],
-  [/allied health|therap|physio|occupational|speech|psycholog/i, 'Therapy services'],
-  [/assistive|equipment/i, 'Assistive technology & equipment'],
-  [/employment/i, 'Employment & education support'],
-  [/\b(sda|sil)\b|accommodation|housing/i, 'Housing (SDA & SIL)'],
-  [/domestic|cleaning|household/i, 'Domestic assistance'],
+  [/support coordination|support connection|psychosocial recovery/i, 'Support coordination'],
+  [/respite|short term accommodation|\bsta\b/i, 'Respite care'],
+  [/behaviour/i, 'Behaviour support'],
+  [/life skills|daily living|self-management|financial and organisational|study and learning|life transition|skill-building camps|group skills|tenancy skills/i, 'Life skills'],
+  [/\b(sda|sil|ilo|mta)\b|accommodation|housing|shared living|individualised living|tenancy/i, 'Housing (SDA & SIL)'],
+  [/home modification/i, 'Home modifications'],
+  [/transport/i, 'Transport'], // deliberately not vehicle modifications / driver training: those aren't transport services
+  [/nurs|continence|enteral|medication/i, 'Nursing'],
+  [/assistive|equipment|prosthetic|orthotic/i, 'Assistive technology & equipment'],
+  [/\bAT\b/, 'Assistive technology & equipment'], // "AT repairs..." (case-sensitive: not the word "at")
+  [/allied health|therap|physio|occupational|speech|psycholog|counsell|dietitian|podiatry|audiolog|hearing services|exercise|early childhood|social work|orientation/i, 'Therapy services'],
+  [/employment|job coaching|higher education|further education|study/i, 'Employment & education support'],
+  [/personal care|high-intensity|overnight/i, 'Personal care'],
+  [/domestic|cleaning|household|meal preparation|yard|gardening/i, 'Domestic assistance'],
+  [/community|social|activities|participation|volunteer|camps|holidays|recreation|cultural/i, 'Community access'],
 ];
 
 /** The register category a service page corresponds to, or undefined when there's no honest match. */

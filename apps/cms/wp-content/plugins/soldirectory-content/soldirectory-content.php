@@ -16,6 +16,8 @@ require_once __DIR__ . '/includes/menus.php';
 require_once __DIR__ . '/includes/custom-fields.php';
 // Reads content saved while ACF was active and converts it (see the file's own comment).
 require_once __DIR__ . '/includes/acf-compat.php';
+// One-time baseline text for service posts that were created with only a title.
+require_once __DIR__ . '/includes/baseline-services.php';
 require_once __DIR__ . '/includes/custom-fields-engine.php';
 require_once __DIR__ . '/includes/custom-fields-rest.php';
 require_once __DIR__ . '/includes/admin-ui.php';

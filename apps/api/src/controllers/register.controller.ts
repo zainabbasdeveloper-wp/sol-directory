@@ -110,6 +110,25 @@ export async function searchRegister(req: Request, res: Response) {
 }
 
 // ---------------------------------------------------------------
+// GET /api/register/category-counts?type=&category=
+// How many register listings list this support category, per state. Feeds the
+// "listed on the public register" block on the WordPress service pages.
+// ---------------------------------------------------------------
+export async function categoryCounts(req: Request, res: Response) {
+  const type = parseType(req.query.type);
+  if (!type) return res.status(400).json({ error: 'type must be "ndis" or "aged_care".' });
+  const category = str(req.query.category);
+  if (!(REGISTER_SUPPORT_CATEGORIES as readonly string[]).includes(category)) return res.status(400).json({ error: 'Unknown category.' });
+
+  const [byState, total] = await Promise.all([
+    RegisterListing.aggregate([{ $match: { type, supportCategories: category } }, { $unwind: '$states' }, { $group: { _id: '$states', n: { $sum: 1 } } }]),
+    RegisterListing.countDocuments({ type, supportCategories: category }),
+  ]);
+  res.set('Cache-Control', 'public, max-age=600');
+  res.json({ total, states: Object.fromEntries((byState as { _id: string; n: number }[]).map((s) => [s._id, s.n])) });
+}
+
+// ---------------------------------------------------------------
 // GET /api/register/hub?type=
 // State counts, category counts and the suburbs that have enough real
 // listings to deserve their own page. Computed from the collection and

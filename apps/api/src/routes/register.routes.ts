@@ -1,5 +1,5 @@
 import { Router, type NextFunction, type Request, type RequestHandler, type Response } from 'express';
-import { getRegisterHub, getRegisterListing, searchRegister, submitClaimRequest } from '../controllers/register.controller.js';
+import { categoryCounts, getRegisterHub, getRegisterListing, searchRegister, submitClaimRequest } from '../controllers/register.controller.js';
 
 const router = Router();
 
@@ -12,6 +12,7 @@ const safe = (fn: (req: Request, res: Response) => Promise<unknown>): RequestHan
 // Order matters: the fixed paths must come before /:type/:slug.
 router.get('/search', safe(searchRegister));
 router.get('/hub', safe(getRegisterHub));
+router.get('/category-counts', safe(categoryCounts));
 router.get('/:type/:slug', safe(getRegisterListing));
 router.post('/:type/:slug/claim-request', safe(submitClaimRequest));
 

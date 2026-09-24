@@ -16,7 +16,7 @@ $GLOBALS['OPTIONS'] = [];
 $GLOBALS['ROUTES'] = [];
 $GLOBALS['POSTS'] = [];     // id => WP_Post
 
-class WP_Post { public $post_name = ''; public $ID; public $post_type; public $post_title; public $post_status = 'publish'; public function __construct($id, $type, $title = '') { $this->ID = $id; $this->post_type = $type; $this->post_title = $title ?: "Post $id"; } }
+class WP_Post { public $post_excerpt = ''; public $post_content = ''; public $post_name = ''; public $ID; public $post_type; public $post_title; public $post_status = 'publish'; public function __construct($id, $type, $title = '') { $this->ID = $id; $this->post_type = $type; $this->post_title = $title ?: "Post $id"; } }
 class WP_REST_Response { private $d; public $status; public function __construct($d = null, $s = 200) { $this->d = $d; $this->status = $s; } public function get_data() { return $this->d; } public function set_data($d) { $this->d = $d; } }
 
 function add_action($h, $cb, $p = 10, $a = 1) { $GLOBALS['ACTIONS'][$h][] = $cb; }
@@ -44,6 +44,8 @@ function get_posts($args) {
 }
 function get_post($id) { return $GLOBALS['POSTS'][$id] ?? ($id === 3 || $id === 4 ? (function () use ($id) { $p = new WP_Post($id, 'service', "Related $id"); $p->post_name = "related-$id"; return $p; })() : null); }
 function get_post_thumbnail_id($id) { return 0; }
+function get_post_field($f, $id) { $p = $GLOBALS['POSTS'][$id] ?? null; return $p ? $p->$f : ''; }
+function wp_update_post($a) { $p = $GLOBALS['POSTS'][$a['ID']]; foreach ($a as $k => $v) if ($k !== 'ID') $p->$k = $v; return $a['ID']; }
 function esc_html($s) { return htmlspecialchars((string) $s); }
 function do_action($h, ...$a) { foreach ($GLOBALS['ACTIONS'][$h] ?? [] as $cb) $cb(...$a); }
 
@@ -51,6 +53,7 @@ require $PLUGIN . '/includes/custom-fields.php';
 require $PLUGIN . '/includes/acf-compat.php';
 require $PLUGIN . '/includes/custom-fields-engine.php';
 require $PLUGIN . '/includes/custom-fields-rest.php';
+require $PLUGIN . '/includes/baseline-services.php';
 
 $pass = 0; $fail = 0;
 function check($label, $ok, $extra = '') { global $pass, $fail; $ok ? $pass++ : $fail++; echo ($ok ? 'PASS' : 'FAIL') . "  $label" . ($ok ? '' : "  -> $extra") . "\n"; }
@@ -197,5 +200,32 @@ check('mega-menu: cta group came through', is_array($tabs[0]['cta'] ?? null) && 
 $before = count($GLOBALS['META']);
 do_action('admin_init');
 check('admin_init full migration sets its once-only option', !empty($GLOBALS['OPTIONS'][SOLDIRECTORY_ACF_MIGRATED_ALL_OPTION]));
+
+// 9) Baseline service text: fills blanks once, never overwrites, decodes entities, leaves unknown titles alone.
+$GLOBALS['POSTS'] = []; $GLOBALS['OPTIONS'] = [];
+$mk = function ($id, $title, $excerpt = '', $content = '') { $p = new WP_Post($id, 'service', $title); $p->post_excerpt = $excerpt; $p->post_content = $content; $GLOBALS['POSTS'][$id] = $p; $GLOBALS['TYPES'][$id] = 'service'; };
+$mk(501, 'Vision and orientation &amp; mobility');
+$mk(502, 'Physiotherapy');
+$mk(503, 'Physiotherapy', 'Editor wrote this excerpt', '<p>Editor content</p>');
+$mk(504, 'Some Title Nobody Wrote Text For');
+$mk(505, 'Specialist Disability Accommodation (SDA)');
+$GLOBALS['META'][502]['overview_content'] = 'Editor-written overview';
+$GLOBALS['META'][502]['eligibility'] = 'ABC';
+do_action('admin_init');
+check('baseline: entity-encoded title matches and is filled', strpos($GLOBALS['META'][501]['overview_content'] ?? '', 'blind or have low vision') !== false && ($GLOBALS['META'][501]['overview_heading'] ?? '') === 'About Vision and orientation & mobility');
+check('baseline: excerpt is the first sentence only', $GLOBALS['POSTS'][505]->post_excerpt !== '' && strpos($GLOBALS['POSTS'][505]->post_excerpt, 'It covers the building') === false && substr($GLOBALS['POSTS'][505]->post_excerpt, -1) === '.', $GLOBALS['POSTS'][505]->post_excerpt);
+check('baseline: editor-written overview is never overwritten', $GLOBALS['META'][502]['overview_content'] === 'Editor-written overview');
+check('baseline: existing excerpt/content untouched', $GLOBALS['POSTS'][503]->post_excerpt === 'Editor wrote this excerpt' && $GLOBALS['POSTS'][503]->post_content === '<p>Editor content</p>');
+check('baseline: unknown titles are left alone', !isset($GLOBALS['META'][504]['overview_content']) && !isset($GLOBALS['META'][504]['_sd_baseline_content']));
+check('baseline: other fields (eligibility etc.) are never written', $GLOBALS['META'][501]['eligibility'] ?? '' === '' && !isset($GLOBALS['META'][501]['funding_info']) && !isset($GLOBALS['META'][501]['typical_cost']) && !isset($GLOBALS['META'][501]['wait_time']));
+check('baseline: touched posts are marked', ($GLOBALS['META'][501]['_sd_baseline_content'] ?? '') === '1');
+$GLOBALS['META'][501]['overview_content'] = 'Editor replaced it';
+do_action('admin_init');
+check('baseline: runs once - an editor\'s later edit is not undone', $GLOBALS['META'][501]['overview_content'] === 'Editor replaced it');
+$all = soldirectory_baseline_service_text();
+$bad = array_filter($all, fn($t) => preg_match('/(?<![-\w])(eligible|eligibility|cost|price|free of charge|waiting time|wait time)\b|\$/i', $t));
+check('baseline text makes no eligibility/cost/wait-time claims', !$bad, implode(', ', array_keys($bad)));
+check('baseline has 89 descriptions (one per unique service title)', count($all) === 89, (string) count($all));
+if (getenv('SD_DUMP_BASELINE_KEYS')) file_put_contents(getenv('SD_DUMP_BASELINE_KEYS'), json_encode(array_keys($all)));
 
 echo "\n$pass passed, $fail failed\n";
