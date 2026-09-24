@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import Worker from '../models/Worker.js';
 import WorkerPhoto, { photoBytes } from '../models/WorkerPhoto.js';
 import { STATE_CODES } from '../services/registerNormalise.js';
+import { ratingsFor } from './workersReviews.controller.js';
 
 /**
  * PUBLIC independent-worker listings — no login.
@@ -28,7 +29,7 @@ const visible = () => ({
   publicSlug: { $exists: true, $ne: null },
 });
 
-function toPublic(w: any) {
+function toPublic(w: any, rating?: { rating: number; count: number }) {
   return {
     slug: w.publicSlug as string,
     firstName: w.firstName as string,
@@ -47,9 +48,10 @@ function toPublic(w: any) {
     bio: w.bio ?? '',
     hasPhoto: !!w.hasPhoto,
     photoVersion: w.updatedAt ? new Date(w.updatedAt).getTime() : 0,
-    // Only real reviews — a worker with none shows no rating at all.
-    rating: w.reviewCount > 0 ? w.rating : null,
-    reviewCount: w.reviewCount > 0 ? w.reviewCount : 0,
+    // Computed from admin-approved reviews only (never the stored fields, which
+    // demo seed data may have filled with made-up numbers). None -> no rating shown.
+    rating: rating && rating.count > 0 ? rating.rating : null,
+    reviewCount: rating?.count ?? 0,
   };
 }
 
@@ -80,7 +82,8 @@ export async function listPublicWorkers(req: Request, res: Response) {
   ]);
 
   res.set('Cache-Control', 'public, max-age=60');
-  res.json({ items: docs.map(toPublic), page, limit, total, hasMore: page * limit < total });
+  const ratings = await ratingsFor(docs.map((d: any) => d._id));
+  res.json({ items: docs.map((d: any) => toPublic(d, ratings.get(String(d._id)))), page, limit, total, hasMore: page * limit < total });
 }
 
 // GET /api/workers/public/:slug
@@ -90,7 +93,7 @@ export async function getPublicWorker(req: Request, res: Response) {
   const w = await Worker.findOne({ ...visible(), publicSlug: slug }).select(PROJECTION).lean();
   if (!w) return res.status(404).json({ error: 'Not found.' });
   res.set('Cache-Control', 'public, max-age=60');
-  res.json(toPublic(w));
+  res.json(toPublic(w, (await ratingsFor([(w as any)._id])).get(String((w as any)._id))));
 }
 
 // GET /api/workers/public/:slug/photo

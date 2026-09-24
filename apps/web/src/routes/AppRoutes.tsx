@@ -32,6 +32,7 @@ import AdminServices from '../pages/admin/AdminServices';
 import AdminConditions from '../pages/admin/AdminConditions';
 import AdminDiagnostics from '../pages/admin/AdminDiagnostics';
 import AdminClaims from '../pages/admin/AdminClaims';
+import AdminWorkerReviews from '../pages/admin/AdminWorkerReviews';
 import ProviderPublicPage from '../pages/public/ProviderPublicPage';
 import WorkerFinder from '../pages/public/WorkerFinder';
 import WorkerPublicProfile from '../pages/public/WorkerPublicProfile';
@@ -206,6 +207,7 @@ export default function AppRoutes() {
         <Route path="/admin/conditions" element={<RequireRole roles={['admin']}><AdminConditions /></RequireRole>} />
         <Route path="/admin/diagnostics" element={<RequireRole roles={['admin']}><AdminDiagnostics /></RequireRole>} />
         <Route path="/admin/claims" element={<RequireRole roles={['admin']}><AdminClaims /></RequireRole>} />
+        <Route path="/admin/worker-reviews" element={<RequireRole roles={['admin']}><AdminWorkerReviews /></RequireRole>} />
       </Route>
 
       <Route path="*" element={<WordPressCatchAllPage />} />

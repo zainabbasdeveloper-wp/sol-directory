@@ -194,6 +194,25 @@ async function wpFetch<T>(path: string, cacheKey: string): Promise<T | null> {
   }
 }
 
+/**
+ * Like wpFetch, but a WordPress that is DOWN or BROKEN throws instead of
+ * returning null. wpFetch's null means "nothing here" for its callers, which
+ * is right for optional extras (menus, term lists) but wrong for a page's
+ * own content: when WordPress returned a 500, every /services/:slug page
+ * quietly turned into a 404 - telling visitors and search engines the page
+ * doesn't exist when the truth was "temporarily unavailable". Failures are
+ * never cached.
+ */
+async function wpFetchStrict<T>(path: string, cacheKey: string): Promise<T> {
+  await ensureCacheFresh();
+  if (contentCache.has(cacheKey)) return contentCache.get(cacheKey) as T;
+  const res = await fetch(`${API_URL}/wp/rest${path}`);
+  if (!res.ok) throw new Error(`WordPress responded ${res.status}`);
+  const data = await res.json(); // an HTML error page (PHP fatal) throws here too
+  contentCache.set(cacheKey, data);
+  return data as T;
+}
+
 export interface WPImage { url: string; alt: string; width?: number; height?: number }
 
 function extractFeaturedImage(raw: any): WPImage | null {
@@ -267,8 +286,9 @@ export async function getWordPressPage(slug: string): Promise<WPContentBase | nu
 // One generic fetcher for any CPT registered in cptRouteConfig.ts.
 export interface WPCPTItem extends WPContentBase { meta: Record<string, unknown> }
 export async function getCPTItem(restBase: string, slug: string): Promise<WPCPTItem | null> {
-  const results = await wpFetch<any[]>(`/wp-json/wp/v2/${restBase}?slug=${encodeURIComponent(slug)}&_embed`, `${restBase}:${slug}`);
-  if (!results?.length) return null;
+  // Empty list = the page genuinely doesn't exist (null -> 404). A failed request throws -> the page shows "unable to reach the content service".
+  const results = await wpFetchStrict<any[]>(`/wp-json/wp/v2/${restBase}?slug=${encodeURIComponent(slug)}&_embed`, `${restBase}:${slug}`);
+  if (!Array.isArray(results) || !results.length) return null;
   return { ...mapBaseContent(results[0]), meta: results[0].meta ?? {} };
 }
 

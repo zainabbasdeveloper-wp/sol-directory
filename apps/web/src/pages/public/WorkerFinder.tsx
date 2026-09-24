@@ -6,6 +6,7 @@ import Pagination from '../../components/ui/Pagination';
 import Combobox, { type ComboItem } from '../../components/ui/Combobox';
 import { listPublicWorkers, workerPhotoUrl, type PublicWorkerList } from '../../api/profilesApi';
 import { listActiveServices } from '../../api/serviceCatalogue';
+import { Stars } from '../../components/reviews/WorkerReviews';
 import { applySeoTags } from '../../lib/seo';
 import './Home.css';
 import './Directory.css';
@@ -177,6 +178,7 @@ export default function WorkerFinder() {
                   {[w.yearsExperience && `${w.yearsExperience} experience`, w.languages.length > 0 && w.languages.slice(0, 3).join(', '), w.hourlyRate && `about $${w.hourlyRate}/hr`]
                     .filter(Boolean).join(' · ')}
                 </p>
+                {w.rating !== null && <p className="pp-meta"><Stars value={w.rating} /> <strong>{w.rating.toFixed(1)}</strong> ({w.reviewCount} {w.reviewCount === 1 ? 'review' : 'reviews'})</p>}
                 <Link className="dir-card-cta" to={`/independent-workers/${w.slug}`}>View profile →</Link>
               </li>
             );
