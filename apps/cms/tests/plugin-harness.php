@@ -266,7 +266,7 @@ check('content: editor FAQ is never replaced', json_decode($GLOBALS['META'][602]
 check('content: placeholder "ABC" eligibility is replaced', strpos($GLOBALS['META'][607]['eligibility'], 'reasonable and necessary') !== false);
 check('content: real editor funding text is kept', strpos($GLOBALS['META'][607]['funding_info'], 'written by an editor') !== false);
 $faq = json_decode($GLOBALS['META'][603]['faq_repeater'], true);
-check('content: FAQ has 8 rows of {question, answer} (3 short + 3 long + 2 shared) ending with the find-a-provider one', count($faq) === 8 && isset($faq[0]['question'], $faq[0]['answer']) && strpos($faq[7]['question'], 'provider near me') !== false, (string) count($faq));
+check('content: FAQ has 11 rows of {question, answer} (3 short + 3 long + 3 deeper + 2 shared) ending with the find-a-provider one', count($faq) === 11 && isset($faq[0]['question'], $faq[0]['answer']) && strpos($faq[10]['question'], 'provider near me') !== false, (string) count($faq));
 $cred = json_decode($GLOBALS['META'][603]['credentials_repeater'], true); $reg = json_decode($GLOBALS['META'][603]['regulator_cards_repeater'], true);
 check('content: credentials + regulator cards have the row shapes the frontend reads', count($cred) === 3 && isset($cred[0]['title'], $cred[0]['description']) && count($reg) === 2 && isset($reg[0]['title'], $reg[0]['phone'], $reg[0]['website'], $reg[0]['cta']));
 $rel = json_decode($GLOBALS['META'][603]['related_services'], true);
@@ -274,7 +274,7 @@ check('content: related services are real sibling post ids, not self, no duplica
 check('content: hero + CTA use action keys the frontend understands', $GLOBALS['META'][603]['hero_cta_url'] === 'get_matched' && $GLOBALS['META'][603]['cta_primary_action'] === 'get_matched' && $GLOBALS['META'][603]['cta_secondary_action'] === '/directory');
 check('content: no cost / wait / hours / availability fields are written', !isset($GLOBALS['META'][603]['typical_cost']) && !isset($GLOBALS['META'][603]['wait_time']) && !isset($GLOBALS['META'][603]['hours']) && !isset($GLOBALS['META'][603]['availability']));
 check('content: the two duplicate posts both get content but related links use ONE post per title', isset($GLOBALS['META'][608]['who_for']) && isset($GLOBALS['META'][609]['who_for']));
-check('content: marked with the version', ($GLOBALS['META'][603]['_sd_content_v3'] ?? '') === '3');
+check('content: marked with the version', ($GLOBALS['META'][603]['_sd_content_v4'] ?? '') === '4');
 $before = $GLOBALS['META'][603];
 $sum2 = soldirectory_apply_service_content(false);
 check('content: second run without force is a no-op', $sum2['posts'] === 0 && $GLOBALS['META'][603] === $before);
@@ -322,7 +322,7 @@ $GLOBALS['META'][702]['faq_repeater'] = json_encode([['question' => 'Editor Q?',
 $sumL = soldirectory_apply_service_content(false);
 $m = $GLOBALS['META'][701];
 check('long: earlier machine overview is upgraded to the long guide (3 paragraphs)', substr_count($m['overview_content'], "\n\n") === 2 && strlen($m['overview_content']) > 600);
-check('long: earlier machine FAQ set is upgraded to 8 rows', count(json_decode($m['faq_repeater'], true)) === 8);
+check('long: earlier machine FAQ set is upgraded to 11 rows', count(json_decode($m['faq_repeater'], true)) === 11);
 check('long: an editor-written overview and FAQ are never replaced', $GLOBALS['META'][702]['overview_content'] === 'My own carefully written overview of occupational therapy for our clients.' && count(json_decode($GLOBALS['META'][702]['faq_repeater'], true)) === 1);
 check('long: short answer, how-to-choose (5 lines), getting-started (4 lines), cost info written', strlen($m['short_answer']) > 80 && substr_count($m['how_to_choose'], "\n") === 4 && substr_count($m['getting_started'], "\n") === 3 && strpos($m['cost_info'], 'Pricing Arrangements and Price Limits') !== false);
 check('long: cost text names no price', !preg_match('/\$|\d/', $m['cost_info']));
@@ -345,5 +345,55 @@ if (getenv('SD_EMIT_REST')) {
 }
 $again = soldirectory_apply_service_content(true);
 check('long: forced re-run changes nothing further (idempotent)', $again['fields'] === 0, json_encode($again));
+
+// 12) Deeper guides (typical session, who delivers, plan fit, questions to ask, mistakes, 3 more FAQs) ----------------
+$deep = soldirectory_service_deep();
+check('deep: every one of the 89 services has a deeper guide', count($deep) === 89 && !array_diff($baseTitles, array_keys($deep)) && !array_diff(array_keys($deep), $baseTitles), (string) count($deep) . ' missing: ' . implode('; ', array_diff($baseTitles, array_keys($deep))));
+$dBad = []; $dNum = []; $dBs = []; $dWords = []; $dQ = [];
+foreach ($deep as $t => $d) {
+    if (count(preg_split('/\n\n/', $d['day'])) !== 2 || strlen($d['day']) < 500 || strlen($d['who']) < 200 || strlen($d['fit']) < 200 || count($d['ask']) !== 6 || count($d['mistakes']) !== 5 || count($d['faq']) !== 3) $dBad[] = "$t (shape " . count(preg_split('/\n\n/', $d['day'])) . '/' . strlen($d['day']) . '/' . strlen($d['who']) . '/' . strlen($d['fit']) . '/' . count($d['ask']) . '/' . count($d['mistakes']) . '/' . count($d['faq']) . ')';
+    foreach ($d['ask'] as $q) if (substr($q, -1) !== '?') $dBad[] = "$t (ask: $q)";
+    foreach ($d['faq'] as $qa) { if (substr($qa[0], -1) !== '?' || strlen($qa[1]) < 30) $dBad[] = "$t (faq)"; $dQ[] = strtolower($qa[0]); }
+    $blob = $d['day'] . ' ' . $d['who'] . ' ' . $d['fit'] . ' ' . implode(' ', $d['ask']) . ' ' . implode(' ', $d['mistakes']) . ' ' . implode(' ', array_map(fn($qa) => $qa[0] . ' ' . $qa[1], $d['faq']));
+    if (preg_match('/\$|\d+\s*(%|percent|weeks|months|years|days|hours)|\b\d{2,}\b/i', $blob)) $dNum[] = $t;
+    if (strpos($blob, '\\') !== false) $dBs[] = $t;
+    $dWords[$t] = str_word_count($blob);
+}
+check('deep: every deeper guide has the full shape (2 paragraphs, 6 questions, 5 mistakes, 3 FAQs)', !$dBad, implode('; ', array_slice($dBad, 0, 4)));
+check('deep: no prices, percentages or timeframes stated as fact', !$dNum, implode('; ', $dNum));
+check('deep: no stray backslashes (PHP quoting bug)', !$dBs, implode('; ', $dBs));
+foreach ($long as $t => $l) foreach ($l['faq'] as $qa) $dQ[] = strtolower($qa[0]);
+foreach ($editorial as $t => $e) foreach ($e[2] as $qa) $dQ[] = strtolower($qa[0]);
+check('deep: FAQ questions stay unique across short + long + deeper sets', count($dQ) === count(array_unique($dQ)), implode(' | ', array_slice(array_keys(array_filter(array_count_values($dQ), fn($n) => $n > 1)), 0, 6)));
+check('deep: deeper guides average at least 400 words (and none under 300) of unique writing each', array_sum($dWords) / count($dWords) >= 400 && min($dWords) >= 300, (string) round(array_sum($dWords) / count($dWords)) . ' min ' . min($dWords));
+$dNoDup = []; $seenDay = [];
+foreach ($deep as $t => $d) { $k = md5($d['day']); if (isset($seenDay[$k])) $dNoDup[] = $t; $seenDay[$k] = 1; }
+check('deep: no two services share the same typical-session text', !$dNoDup);
+
+// The fields are written for a real post, blank-only, and never over an editor's text.
+$GLOBALS['POSTS'] = []; $GLOBALS['OPTIONS'] = []; $GLOBALS['META'] = [];
+$mk(801, 'Physiotherapy'); $mk(802, 'Occupational therapy');
+$GLOBALS['META'][802]['typical_session'] = 'Our own description of what a session looks like at our clinic.';
+soldirectory_apply_service_content(false);
+$p1 = $GLOBALS['META'][801]; $p2 = $GLOBALS['META'][802];
+check('deep: the five new fields are written on a fresh service post', strlen($p1['typical_session'] ?? '') > 500 && strlen($p1['who_delivers'] ?? '') > 200 && strlen($p1['plan_fit'] ?? '') > 200 && substr_count($p1['questions_to_ask'] ?? '', "\n") === 5 && substr_count($p1['common_mistakes'] ?? '', "\n") === 4);
+check('deep: an editor-written typical session is never replaced (other blank fields still filled)', $p2['typical_session'] === 'Our own description of what a session looks like at our clinic.' && strlen($p2['who_delivers'] ?? '') > 200);
+check('deep: a fresh post gets 11 FAQs (3 + 3 + 3 + 2 shared)', count(json_decode($p1['faq_repeater'], true)) === 11);
+
+
+// 13) Whole-page word count from the WordPress fields alone (the live register tables, provider and worker lists come on top).
+$GLOBALS['POSTS'] = []; $GLOBALS['OPTIONS'] = []; $GLOBALS['META'] = [];
+$pid = 900; foreach ($baseTitles as $bt) { $pid++; $mk($pid, $bt); }
+soldirectory_apply_service_content(false);
+$pageWords = [];
+foreach ($GLOBALS['META'] as $id => $mm) {
+    if (!isset($mm['typical_session'])) continue;
+    $txt = '';
+    foreach (['short_answer', 'overview_content', 'how_to_choose', 'getting_started', 'typical_session', 'who_delivers', 'plan_fit', 'questions_to_ask', 'common_mistakes', 'who_for', 'eligibility', 'funding_info', 'plan_management_info', 'cost_info'] as $k) $txt .= ' ' . ($mm[$k] ?? '');
+    foreach (['faq_repeater', 'credentials_repeater', 'regulator_cards_repeater', 'sources_repeater'] as $k) foreach (json_decode($mm[$k] ?? '[]', true) ?: [] as $row) $txt .= ' ' . implode(' ', array_filter($row, 'is_string'));
+    $pageWords[$id] = str_word_count($txt);
+}
+check('page: every one of the 89 services has at least 1,200 words from WordPress fields alone (target 1,200 to 1,500)', count($pageWords) === 89 && min($pageWords) >= 1200, count($pageWords) . ' pages, min ' . min($pageWords) . ', avg ' . round(array_sum($pageWords) / max(1, count($pageWords))) . ', max ' . max($pageWords));
+
 
 echo "\n$pass passed, $fail failed\n";

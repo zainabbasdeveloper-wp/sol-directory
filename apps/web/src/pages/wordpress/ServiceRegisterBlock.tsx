@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import Avatar from '../../components/ui/Avatar';
 import { getCategoryOverview, searchRegister, type CategoryOverview, type RegisterListItem } from '../../api/registerApi';
 import { KIND_BY_TYPE, STATES, areaLabel, categoryForService, registerPath, type RegisterType } from '../../lib/registerMeta';
 
@@ -52,10 +53,15 @@ function ProviderList({ type, category, states, total }: { type: RegisterType; c
       <ul className="wp-cpt-cards" aria-busy={loading}>
         {items.map((p) => (
           <li key={p.slug} className="wp-cpt-card">
-            <h4 className="wp-cpt-card-title"><Link to={registerPath(kind, p.slug)}>{p.name}</Link></h4>
-            <p className="wp-cpt-card-meta">
-              {p.areas.length > 0 ? `${p.areas.slice(0, 3).map(areaLabel).join(' · ')}${p.areaCount > 3 ? ` · +${fmt(p.areaCount - 3)} more` : ''}` : p.states.join(', ')}
-            </p>
+            <div className="wp-cpt-card-head">
+              <Avatar src={p.logoUrl} name={p.name} shape="square" />
+              <div>
+                <h4 className="wp-cpt-card-title"><Link to={registerPath(kind, p.slug)}>{p.name}</Link></h4>
+                <p className="wp-cpt-card-meta">
+                  {p.areas.length > 0 ? `${p.areas.slice(0, 3).map(areaLabel).join(' · ')}${p.areaCount > 3 ? ` · +${fmt(p.areaCount - 3)} more` : ''}` : p.states.join(', ')}
+                </p>
+              </div>
+            </div>
             {p.supportCategories.length > 0 && (
               <div className="wp-cpt-tags" aria-label="Support categories listed">
                 {p.supportCategories.slice(0, 4).map((c) => <span key={c} className="wp-cpt-tag">{c}</span>)}

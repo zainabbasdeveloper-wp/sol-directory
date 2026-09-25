@@ -2,6 +2,8 @@ import type { Request, Response } from 'express';
 import type { FilterQuery } from 'mongoose';
 import RegisterListing, { type RegisterListingDoc } from '../models/RegisterListing.js';
 import ClaimRequest from '../models/ClaimRequest.js';
+import Provider from '../models/Provider.js';
+import { VISIBLE_PROVIDER, publicLogoUrl } from './providersPublic.controller.js';
 import { EmailService } from '../services/email.service.js';
 import {
   MIN_SUBURB_LISTINGS, REGISTER_SUPPORT_CATEGORIES, REGISTER_TYPES, STATE_CODES,
@@ -29,8 +31,9 @@ function parseState(v: unknown): StateCode | null {
   return STATE_CODES.includes(s as StateCode) ? (s as StateCode) : null;
 }
 
-function toListItem(d: Pick<RegisterListingDoc, 'type' | 'slug' | 'name' | 'states' | 'areaCount' | 'areas' | 'supportCategories' | 'website'>) {
+function toListItem(d: Pick<RegisterListingDoc, 'type' | 'slug' | 'name' | 'states' | 'areaCount' | 'areas' | 'supportCategories' | 'website'>, logoUrl: string | null = null) {
   return {
+    logoUrl,
     type: d.type,
     slug: d.slug,
     name: d.name,
@@ -40,6 +43,20 @@ function toListItem(d: Pick<RegisterListingDoc, 'type' | 'slug' | 'name' | 'stat
     supportCategories: d.supportCategories,
     hasWebsite: !!d.website,
   };
+}
+
+/**
+ * The registers publish no logos. A listing a member provider has claimed can
+ * show that provider's own uploaded logo, so list items for claimed listings get it.
+ */
+async function listItemsWithLogos(docs: any[]) {
+  const ids = docs.filter((d) => d.providerId && d.claimStatus === 'claimed').map((d) => d.providerId);
+  const logos = new Map<string, string>();
+  if (ids.length) {
+    const providers: any[] = await Provider.find({ _id: { $in: ids }, hasLogoUpload: true, ...VISIBLE_PROVIDER }).select('slug logoUrl hasLogoUpload updatedAt').lean();
+    for (const p of providers) { const u = publicLogoUrl(p); if (u) logos.set(String(p._id), u); }
+  }
+  return docs.map((d) => toListItem(d as never, d.providerId ? logos.get(String(d.providerId)) ?? null : null));
 }
 
 // ---------------------------------------------------------------
@@ -82,7 +99,7 @@ export async function searchRegister(req: Request, res: Response) {
   const wantFacets = req.query.facets === '1';
   const [docs, total, facets] = await Promise.all([
     RegisterListing.find(filter)
-      .select('type slug name states areaCount areas supportCategories website')
+      .select('type slug name states areaCount areas supportCategories website providerId claimStatus')
       .sort({ nameLower: 1, _id: 1 })
       .skip((page - 1) * limit)
       .limit(limit)
@@ -100,7 +117,7 @@ export async function searchRegister(req: Request, res: Response) {
 
   res.set('Cache-Control', 'public, max-age=300');
   res.json({
-    items: docs.map((d) => toListItem(d as never)),
+    items: await listItemsWithLogos(docs),
     page,
     limit,
     total,
@@ -165,11 +182,11 @@ export async function computeCategoryOverview(type: RegisterType, category: stri
 /** First listings (A-Z) for one support category, in the list-card shape; used by the crawler HTML of service pages. */
 export async function categoryListings(type: RegisterType, category: string, limit = 12) {
   const docs = await RegisterListing.find({ type, supportCategories: category })
-    .select('type slug name states areaCount areas supportCategories website')
+    .select('type slug name states areaCount areas supportCategories website providerId claimStatus')
     .sort({ nameLower: 1, _id: 1 })
     .limit(limit)
     .lean();
-  return docs.map((d) => toListItem(d as never));
+  return listItemsWithLogos(docs);
 }
 
 export async function getCategoryOverview(req: Request, res: Response) {

@@ -19,13 +19,13 @@
  * HOW IT RUNS: once, on the first wp-admin load after deploy; and on demand from
  * Tools > Service content (fills anything still blank, e.g. after you delete a
  * duplicate post or clear a field). Every post it touches is marked
- * (_sd_content_v3). Editing anything afterwards is safe.
+ * (_sd_content_v4). Editing anything afterwards is safe.
  */
 
 if (!defined('ABSPATH')) exit;
 
-const SOLDIRECTORY_CONTENT_VERSION = '3';
-const SOLDIRECTORY_CONTENT_OPTION = 'soldirectory_service_content_v3';
+const SOLDIRECTORY_CONTENT_VERSION = '4';
+const SOLDIRECTORY_CONTENT_OPTION = 'soldirectory_service_content_v4';
 
 /** Title => [group, who, [[q, a] x3]] */
 function soldirectory_service_editorial(): array {
@@ -46,6 +46,18 @@ function soldirectory_service_long(): array {
     $all = [];
     foreach ([1, 2, 3, 4, 5, 6, 7, 8] as $n) {
         $part = require __DIR__ . "/content-long-{$n}.php";
+        if (is_array($part)) $all = array_merge($all, $part);
+    }
+    return $all;
+}
+
+/** Title => deeper guide content (typical session, who delivers it, how it fits a plan, questions to ask, common mistakes, three more FAQs). */
+function soldirectory_service_deep(): array {
+    static $all = null;
+    if ($all !== null) return $all;
+    $all = [];
+    foreach ([1, 2, 3, 4, 5, 6, 7, 8] as $n) {
+        $part = require __DIR__ . "/content-deep-{$n}.php";
         if (is_array($part)) $all = array_merge($all, $part);
     }
     return $all;
@@ -130,10 +142,11 @@ function soldirectory_seo_description_for(string $overview): string {
 }
 
 /** The FAQ rows this feature writes. $long null = the earlier (short-only) set, used to recognise it. */
-function soldirectory_machine_faq_rows(string $title, array $entry, ?array $long): array {
+function soldirectory_machine_faq_rows(string $title, array $entry, ?array $long, ?array $deep = null): array {
     $rows = [];
     foreach ($entry[2] as [$q, $a]) $rows[] = ['question' => $q, 'answer' => $a];
     if ($long) foreach ($long['faq'] as [$q, $a]) $rows[] = ['question' => $q, 'answer' => $a];
+    if ($deep) foreach ($deep['faq'] as [$q, $a]) $rows[] = ['question' => $q, 'answer' => $a];
     $rows[] = [
         'question' => "Can I use my NDIS plan to pay for {$title}?",
         'answer' => "If {$title} is in your NDIS plan and is reasonable and necessary for you, then yes. Check with your planner, Local Area Coordinator or support coordinator. You can also arrange it privately.",
@@ -146,11 +159,11 @@ function soldirectory_machine_faq_rows(string $title, array $entry, ?array $long
 }
 
 /** Every field this feature writes, for one service. $relatedIds are post IDs of sibling services. */
-function soldirectory_service_fields(string $title, array $entry, string $overview, array $relatedIds, ?array $long = null): array {
+function soldirectory_service_fields(string $title, array $entry, string $overview, array $relatedIds, ?array $long = null, ?array $deep = null): array {
     [$group, $who, $faqs] = $entry;
 
-    // FAQ order: the three short ones, then the three from the long guide, then the two shared ones.
-    $faqRows = soldirectory_machine_faq_rows($title, $entry, $long);
+    // FAQ order: the three short ones, the three from the long guide, the three from the deeper guide, then the two shared ones.
+    $faqRows = soldirectory_machine_faq_rows($title, $entry, $long, $deep);
 
     $extra = [];
     if ($long) {
@@ -162,6 +175,15 @@ function soldirectory_service_fields(string $title, array $entry, string $overvi
             'cost_info' => soldirectory_cost_text($group, $title),
             'register_category' => $long['cat'],
             'sources_repeater' => soldirectory_source_links($long['src'] ?? []),
+        ];
+    }
+    if ($deep) {
+        $extra += [
+            'typical_session' => $deep['day'],
+            'who_delivers' => $deep['who'],
+            'plan_fit' => $deep['fit'],
+            'questions_to_ask' => implode("\n", $deep['ask']),
+            'common_mistakes' => implode("\n", $deep['mistakes']),
         ];
     }
 
@@ -271,7 +293,7 @@ function soldirectory_apply_service_content(bool $force = false): array {
         try {
             $t = $titles[$id];
             if (!isset($editorial[$t])) continue;
-            if (!$force && get_post_meta($id, '_sd_content_v3', true)) { $summary['skipped']++; continue; }
+            if (!$force && get_post_meta($id, '_sd_content_v4', true)) { $summary['skipped']++; continue; }
 
             $group = $editorial[$t][0];
             $list = $siblings[$group] ?? [];
@@ -287,15 +309,17 @@ function soldirectory_apply_service_content(bool $force = false): array {
 
             $overview = (string) ($overviews[$t] ?? '');
             $long = soldirectory_service_long()[$t] ?? null;
-            $fields = soldirectory_service_fields($t, $editorial[$t], $overview, $related, $long);
+            $deep = soldirectory_service_deep()[$t] ?? null;
+            $fields = soldirectory_service_fields($t, $editorial[$t], $overview, $related, $long, $deep);
             // Earlier machine-written text (the short overview and the short FAQ set) may be upgraded to the long guide.
             $replaceable = [
                 'overview_content' => [trim($overview)],
-                'faq_repeater' => [soldirectory_machine_faq_rows($t, $editorial[$t], null)],
+                // the short-only set, and the short + long set this tool wrote before the deeper guides existed
+                'faq_repeater' => [soldirectory_machine_faq_rows($t, $editorial[$t], null), soldirectory_machine_faq_rows($t, $editorial[$t], $long)],
             ];
             $written = soldirectory_fill_service_post($id, $fields, $replaceable);
             if ($written) {
-                update_post_meta($id, '_sd_content_v3', SOLDIRECTORY_CONTENT_VERSION);
+                update_post_meta($id, '_sd_content_v4', SOLDIRECTORY_CONTENT_VERSION);
                 $summary['posts']++;
                 $summary['fields'] += count($written);
             }
@@ -339,12 +363,12 @@ add_action('admin_post_soldirectory_apply_service_content', function () {
 function soldirectory_render_service_content_page(): void {
     if (!current_user_can('manage_options')) return;
     $total = count(get_posts(['post_type' => 'service', 'post_status' => 'any', 'numberposts' => -1, 'fields' => 'ids', 'no_found_rows' => true]));
-    $marked = count(get_posts(['post_type' => 'service', 'post_status' => 'any', 'numberposts' => -1, 'fields' => 'ids', 'no_found_rows' => true, 'meta_key' => '_sd_content_v3']));
+    $marked = count(get_posts(['post_type' => 'service', 'post_status' => 'any', 'numberposts' => -1, 'fields' => 'ids', 'no_found_rows' => true, 'meta_key' => '_sd_content_v4']));
     echo '<div class="wrap"><h1>Service content</h1>';
     if (isset($_GET['done'])) {
         echo '<div class="notice notice-success"><p>Filled ' . (int) $_GET['fields'] . ' blank fields on ' . (int) $_GET['done'] . ' service posts.</p></div>';
     }
-    echo '<p>Fills the <strong>blank</strong> fields on service posts with a long-form guide (short answer, overview, how to choose a provider, getting started), eligibility, funding and cost guidance, eight FAQs, SEO title and description, regulator information, sources and related links. Anything you have written yourself is never changed; text this tool wrote earlier is upgraded.</p>';
+    echo '<p>Fills the <strong>blank</strong> fields on service posts with a long-form guide (short answer, overview, how to choose a provider, getting started), eligibility, funding and cost guidance, eleven FAQs, deeper guide sections (typical session, who delivers it, how it fits a plan, questions to ask, common mistakes), SEO title and description, regulator information, sources and related links. Anything you have written yourself is never changed; text this tool wrote earlier is upgraded.</p>';
     echo '<p>' . (int) $marked . ' of ' . (int) $total . ' service posts have had content applied.</p>';
     echo '<p>It does not write prices, typical costs, waiting times or availability. Add those per service if you want them.</p>';
     echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';

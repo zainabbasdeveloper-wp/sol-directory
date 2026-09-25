@@ -126,6 +126,17 @@ export async function workersForService(title: string, category: string | undefi
   return { level: null, matchedNames: [] as string[], items: [], total: 0, allTotal: 0, states: {} as Record<string, number>, page, limit, hasMore: false };
 }
 
+/** Public workers in a state, or one suburb of it (used by the crawler HTML of location pages). */
+export async function workersInArea(state: string, suburb?: string, limit = 6) {
+  const filter: Record<string, unknown> = { ...visible(), state };
+  if (suburb) filter.suburb = new RegExp('^\\s*' + escapeRegex(suburb) + '\\s*$', 'i');
+  const [docs, total] = await Promise.all([
+    Worker.find(filter).select(PROJECTION).sort({ firstName: 1, _id: 1 }).limit(limit).lean(),
+    Worker.countDocuments(filter),
+  ]);
+  return { total, items: docs.map((d: any) => toPublic(d)) };
+}
+
 // GET /api/workers/public/for-service?title=&category=&state=&page=&limit=
 export async function listWorkersForService(req: Request, res: Response) {
   const title = str(req.query.title).slice(0, 120);

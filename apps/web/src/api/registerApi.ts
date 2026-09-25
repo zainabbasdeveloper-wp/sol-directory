@@ -25,6 +25,8 @@ export interface RegisterListItem {
   areas: RegisterArea[];
   supportCategories: string[];
   hasWebsite: boolean;
+  /** Only for a listing a member provider has claimed and uploaded a logo for; the registers publish none. */
+  logoUrl?: string | null;
 }
 
 export interface RegisterSearchResult {
