@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Avatar from '../../components/ui/Avatar';
+import ProviderMap from '../../components/ProviderMap';
 import { Stars } from '../../components/reviews/WorkerReviews';
 import { listWorkersForService, workerPhotoUrl, type ServiceWorkers } from '../../api/profilesApi';
 import { STATES } from '../../lib/registerMeta';
@@ -83,6 +84,19 @@ export default function ServiceWorkersBlock({ serviceName, category }: Props) {
               ))}
             </div>
           )}
+          {items.length > 0 && (
+            <ProviderMap
+              providers={items.map((w) => ({
+                id: w.slug,
+                name: `${w.firstName} ${w.lastInitial ? `${w.lastInitial}.` : ''}`.trim(),
+                location: w.location,
+                category: w.role || null,
+                suburb: [w.suburb, w.state].filter(Boolean).join(', ') || null,
+                href: `/independent-workers/${w.slug}`,
+              }))}
+            />
+          )}
+
           <ul className="wp-cpt-cards" aria-busy={loading}>
             {items.map((w) => {
               const name = `${w.firstName} ${w.lastInitial ? `${w.lastInitial}.` : ''}`.trim();

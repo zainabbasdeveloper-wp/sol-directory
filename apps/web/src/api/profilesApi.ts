@@ -62,6 +62,8 @@ export interface PublicWorker {
   photoVersion: number;
   rating: number | null;
   reviewCount: number;
+  /** The worker's suburb centroid (never a street address) — null until that suburb has been geocoded. */
+  location: { lat: number; lng: number } | null;
 }
 export interface PublicWorkerList { items: PublicWorker[]; page: number; limit: number; total: number; hasMore: boolean }
 

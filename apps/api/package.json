@@ -12,6 +12,7 @@
     "import:providers": "tsx src/scripts/importScrapedProviders.ts",
     "import:register": "tsx src/scripts/importRegisterListings.ts",
     "recompute:worker-ratings": "tsx src/scripts/recomputeWorkerRatings.ts",
+    "geocode:suburbs": "tsx src/scripts/geocodeSuburbs.ts",
     "job:capacity-check": "tsx src/scripts/weeklyCapacityCheck.ts"
   },
   "dependencies": {
