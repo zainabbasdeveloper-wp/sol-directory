@@ -133,6 +133,11 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
   const howToChoose = lines(meta.how_to_choose);
   const gettingStarted = lines(meta.getting_started);
   const costInfo = str(meta.cost_info);
+  const sessionParagraphs = str(meta.typical_session).split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+  const whoDelivers = str(meta.who_delivers);
+  const planFit = str(meta.plan_fit);
+  const questionsToAsk = lines(meta.questions_to_ask);
+  const commonMistakes = lines(meta.common_mistakes);
   const registerCategory = str(meta.register_category);
   const sources = safeParseJson<{ title: string; url: string }[]>(meta.sources_json, []).filter((s) => s.title && /^https?:\/\//i.test(s.url));
   const whoFor = str(meta.who_for);
@@ -181,7 +186,10 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
   if (content) {
     tocItems.push({ href: '#wp-cpt-overview', label: 'Overview' });
     if (shortAnswer) tocItems.push({ href: '#wp-cpt-short', label: 'The short answer' });
+    if (sessionParagraphs.length > 0) tocItems.push({ href: '#wp-cpt-session', label: 'What a session looks like' });
     if (howToChoose.length > 0) tocItems.push({ href: '#wp-cpt-choose', label: 'How to choose a provider' });
+    if (questionsToAsk.length > 0) tocItems.push({ href: '#wp-cpt-ask', label: 'Questions to ask' });
+    if (commonMistakes.length > 0) tocItems.push({ href: '#wp-cpt-mistakes', label: 'Common mistakes' });
     if (gettingStarted.length > 0) tocItems.push({ href: '#wp-cpt-start', label: 'Getting started' });
     if (glanceRows.length > 0) tocItems.push({ href: '#wp-cpt-glance', label: 'At a glance' });
     if (eligibility) tocItems.push({ href: '#wp-cpt-eligibility', label: 'Eligibility' });
@@ -299,10 +307,37 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
               </section>
             )}
 
+            {(sessionParagraphs.length > 0 || whoDelivers) && (
+              <section id="wp-cpt-session" className="wp-cpt-section">
+                {sessionParagraphs.length > 0 && <h2>What a typical session looks like</h2>}
+                {sessionParagraphs.map((para, i) => <p key={i}>{para}</p>)}
+                {whoDelivers && (
+                  <>
+                    <h3>Who delivers this support</h3>
+                    <p>{whoDelivers}</p>
+                  </>
+                )}
+              </section>
+            )}
+
             {howToChoose.length > 0 && (
               <section id="wp-cpt-choose" className="wp-cpt-section">
                 <h2>How to choose a provider</h2>
                 <ul className="wp-cpt-plain-list">{howToChoose.map((l, i) => <li key={i}>{l}</li>)}</ul>
+              </section>
+            )}
+
+            {questionsToAsk.length > 0 && (
+              <section id="wp-cpt-ask" className="wp-cpt-section">
+                <h2>Questions to ask a provider</h2>
+                <ul className="wp-cpt-plain-list">{questionsToAsk.map((l, i) => <li key={i}>{l}</li>)}</ul>
+              </section>
+            )}
+
+            {commonMistakes.length > 0 && (
+              <section id="wp-cpt-mistakes" className="wp-cpt-section">
+                <h2>Common mistakes to avoid</h2>
+                <ul className="wp-cpt-plain-list">{commonMistakes.map((l, i) => <li key={i}>{l}</li>)}</ul>
               </section>
             )}
 
@@ -325,6 +360,13 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
                   ))}
                 </div>
                 {howToPay && <p className="wp-cpt-howtopay">{howToPay}</p>}
+              </section>
+            )}
+
+            {planFit && (
+              <section id="wp-cpt-planfit" className="wp-cpt-section">
+                <h2>How it fits with the rest of your plan</h2>
+                <p>{planFit}</p>
               </section>
             )}
 

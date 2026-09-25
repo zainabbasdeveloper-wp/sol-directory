@@ -6,6 +6,7 @@ import { getRegisterHub, searchRegister, type RegisterHub, type RegisterSearchRe
 import { MIN_INDEXABLE, absoluteUrl, registerPath, stateBySlug, type RegisterKind } from '../../../lib/registerMeta';
 import { applySeoTags, setJsonLd } from '../../../lib/seo';
 import RegisterCard from './RegisterCard';
+import LocationWorkers from './LocationWorkers';
 import { Breadcrumbs, GetMatchedCta, VerifyNote, formatCount, titleCase, trimTo } from './RegisterParts';
 import '../Home.css';
 import '../Directory.css';
@@ -230,6 +231,10 @@ export default function RegisterListPage({ kind, stateSlug, suburbSlug }: Props)
             disabled={loading}
             onChange={(p) => { setParam({ page: p > 1 ? String(p) : null }); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
           />
+        )}
+
+        {!failed && !loading && total > 0 && !filtered && (
+          <LocationWorkers stateCode={state.code} stateName={state.name} suburbName={suburbSlug ? suburbName : undefined} />
         )}
 
         {nearby.length > 0 && (

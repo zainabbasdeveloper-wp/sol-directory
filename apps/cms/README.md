@@ -166,7 +166,7 @@ normal app instead of a false 404. `seo_noindex` on a post is honoured.
 
 Each of the 89 services now has a written guide on top of the shorter fields: a short answer, a
 three-paragraph overview, how to choose a provider, getting started, "what it costs" (how pricing
-works, never a price), eight FAQs and a sources list (official root sites only). About 1,200 words
+works, never a price), eight FAQs (eleven once the deeper guides are applied) and a sources list (official root sites only). About 1,200 words
 per page from WordPress, before the live data. The text lives in `includes/content-long-1..8.php`
 and `content-services-1..3.php`; `content-services.php` writes it. Text this tool wrote earlier
 (the short overview, the earlier five-question FAQ) is upgraded automatically if nobody has edited
@@ -176,6 +176,20 @@ New fields on the Service post: The short answer, How to choose a provider (one 
 started (one per line), How costs work, Register category (drives the live register tables on the
 page), and Sources. The "Register category" is set per service in the content files, so the
 service-to-category match is explicit rather than guessed.
+
+### Deeper guides (v4)
+
+Each service also has a second layer of its own writing in `includes/content-deep-1..8.php`: what a
+typical session looks like, who delivers the support, how it fits with the rest of a plan, six
+questions to ask a provider, five common mistakes and three more FAQs (eleven in all). Together with
+the long guide that is about 1,300 to 1,800 words per page from WordPress (the harness checks every
+page is at least 1,200), before the live register tables and the provider and worker lists. New
+Service fields: What a typical session looks like, Who delivers this support, How it fits with the
+rest of a plan, Questions to ask a provider, Common mistakes. The marker is now `_sd_content_v4` and
+the one-time run is `soldirectory_service_content_v4`, so the next wp-admin load (or Tools > Service
+content) upgrades every post; editor-written fields are still never replaced. The text is general
+guidance written for this site (no prices, no timeframes, no promise about who qualifies) and should
+be read by someone who knows the NDIS before it is relied on.
 
 Live data on the page (from the imported register, not written by hand): listings per state, the
 suburbs with the most listings, and the listings covering the most areas, for the service's category.

@@ -7,7 +7,7 @@ import Worker from '../models/Worker.js';
 import WorkerReview from '../models/WorkerReview.js';
 import { MIN_SUBURB_LISTINGS, STATE_CODES, type RegisterType } from '../services/registerNormalise.js';
 import { categoryListings, computeCategoryOverview, computeHub } from './register.controller.js';
-import { workersForService } from './workersPublic.controller.js';
+import { workersForService, workersInArea } from './workersPublic.controller.js';
 import { MIN_INDEXABLE_PROVIDERS, VISIBLE_PROVIDER, areaRows, conditionRows, publicLogoUrl } from './providersPublic.controller.js';
 
 /**
@@ -175,6 +175,15 @@ async function listPage(site: string, kindPath: KindPath, stateSlug: string, sub
     const hub = await hubFor(kind.type);
     extra = `<h2>Suburbs in ${esc(STATE_NAMES[code])}</h2><ul>${hub.suburbs.filter((s) => s.state === code).slice(0, 40).map((s) => li(`${base}/${s.slug}`, `${s.suburb}, ${s.state}`, `(${fmt(s.count)})`)).join('')}</ul>`;
   }
+  let workersHtml = '';
+  if (!filtered && total > 0) {
+    try {
+      const w = await workersInArea(code, suburbName ?? undefined, 6);
+      if (w.total > 0) {
+        workersHtml = `<h2>Independent support workers in ${esc(areaName)}</h2><p>${fmt(w.total)} independent ${w.total === 1 ? 'worker has' : 'workers have'} published a public profile for ${esc(areaName)}.</p><ul>${w.items.map((x) => li(`/independent-workers/${x.slug}`, `${x.firstName}${x.lastInitial ? ` ${x.lastInitial}.` : ''}`, [x.role, [x.suburb, x.state].filter(Boolean).join(', '), x.services.slice(0, 4).join(', ')].filter(Boolean).join(' - '))).join('')}</ul>`;
+      }
+    } catch { workersHtml = ''; }
+  }
   const pager =
     (page > 1 ? `<a rel="prev" href="${esc(page === 2 ? base : `${base}?page=${page - 1}`)}">Previous page</a> ` : '') +
     (page < totalPages ? `<a rel="next" href="${esc(`${base}?page=${page + 1}`)}">Next page</a>` : '');
@@ -191,7 +200,7 @@ async function listPage(site: string, kindPath: KindPath, stateSlug: string, sub
       `<h1>${esc(kind.label)} providers in ${esc(areaName)}</h1>` +
       `<p>${fmt(total)} ${esc(kind.label)} ${total === 1 ? 'provider is' : 'providers are'} listed on the ${esc(kind.register)} for ${esc(areaName)}.</p>` +
       `<ul>${docs.map((d) => li(`/${kindPath}/${d.slug}`, d.name, d.supportCategories.length ? `– ${d.supportCategories.slice(0, 3).join(', ')}` : '')).join('')}</ul>` +
-      `<p>${pager}</p>${extra}`,
+      `<p>${pager}</p>${workersHtml}${extra}`,
   };
 }
 
@@ -558,8 +567,13 @@ async function servicePage(site: string, slug: string): Promise<Page> {
     (plain(item.content?.rendered ?? '') ? `<div>${esc(plain(item.content.rendered))}</div>` : '') +
     (paras('overview_content').length ? `<h2>${esc(s('overview_heading') || `About ${title}`)}</h2>${paras('overview_content').map((p) => `<p>${esc(p)}</p>`).join('')}` : '') +
     block('Who is this service for?', s('who_for')) +
+    (paras('typical_session').length ? `<h2>What a typical session looks like</h2>${paras('typical_session').map((p) => `<p>${esc(p)}</p>`).join('')}` : '') +
+    block('Who delivers this support', s('who_delivers')) +
     (lines('how_to_choose').length ? `<h2>How to choose a provider</h2><ul>${lines('how_to_choose').map((l) => `<li>${esc(l)}</li>`).join('')}</ul>` : '') +
+    (lines('questions_to_ask').length ? `<h2>Questions to ask a provider</h2><ul>${lines('questions_to_ask').map((l) => `<li>${esc(l)}</li>`).join('')}</ul>` : '') +
+    (lines('common_mistakes').length ? `<h2>Common mistakes to avoid</h2><ul>${lines('common_mistakes').map((l) => `<li>${esc(l)}</li>`).join('')}</ul>` : '') +
     (lines('getting_started').length ? `<h2>Getting started</h2><ol>${lines('getting_started').map((l) => `<li>${esc(l)}</li>`).join('')}</ol>` : '') +
+    block('How it fits with the rest of your plan', s('plan_fit')) +
     block('Eligibility', s('eligibility')) +
     block('Funding', [s('funding_info'), s('plan_management_info')].filter(Boolean).join(' ')) +
     block('What it costs', s('cost_info')) +

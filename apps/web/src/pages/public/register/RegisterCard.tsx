@@ -12,8 +12,8 @@ export default function RegisterCard({ item }: { item: RegisterListItem }) {
   return (
     <li className="dir-card reg-card">
       <div className="dir-card-top">
-        {/* The registers publish no logos, so this is the business's initials, never a stock image. */}
-        <Avatar name={item.name} shape="square" />
+        {/* The registers publish no logos: a claimed listing shows its provider's own upload, everything else the initials, never a stock image. */}
+        <Avatar src={item.logoUrl} name={item.name} shape="square" />
         <div className="dir-card-title">
           <h3>
             <Link to={registerPath(kind, item.slug)}>{item.name}</Link>
