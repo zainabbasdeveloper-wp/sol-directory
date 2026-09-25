@@ -162,6 +162,16 @@ export async function computeCategoryOverview(type: RegisterType, category: stri
   };
 }
 
+/** First listings (A-Z) for one support category, in the list-card shape; used by the crawler HTML of service pages. */
+export async function categoryListings(type: RegisterType, category: string, limit = 12) {
+  const docs = await RegisterListing.find({ type, supportCategories: category })
+    .select('type slug name states areaCount areas supportCategories website')
+    .sort({ nameLower: 1, _id: 1 })
+    .limit(limit)
+    .lean();
+  return docs.map((d) => toListItem(d as never));
+}
+
 export async function getCategoryOverview(req: Request, res: Response) {
   const type = parseType(req.query.type);
   if (!type) return res.status(400).json({ error: 'type must be "ndis" or "aged_care".' });

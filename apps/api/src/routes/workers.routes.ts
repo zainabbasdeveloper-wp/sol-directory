@@ -1,7 +1,7 @@
 import express, { Router } from 'express';
 import type { Response, NextFunction } from 'express';
 import { listWorkers, getWorkerProfile, requestContact } from '../controllers/workers.controller.js';
-import { listPublicWorkers, getPublicWorker, getPublicWorkerPhoto } from '../controllers/workersPublic.controller.js';
+import { listPublicWorkers, listWorkersForService, getPublicWorker, getPublicWorkerPhoto } from '../controllers/workersPublic.controller.js';
 import { getMyWorker, updateMyWorker, putMyPhoto, deleteMyPhoto, getMyPhoto } from '../controllers/workersSelf.controller.js';
 import { getPublicWorkerReviews, getWorkerReviewsForOrg, submitWorkerReview, getMyReviews } from '../controllers/workersReviews.controller.js';
 import { requireAuth, type AuthedRequest } from '../middleware/auth.middleware.js';
@@ -43,6 +43,7 @@ const safe = (fn: (req: any, res: Response) => Promise<unknown>) =>
 // fixed paths must stay ABOVE the '/:id' routes below, or '/me' and
 // '/public' would be read as worker ids.
 router.get('/public', safe(listPublicWorkers));
+router.get('/public/for-service', safe(listWorkersForService));
 router.get('/public/:slug', safe(getPublicWorker));
 router.get('/public/:slug/photo', safe(getPublicWorkerPhoto));
 router.get('/public/:slug/reviews', safe(getPublicWorkerReviews));

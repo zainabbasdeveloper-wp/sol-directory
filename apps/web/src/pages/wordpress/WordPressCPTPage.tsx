@@ -7,6 +7,7 @@ import { PublicHeader, PublicFooter } from '../public/PublicLayout';
 import WordPressTemplate from '../../components/wordpress/WordPressTemplate';
 import ProviderMap from '../../components/ProviderMap';
 import ServiceRegisterBlock from './ServiceRegisterBlock';
+import ServiceWorkersBlock from './ServiceWorkersBlock';
 import { categoryForService } from '../../lib/registerMeta';
 import { setJsonLd } from '../../lib/seo';
 import NotFound from './NotFound';
@@ -187,6 +188,10 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
     if (fundingInfo) tocItems.push({ href: '#wp-cpt-funding', label: 'Funding' });
     if (costInfo) tocItems.push({ href: '#wp-cpt-cost', label: 'What it costs' });
     if (hasRelatedProviders) tocItems.push({ href: '#wp-cpt-providers', label: 'Providers near you' });
+    if (config.pathPrefix === 'services') {
+      if (registerCategory || categoryForService(content.title)) tocItems.push({ href: '#wp-cpt-register', label: 'Providers on the register' });
+      tocItems.push({ href: '#wp-cpt-workers', label: 'Independent workers' });
+    }
     if (regulatorCards.length > 0) tocItems.push({ href: '#wp-cpt-regulations', label: regulationsHeading || 'Regulations & compliance' });
     if (credentials.length > 0) tocItems.push({ href: '#wp-cpt-credentials', label: 'Checking credentials' });
     if (relatedServices.length > 0) tocItems.push({ href: '#wp-cpt-related', label: 'Related services' });
@@ -381,6 +386,8 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
             )}
 
             {config.pathPrefix === 'services' && content && <ServiceRegisterBlock serviceName={content.title} category={registerCategory || undefined} />}
+
+            {config.pathPrefix === 'services' && content && <ServiceWorkersBlock serviceName={content.title} category={registerCategory || categoryForService(content.title)} />}
 
             {regulatorCards.length > 0 && (
               <section id="wp-cpt-regulations" className="wp-cpt-section">
