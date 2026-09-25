@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { PublicHeader, PublicFooter } from '../PublicLayout';
 import Pagination from '../../../components/ui/Pagination';
+import ProviderMap from '../../../components/ProviderMap';
 import { getRegisterHub, searchRegister, type RegisterHub, type RegisterSearchResult } from '../../../api/registerApi';
 import { MIN_INDEXABLE, absoluteUrl, registerPath, stateBySlug, type RegisterKind } from '../../../lib/registerMeta';
 import { applySeoTags, setJsonLd } from '../../../lib/seo';
@@ -219,9 +220,21 @@ export default function RegisterListPage({ kind, stateSlug, suburbSlug }: Props)
         )}
 
         {data && data.items.length > 0 && (
-          <ul className={`dir-grid${loading ? ' dir-grid-loading' : ''}`} aria-busy={loading}>
-            {data.items.map((i) => <RegisterCard key={`${i.type}-${i.slug}`} item={i} />)}
-          </ul>
+          <>
+            <ProviderMap
+              providers={data.items.map((i) => ({
+                id: `${i.type}-${i.slug}`,
+                name: i.name,
+                location: i.location,
+                category: i.supportCategories[0] ?? null,
+                suburb: i.areas[0] ? `${i.areas[0].suburb}, ${i.areas[0].state}` : null,
+                href: registerPath(kind, i.slug),
+              }))}
+            />
+            <ul className={`dir-grid${loading ? ' dir-grid-loading' : ''}`} aria-busy={loading}>
+              {data.items.map((i) => <RegisterCard key={`${i.type}-${i.slug}`} item={i} />)}
+            </ul>
+          </>
         )}
 
         {!failed && total > PAGE_SIZE && (

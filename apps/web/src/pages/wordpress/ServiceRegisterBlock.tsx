@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Avatar from '../../components/ui/Avatar';
+import ProviderMap from '../../components/ProviderMap';
 import { getCategoryOverview, searchRegister, type CategoryOverview, type RegisterListItem } from '../../api/registerApi';
 import { KIND_BY_TYPE, STATES, areaLabel, categoryForService, registerPath, type RegisterType } from '../../lib/registerMeta';
 
@@ -50,6 +51,18 @@ function ProviderList({ type, category, states, total }: { type: RegisterType; c
         ))}
       </div>
       {failed && <p className="wp-cpt-table-note" role="alert">We couldn’t load the list just now. Please try again shortly.</p>}
+      {items.length > 0 && (
+        <ProviderMap
+          providers={items.map((p) => ({
+            id: p.slug,
+            name: p.name,
+            location: p.location,
+            category: p.supportCategories[0] ?? null,
+            suburb: p.areas[0] ? `${p.areas[0].suburb}, ${p.areas[0].state}` : null,
+            href: registerPath(kind, p.slug),
+          }))}
+        />
+      )}
       <ul className="wp-cpt-cards" aria-busy={loading}>
         {items.map((p) => (
           <li key={p.slug} className="wp-cpt-card">

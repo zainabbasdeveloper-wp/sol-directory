@@ -19,6 +19,11 @@ export type RegisterType = (typeof REGISTER_TYPES)[number];
 export const STATE_CODES = ['NSW', 'VIC', 'QLD', 'SA', 'WA', 'TAS', 'NT', 'ACT'] as const;
 export type StateCode = (typeof STATE_CODES)[number];
 
+export const STATE_NAMES: Record<StateCode, string> = {
+  NSW: 'New South Wales', VIC: 'Victoria', QLD: 'Queensland', WA: 'Western Australia',
+  SA: 'South Australia', TAS: 'Tasmania', ACT: 'Australian Capital Territory', NT: 'Northern Territory',
+};
+
 /** Canonical support categories — the first eight match the Home page tiles / directory ?service= values exactly. */
 export const REGISTER_SUPPORT_CATEGORIES = [
   'Support coordination',

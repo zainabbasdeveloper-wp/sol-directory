@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { PublicHeader, PublicFooter } from './PublicLayout';
 import Avatar from '../../components/ui/Avatar';
+import ProviderMap from '../../components/ProviderMap';
 import Pagination from '../../components/ui/Pagination';
 import Combobox, { type ComboItem } from '../../components/ui/Combobox';
 import { listPublicWorkers, workerPhotoUrl, type PublicWorkerList } from '../../api/profilesApi';
@@ -154,6 +155,19 @@ export default function WorkerFinder() {
               <Link className="btn-tint" to="/directory">Browse providers instead</Link>
             </div>
           </div>
+        )}
+
+        {(data?.items?.length ?? 0) > 0 && (
+          <ProviderMap
+            providers={(data?.items ?? []).map((w) => ({
+              id: w.slug,
+              name: `${w.firstName} ${w.lastInitial ? `${w.lastInitial}.` : ''}`.trim(),
+              location: w.location,
+              category: w.role || null,
+              suburb: [w.suburb, w.state].filter(Boolean).join(', ') || null,
+              href: `/independent-workers/${w.slug}`,
+            }))}
+          />
         )}
 
         <ul className="dir-grid" aria-busy={loading}>

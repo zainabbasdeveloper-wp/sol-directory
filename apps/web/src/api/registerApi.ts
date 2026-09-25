@@ -27,6 +27,8 @@ export interface RegisterListItem {
   hasWebsite: boolean;
   /** Only for a listing a member provider has claimed and uploaded a logo for; the registers publish none. */
   logoUrl?: string | null;
+  /** The suburb centroid of the listing's first service area — a register listing has no street address, so this is never more precise than "somewhere in this suburb". Null until that suburb has been geocoded. */
+  location: { lat: number; lng: number } | null;
 }
 
 export interface RegisterSearchResult {
@@ -83,6 +85,7 @@ export interface RegisterListing {
   services: string[];
   supportCategories: string[];
   claimStatus: 'unclaimed' | 'requested' | 'claimed';
+  location: { lat: number; lng: number } | null;
   related: RegisterListItem[];
 }
 export const getRegisterListing = (type: RegisterType, slug: string): Promise<RegisterListing> =>
