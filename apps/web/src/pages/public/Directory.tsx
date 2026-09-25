@@ -7,6 +7,10 @@ import { listPublicProviders, type PublicProviderRow } from '../../api/providerR
 import { listActiveServices } from '../../api/serviceCatalogue';
 import { searchPlaces, formatPlace, placeSearchEnabled, type PlaceSuggestion } from '../../lib/places';
 import { useMatchModal } from '../../context/MatchModalContext';
+import { searchRegister, type RegisterListItem } from '../../api/registerApi';
+import { AGED_CARE_CATEGORIES, STATES, categoryForService } from '../../lib/registerMeta';
+import { slugify } from '../../lib/slugify';
+import RegisterCard from './register/RegisterCard';
 import './Home.css';
 import './Directory.css';
 
@@ -16,7 +20,10 @@ const PAGE_SIZE = 12;
 // suburb by name are always included regardless.
 const NEARBY_RADIUS_KM = 25;
 
-interface Place { label: string; suburb: string; lat: number | null; lng: number | null }
+interface Place { label: string; suburb: string; lat: number | null; lng: number | null; state?: string }
+
+type DirTab = 'all' | 'providers' | 'listings';
+const REGISTER_PREVIEW = 9;
 
 const STATUS_STYLE: Record<string, { label: string; tone: 'ok' | 'limited' | 'wait' | 'closed' }> = {
   'Open to referrals': { label: 'Accepting referrals', tone: 'ok' },
@@ -140,6 +147,53 @@ export default function Directory() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [service, place, nameQuery, reloadKey]);
 
+  // ---------------------------------------------------------------
+  // Organisations imported from the public NDIS/My Aged Care registers —
+  // real businesses that exist in the directory but have not (yet) signed
+  // up or claimed their listing. Shown as a clearly separate, clearly
+  // labelled section, never merged into the "providers" count or list
+  // above: an unclaimed listing has no account, can't respond to an
+  // enquiry, and must never look like a verified SolDirectory member.
+  // ---------------------------------------------------------------
+  const [tab, setTab] = useState<DirTab>('all');
+  const [registerItems, setRegisterItems] = useState<RegisterListItem[]>([]);
+  const [registerTotal, setRegisterTotal] = useState(0);
+  // Per-type totals, so the "see all" link below can point at the right
+  // register hub with the right count — a single combined number would
+  // either overcount (linking to just one hub) or have nowhere honest to link.
+  const [registerTotalsByType, setRegisterTotalsByType] = useState<{ ndis: number; aged_care: number }>({ ndis: 0, aged_care: 0 });
+  const [registerLoading, setRegisterLoading] = useState(true);
+  const registerCategory = service ? categoryForService(service) : undefined;
+  const registerStateCode = place?.state && STATES.some((s) => s.code === place.state) ? place.state : undefined;
+  const registerSuburbSlug = place?.suburb ? slugify(place.suburb) : undefined;
+  const registerRequestId = useRef(0);
+
+  useEffect(() => {
+    const id = ++registerRequestId.current;
+    setRegisterLoading(true);
+    const types = registerCategory ? [AGED_CARE_CATEGORIES.includes(registerCategory) ? 'aged_care' : 'ndis'] as const : (['ndis', 'aged_care'] as const);
+    Promise.all(types.map((type) => searchRegister({
+      type,
+      category: registerCategory,
+      // A suburb filter needs a state; without one (place typed free-text, no suggestion chosen) fall back to browsing the whole register for the category instead of filtering incorrectly.
+      ...(registerStateCode && registerSuburbSlug ? { state: registerStateCode, suburb: registerSuburbSlug } : {}),
+      q: nameQuery || undefined,
+      limit: REGISTER_PREVIEW,
+    }).then((r) => ({ type, ...r })).catch(() => ({ type, items: [] as RegisterListItem[], total: 0, page: 1, limit: REGISTER_PREVIEW }))))
+      .then((results) => {
+        if (id !== registerRequestId.current) return;
+        const items = results.flatMap((r) => r.items).slice(0, REGISTER_PREVIEW);
+        setRegisterItems(items);
+        setRegisterTotal(results.reduce((sum, r) => sum + r.total, 0));
+        setRegisterTotalsByType({
+          ndis: results.find((r) => r.type === 'ndis')?.total ?? 0,
+          aged_care: results.find((r) => r.type === 'aged_care')?.total ?? 0,
+        });
+      })
+      .finally(() => { if (id === registerRequestId.current) setRegisterLoading(false); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [registerCategory, registerStateCode, registerSuburbSlug, nameQuery, reloadKey]);
+
   function goToPage(n: number) {
     const target = Math.min(Math.max(1, n), totalPages);
     if (target === page) return;
@@ -238,7 +292,7 @@ export default function Directory() {
                 const s = placeItems.find((p) => p.id === item.key);
                 if (!s) return;
                 const label = formatPlace(s);
-                setPlace({ label, suburb: s.suburb, lat: s.lat, lng: s.lng });
+                setPlace({ label, suburb: s.suburb, lat: s.lat, lng: s.lng, state: s.state });
                 setPlaceText(label);
               }}
               // Enter on typed text (no suggestion chosen) searches that suburb by name.
@@ -279,79 +333,153 @@ export default function Directory() {
           <button type="button" className="btn-gradient" onClick={() => openMatchModal()}>Submit an enquiry →</button>
         </div>
 
-        <div className="dir-results-head" aria-live="polite" ref={resultsTopRef}>
-          {loading || pageLoading
-            ? 'Searching…'
-            : error || total === 0
-              ? ''
-              : total <= PAGE_SIZE
-                ? `${total.toLocaleString('en-AU')} ${total === 1 ? 'provider' : 'providers'}${anyFilter ? ' match your search' : ' listed'}`
-                : `Showing ${((page - 1) * PAGE_SIZE + 1).toLocaleString('en-AU')}–${Math.min(page * PAGE_SIZE, total).toLocaleString('en-AU')} of ${total.toLocaleString('en-AU')} providers${anyFilter ? ' matching your search' : ''}`}
+        <div className="dir-tabs" role="tablist" aria-label="Directory section">
+          <button type="button" role="tab" aria-selected={tab === 'all'} className={`dir-tab${tab === 'all' ? ' dir-tab-active' : ''}`} onClick={() => setTab('all')}>All</button>
+          <button type="button" role="tab" aria-selected={tab === 'providers'} className={`dir-tab${tab === 'providers' ? ' dir-tab-active' : ''}`} onClick={() => setTab('providers')}>
+            SolDirectory providers{!loading ? ` (${total.toLocaleString('en-AU')})` : ''}
+          </button>
+          <button type="button" role="tab" aria-selected={tab === 'listings'} className={`dir-tab${tab === 'listings' ? ' dir-tab-active' : ''}`} onClick={() => setTab('listings')}>
+            Unclaimed listings{!registerLoading ? ` (${registerTotal.toLocaleString('en-AU')})` : ''}
+          </button>
         </div>
 
-        {error && (
-          <div className="dir-empty" role="alert">
-            <p>{error}</p>
-            <button type="button" className="btn-gradient" onClick={retry}>Try again</button>
-          </div>
-        )}
-
-        {!error && !loading && results.length === 0 && (
-          <div className="dir-empty">
-            <h2>No providers listed for this search yet</h2>
-            <p>
-              {anyFilter
-                ? 'Try removing a filter, or check the spelling. You can also send a request, and we will notify suitable providers in your area as they join.'
-                : 'No providers are listed yet.'}
-            </p>
-            <div className="dir-empty-actions">
-              {anyFilter && <button type="button" className="btn-tint" onClick={clearAll}>Clear search</button>}
-              <button type="button" className="btn-gradient" onClick={() => openMatchModal()}>Submit an enquiry →</button>
+        {tab !== 'listings' && (
+          <>
+            <div className="dir-results-head" aria-live="polite" ref={resultsTopRef}>
+              {loading || pageLoading
+                ? 'Searching…'
+                : error || total === 0
+                  ? ''
+                  : total <= PAGE_SIZE
+                    ? `${total.toLocaleString('en-AU')} ${total === 1 ? 'SolDirectory provider' : 'SolDirectory providers'}${anyFilter ? ' match your search' : ' listed'}`
+                    : `Showing ${((page - 1) * PAGE_SIZE + 1).toLocaleString('en-AU')}–${Math.min(page * PAGE_SIZE, total).toLocaleString('en-AU')} of ${total.toLocaleString('en-AU')} SolDirectory providers${anyFilter ? ' matching your search' : ''}`}
             </div>
-          </div>
+
+            {error && (
+              <div className="dir-empty" role="alert">
+                <p>{error}</p>
+                <button type="button" className="btn-gradient" onClick={retry}>Try again</button>
+              </div>
+            )}
+
+            {!error && !loading && results.length === 0 && (tab === 'providers' || registerTotal === 0) && (
+              <div className="dir-empty">
+                <h2>No SolDirectory providers for this search yet</h2>
+                <p>
+                  {anyFilter
+                    ? 'Try removing a filter, or check the spelling. You can also send a request, and we will notify suitable providers in your area as they join.'
+                    : 'No providers are listed yet.'}
+                </p>
+                <div className="dir-empty-actions">
+                  {anyFilter && <button type="button" className="btn-tint" onClick={clearAll}>Clear search</button>}
+                  <button type="button" className="btn-gradient" onClick={() => openMatchModal()}>Submit an enquiry →</button>
+                </div>
+              </div>
+            )}
+
+            {results.length > 0 && (
+              <ul className={`dir-grid${pageLoading ? ' dir-grid-loading' : ''}`} aria-busy={pageLoading}>
+                {results.map((p) => {
+                  const name = p.tradingName || p.legalEntityName;
+                  const status = STATUS_STYLE[p.intakeStatus];
+                  const moreSuburbs = p.serviceSuburbCount - p.serviceSuburbs.length;
+                  return (
+                    <li key={p.id} className="dir-card">
+                      <div className="dir-card-top">
+                        {p.logoUrl
+                          ? <img className="dir-logo" src={p.logoUrl} alt="" loading="lazy" />
+                          : <span className="dir-logo dir-logo-fallback" aria-hidden="true">{initials(name)}</span>}
+                        <div className="dir-card-title">
+                          <h3>{p.slug ? <Link to={`/directory/${p.slug}`}>{name}</Link> : name}</h3>
+                          {status && <span className={`dir-status dir-status-${status.tone}`}>{status.label}</span>}
+                        </div>
+                      </div>
+
+                      {p.registrationGroups.length > 0 && (
+                        <div className="dir-tags" aria-label="Supports offered">
+                          {p.registrationGroups.slice(0, 4).map((g) => <span key={g} className="dir-tag">{g}</span>)}
+                          {p.registrationGroups.length > 4 && <span className="dir-tag dir-tag-more">+{p.registrationGroups.length - 4} more</span>}
+                        </div>
+                      )}
+
+                      <p className="dir-areas">
+                        {p.serviceSuburbs.length > 0
+                          ? <>Supports people in <strong>{p.serviceSuburbs.join(', ')}</strong>{moreSuburbs > 0 ? ` and ${moreSuburbs} more area${moreSuburbs === 1 ? '' : 's'}` : ''}</>
+                          : 'Service areas not listed'}
+                      </p>
+
+                      {p.slug && <Link className="dir-card-cta" to={`/directory/${p.slug}`}>View profile →</Link>}
+                      <button type="button" className="dir-card-cta" onClick={() => openMatchModal()}>
+                        Get matched with providers like this →
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+
+            {tab === 'providers' && !loading && !error && total > PAGE_SIZE && (
+              <Pagination page={page} totalPages={totalPages} onChange={goToPage} disabled={pageLoading} />
+            )}
+          </>
         )}
 
-        <ul className={`dir-grid${pageLoading ? ' dir-grid-loading' : ''}`} aria-busy={pageLoading}>
-          {results.map((p) => {
-            const name = p.tradingName || p.legalEntityName;
-            const status = STATUS_STYLE[p.intakeStatus];
-            const moreSuburbs = p.serviceSuburbCount - p.serviceSuburbs.length;
-            return (
-              <li key={p.id} className="dir-card">
-                <div className="dir-card-top">
-                  {p.logoUrl
-                    ? <img className="dir-logo" src={p.logoUrl} alt="" loading="lazy" />
-                    : <span className="dir-logo dir-logo-fallback" aria-hidden="true">{initials(name)}</span>}
-                  <div className="dir-card-title">
-                    <h3>{p.slug ? <Link to={`/directory/${p.slug}`}>{name}</Link> : name}</h3>
-                    {status && <span className={`dir-status dir-status-${status.tone}`}>{status.label}</span>}
-                  </div>
-                </div>
+        {tab !== 'providers' && (
+          <section aria-labelledby="dir-listings-heading" className="dir-register-section">
+            <h2 id="dir-listings-heading" className="reg-h2">
+              {tab === 'listings' ? 'Unclaimed listings on the public register' : 'Also on the public register'}
+            </h2>
+            <p className="dir-note">
+              These organisations are on the public NDIS or My Aged Care register but have not signed up to or claimed a listing on SolDirectory. They
+              can’t receive enquiries here yet — details come from the official register, so confirm them directly before engaging.
+            </p>
 
-                {p.registrationGroups.length > 0 && (
-                  <div className="dir-tags" aria-label="Supports offered">
-                    {p.registrationGroups.slice(0, 4).map((g) => <span key={g} className="dir-tag">{g}</span>)}
-                    {p.registrationGroups.length > 4 && <span className="dir-tag dir-tag-more">+{p.registrationGroups.length - 4} more</span>}
-                  </div>
+            {!registerLoading && registerItems.length === 0 && (tab === 'listings' || total === 0) && (
+              <div className="dir-empty">
+                <h3>No unclaimed listings match this search</h3>
+                <p>{anyFilter ? 'Try removing a filter, or browse the full register.' : 'No listings found.'}</p>
+                <Link className="btn-tint" to="/ndis-providers">Browse the NDIS register</Link>
+              </div>
+            )}
+
+            {registerItems.length > 0 && (
+              <>
+                <ul className={`dir-grid${registerLoading ? ' dir-grid-loading' : ''}`} aria-busy={registerLoading}>
+                  {registerItems.map((item) => <RegisterCard key={`${item.type}-${item.slug}`} item={item} />)}
+                </ul>
+                {registerTotal > registerItems.length && (
+                  <p className="dir-register-more">
+                    {/* One category always means one register type, so one honest link with the real count.
+                        Browsing without a category spans both registers, which have no single combined page —
+                        so that case links to each register's own hub with its own real count instead of one
+                        link that would either undercount or point somewhere that doesn't have all of them. */}
+                    {registerCategory ? (
+                      <Link
+                        className="btn-tint"
+                        to={`/${AGED_CARE_CATEGORIES.includes(registerCategory) ? 'aged-care-providers' : 'ndis-providers'}${registerStateCode ? `/${registerStateCode.toLowerCase()}${registerSuburbSlug ? `/${registerSuburbSlug}` : ''}` : ''}?category=${encodeURIComponent(registerCategory)}`}
+                      >
+                        See all {registerTotal.toLocaleString('en-AU')} unclaimed listings →
+                      </Link>
+                    ) : (
+                      <>
+                        {registerTotalsByType.ndis > 0 && (
+                          <Link className="btn-tint" to={`/ndis-providers${registerStateCode ? `/${registerStateCode.toLowerCase()}${registerSuburbSlug ? `/${registerSuburbSlug}` : ''}` : ''}`}>
+                            See all {registerTotalsByType.ndis.toLocaleString('en-AU')} NDIS listings →
+                          </Link>
+                        )}
+                        {' '}
+                        {registerTotalsByType.aged_care > 0 && (
+                          <Link className="btn-tint" to={`/aged-care-providers${registerStateCode ? `/${registerStateCode.toLowerCase()}${registerSuburbSlug ? `/${registerSuburbSlug}` : ''}` : ''}`}>
+                            See all {registerTotalsByType.aged_care.toLocaleString('en-AU')} aged care listings →
+                          </Link>
+                        )}
+                      </>
+                    )}
+                  </p>
                 )}
-
-                <p className="dir-areas">
-                  {p.serviceSuburbs.length > 0
-                    ? <>Supports people in <strong>{p.serviceSuburbs.join(', ')}</strong>{moreSuburbs > 0 ? ` and ${moreSuburbs} more area${moreSuburbs === 1 ? '' : 's'}` : ''}</>
-                    : 'Service areas not listed'}
-                </p>
-
-                {p.slug && <Link className="dir-card-cta" to={`/directory/${p.slug}`}>View profile →</Link>}
-                <button type="button" className="dir-card-cta" onClick={() => openMatchModal()}>
-                  Get matched with providers like this →
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-
-        {!loading && !error && total > PAGE_SIZE && (
-          <Pagination page={page} totalPages={totalPages} onChange={goToPage} disabled={pageLoading} />
+              </>
+            )}
+          </section>
         )}
       </section>
 

@@ -3,9 +3,8 @@ import { Link } from 'react-router-dom';
 import Avatar from '../../components/ui/Avatar';
 import ProviderMap from '../../components/ProviderMap';
 import { getCategoryOverview, searchRegister, type CategoryOverview, type RegisterListItem } from '../../api/registerApi';
-import { KIND_BY_TYPE, STATES, areaLabel, categoryForService, registerPath, type RegisterType } from '../../lib/registerMeta';
+import { AGED_CARE_CATEGORIES, KIND_BY_TYPE, STATES, areaLabel, categoryForService, registerPath, type RegisterType } from '../../lib/registerMeta';
 
-const AGED_CARE_CATEGORIES = ['Dementia care', 'Palliative care', 'Residential aged care'];
 const fmt = (n: number) => n.toLocaleString('en-AU');
 
 interface Props {

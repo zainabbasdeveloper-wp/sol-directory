@@ -70,6 +70,9 @@ export const areaLabel = (a: { suburb: string; state: string }) => `${a.suburb},
 
 export const absoluteUrl = (path: string) => `${window.location.origin}${path}`;
 
+/** The register categories that belong to the aged care register, not NDIS — used to pick which register `type` a category search means. */
+export const AGED_CARE_CATEGORIES = ['Dementia care', 'Palliative care', 'Residential aged care'];
+
 /** Mirrors the API's REGISTER_SUPPORT_CATEGORIES (registerNormalise.ts) — the only values ?category= accepts. */
 export const SUPPORT_CATEGORIES = [
   'Support coordination', 'Plan management', 'Personal care', 'Domestic assistance', 'Transport', 'Therapy services', 'Nursing',
