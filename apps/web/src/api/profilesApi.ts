@@ -67,6 +67,19 @@ export interface PublicWorkerList { items: PublicWorker[]; page: number; limit: 
 
 export const listPublicWorkers = (p: { service?: string; suburb?: string; state?: string; q?: string; page?: number; limit?: number }) =>
   publicGet<PublicWorkerList>(`/workers/public${qs(p)}`);
+export interface ServiceWorkers {
+  /** 'service' = workers who list this very service; 'category' = the wider category it falls under; null = nobody. */
+  level: 'service' | 'category' | null;
+  matchedNames: string[];
+  items: PublicWorker[];
+  total: number;
+  allTotal: number;
+  states: Record<string, number>;
+  page: number; limit: number; hasMore: boolean;
+}
+/** Public workers for a service page (falls back to the service's wider category). */
+export const listWorkersForService = (p: { title: string; category?: string; state?: string; page?: number; limit?: number }) =>
+  publicGet<ServiceWorkers>(`/workers/public/for-service${qs(p)}`);
 export const getPublicWorker = (slug: string) => publicGet<PublicWorker>(`/workers/public/${encodeURIComponent(slug)}`);
 export const workerPhotoUrl = (w: Pick<PublicWorker, 'slug' | 'hasPhoto' | 'photoVersion'>) =>
   w.hasPhoto ? `${API_URL}/workers/public/${encodeURIComponent(w.slug)}/photo?v=${w.photoVersion}` : null;

@@ -3,6 +3,7 @@ import Worker from '../models/Worker.js';
 import WorkerPhoto, { photoBytes } from '../models/WorkerPhoto.js';
 import { STATE_CODES } from '../services/registerNormalise.js';
 import { ratingsFor } from './workersReviews.controller.js';
+import { workerServiceCandidates } from '../services/workerServiceMatch.js';
 
 /**
  * PUBLIC independent-worker listings — no login.
@@ -84,6 +85,58 @@ export async function listPublicWorkers(req: Request, res: Response) {
   res.set('Cache-Control', 'public, max-age=60');
   const ratings = await ratingsFor(docs.map((d: any) => d._id));
   res.json({ items: docs.map((d: any) => toPublic(d, ratings.get(String(d._id)))), page, limit, total, hasMore: page * limit < total });
+}
+
+/**
+ * Public workers for a service page. Tries the page's own service first and
+ * falls back to its wider category when nobody lists it (see workerServiceMatch).
+ * Also returns per-state counts so the page can offer a state filter.
+ */
+export async function workersForService(title: string, category: string | undefined, opts: { state?: string; page?: number; limit?: number } = {}) {
+  const page = Math.max(1, opts.page ?? 1);
+  const limit = Math.min(PUBLIC_MAX_LIMIT, Math.max(1, opts.limit ?? 6));
+  const state = opts.state && STATE_CODES.includes(opts.state as never) ? opts.state : '';
+
+  for (const cand of workerServiceCandidates(title, category)) {
+    const base = { ...visible(), services: { $in: cand.patterns } };
+    const total = await Worker.countDocuments(base);
+    if (total === 0) continue;
+    const filter = state ? { ...base, state } : base;
+    const [docs, filtered, byState, present] = await Promise.all([
+      Worker.find(filter).select(PROJECTION).sort({ firstName: 1, _id: 1 }).skip((page - 1) * limit).limit(limit).lean(),
+      state ? Worker.countDocuments(filter) : Promise.resolve(total),
+      Worker.aggregate([{ $match: base }, { $group: { _id: '$state', n: { $sum: 1 } } }]),
+      // Which catalogue names those workers really listed (most common first), so links filter by a real value.
+      Worker.aggregate([
+        { $match: base }, { $unwind: '$services' }, { $match: { services: { $in: cand.patterns } } },
+        { $group: { _id: '$services', n: { $sum: 1 } } }, { $sort: { n: -1, _id: 1 } },
+      ]),
+    ]);
+    const ratings = await ratingsFor(docs.map((d: any) => d._id));
+    return {
+      level: cand.level,
+      matchedNames: (present as { _id: string }[]).map((p) => p._id),
+      items: docs.map((d: any) => toPublic(d, ratings.get(String(d._id)))),
+      total: filtered,
+      allTotal: total,
+      states: Object.fromEntries((byState as { _id: string | null; n: number }[]).filter((s) => s._id).map((s) => [s._id, s.n])),
+      page, limit, hasMore: page * limit < filtered,
+    };
+  }
+  return { level: null, matchedNames: [] as string[], items: [], total: 0, allTotal: 0, states: {} as Record<string, number>, page, limit, hasMore: false };
+}
+
+// GET /api/workers/public/for-service?title=&category=&state=&page=&limit=
+export async function listWorkersForService(req: Request, res: Response) {
+  const title = str(req.query.title).slice(0, 120);
+  if (!title) return res.status(400).json({ error: 'title is required.' });
+  const state = str(req.query.state).toUpperCase();
+  if (state && !STATE_CODES.includes(state as never)) return res.status(400).json({ error: 'Unknown state.' });
+  const result = await workersForService(title, str(req.query.category).slice(0, 60) || undefined, {
+    state, page: Number(req.query.page) || 1, limit: Number(req.query.limit) || 6,
+  });
+  res.set('Cache-Control', 'public, max-age=60');
+  res.json(result);
 }
 
 // GET /api/workers/public/:slug

@@ -6,7 +6,8 @@ import Provider from '../models/Provider.js';
 import Worker from '../models/Worker.js';
 import WorkerReview from '../models/WorkerReview.js';
 import { MIN_SUBURB_LISTINGS, STATE_CODES, type RegisterType } from '../services/registerNormalise.js';
-import { computeHub } from './register.controller.js';
+import { categoryListings, computeCategoryOverview, computeHub } from './register.controller.js';
+import { workersForService } from './workersPublic.controller.js';
 import { MIN_INDEXABLE_PROVIDERS, VISIBLE_PROVIDER, areaRows, conditionRows, publicLogoUrl } from './providersPublic.controller.js';
 
 /**
@@ -470,6 +471,18 @@ async function fetchWpService(slug: string): Promise<any | null> {
   }
 }
 
+const AGED_CARE_CATEGORIES = ['Dementia care', 'Palliative care', 'Residential aged care'];
+const overviewCache = new Map<string, { at: number; value: Awaited<ReturnType<typeof computeCategoryOverview>> }>();
+async function overviewFor(type: RegisterType, category: string) {
+  const key = `${type}|${category}`;
+  const hit = overviewCache.get(key);
+  if (hit && Date.now() - hit.at < 30 * 60 * 1000) return hit.value;
+  const value = await computeCategoryOverview(type, category);
+  overviewCache.set(key, { at: Date.now(), value });
+  return value;
+}
+const STATE_SLUGS: Record<string, string> = { NSW: 'nsw', VIC: 'vic', QLD: 'qld', WA: 'wa', SA: 'sa', TAS: 'tas', ACT: 'act', NT: 'nt' };
+
 const jsonArr = (v: unknown): any[] => {
   if (Array.isArray(v)) return v;
   if (typeof v !== 'string' || !v.trim()) return [];
@@ -495,20 +508,68 @@ async function servicePage(site: string, slug: string): Promise<Page> {
   const noindex = meta.seo_noindex === true || meta.seo_noindex === '1';
 
   const block = (h: string, text: string) => (text ? `<h2>${esc(h)}</h2><p>${esc(text)}</p>` : '');
+  const paras = (k: string) => (typeof meta[k] === 'string' ? String(meta[k]).split(/\n{2,}/).map(plain).filter(Boolean) : []);
+  const lines = (k: string) => (typeof meta[k] === 'string' ? String(meta[k]).split(/\r?\n/).map(plain).filter(Boolean) : []);
+  const sources = jsonArr(meta.sources_json).filter((x: any) => x?.title && /^https?:\/\//i.test(String(x.url ?? '')));
+
+  // Live register data for this service's category (facts from the imported register only).
+  const category = s('register_category');
+  let registerHtml = '';
+  if (category) {
+    const type: RegisterType = AGED_CARE_CATEGORIES.includes(category) ? 'aged_care' : 'ndis';
+    const kind = KINDS[type === 'ndis' ? 'ndis-providers' : 'aged-care-providers'];
+    const base = `/${type === 'ndis' ? 'ndis-providers' : 'aged-care-providers'}`;
+    try {
+      const [o, listings] = await Promise.all([overviewFor(type, category), categoryListings(type, category, 12)]);
+      if (o.total > 0) {
+        const stateRows = Object.entries(o.states).sort((a, b) => b[1] - a[1]);
+        registerHtml =
+          `<h2>${esc(category)} providers on the ${esc(kind.label)} register</h2>` +
+          `<p>${fmt(o.total)} ${esc(kind.label)} ${o.total === 1 ? 'provider lists' : 'providers list'} ${esc(category.toLowerCase())} supports on the ${esc(kind.register)}. A register listing shows what the register says, not who has capacity.</p>` +
+          (listings.length ? `<h3>Providers listing ${esc(category.toLowerCase())}</h3><ul>${listings.map((x) => li(`${base}/${x.slug}`, x.name, `- ${x.states.join(', ')}${x.areas.length ? `; includes ${x.areas.slice(0, 3).map((a) => `${a.suburb}, ${a.state}`).join('; ')}` : ''}`)).join('')}</ul><p><a href="${base}?category=${encodeURIComponent(category)}">See all ${fmt(o.total)} ${esc(category.toLowerCase())} providers</a></p>` : '') +
+          `<h3>Listings by state and territory</h3><ul>${stateRows.map(([code, n]) => li(`${base}/${STATE_SLUGS[code] ?? code.toLowerCase()}?category=${encodeURIComponent(category)}`, STATE_NAMES[code] ?? code, `(${fmt(n)})`)).join('')}</ul>` +
+          (o.topSuburbs.length ? `<h3>Suburbs with the most listings</h3><ul>${o.topSuburbs.slice(0, 12).map((x) => li(`${base}/${STATE_SLUGS[x.state] ?? x.state.toLowerCase()}/${x.slug}`, `${x.suburb}, ${x.state}`, `(${fmt(x.count)})`)).join('')}</ul>` : '') +
+          (o.widest.length ? `<h3>Listings covering the most areas</h3><ul>${o.widest.slice(0, 8).map((x) => li(`${base}/${x.slug}`, x.name, `- ${fmt(x.areaCount)} areas`)).join('')}</ul>` : '');
+      }
+    } catch {
+      registerHtml = ''; // the register data is an extra; never fail the page over it
+    }
+  }
+  // Independent workers who published a profile for this service (opt-in, admin-approved only).
+  let workersHtml = '';
+  try {
+    const w = await workersForService(title, category || undefined, { limit: 6 });
+    if (w.total > 0) {
+      workersHtml =
+        `<h2>Independent support workers offering ${esc(title)}</h2>` +
+        `<p>${fmt(w.total)} independent ${w.total === 1 ? 'worker has' : 'workers have'} published a public profile for ${w.level === 'service' ? esc(title.toLowerCase()) : `${esc(category.toLowerCase() || title.toLowerCase())} supports (the wider category this service falls under)`}. Contact details are not shown; organisations request contact through SolDirectory.</p>` +
+        `<ul>${w.items.map((x) => li(`/independent-workers/${x.slug}`, `${x.firstName}${x.lastInitial ? ` ${x.lastInitial}.` : ''}`, `${[x.role, [x.suburb, x.state].filter(Boolean).join(', '), x.services.slice(0, 4).join(', ')].filter(Boolean).join(' - ')}`)).join('')}</ul>` +
+        `<p><a href="/independent-workers/find?service=${encodeURIComponent(w.matchedNames[0] ?? title)}">Browse independent workers</a></p>`;
+    }
+  } catch {
+    workersHtml = ''; // an extra: never fail the page over it
+  }
   const body =
     `<nav aria-label="Breadcrumb"><a href="/">Home</a> / <a href="/services">Services</a> / ${esc(title)}</nav>` +
     `<h1>${esc(s('hero_headline') || title)}</h1>` +
     (s('hero_eyebrow') ? `<p>${esc(s('hero_eyebrow'))}</p>` : '') +
     (s('hero_description') || excerpt ? `<p>${esc(s('hero_description') || excerpt)}</p>` : '') +
+    (s('short_answer') ? `<h2>The short answer</h2><p>${esc(s('short_answer'))}</p>` : '') +
     (plain(item.content?.rendered ?? '') ? `<div>${esc(plain(item.content.rendered))}</div>` : '') +
-    block(s('overview_heading') || `About ${title}`, s('overview_content')) +
+    (paras('overview_content').length ? `<h2>${esc(s('overview_heading') || `About ${title}`)}</h2>${paras('overview_content').map((p) => `<p>${esc(p)}</p>`).join('')}` : '') +
     block('Who is this service for?', s('who_for')) +
+    (lines('how_to_choose').length ? `<h2>How to choose a provider</h2><ul>${lines('how_to_choose').map((l) => `<li>${esc(l)}</li>`).join('')}</ul>` : '') +
+    (lines('getting_started').length ? `<h2>Getting started</h2><ol>${lines('getting_started').map((l) => `<li>${esc(l)}</li>`).join('')}</ol>` : '') +
     block('Eligibility', s('eligibility')) +
     block('Funding', [s('funding_info'), s('plan_management_info')].filter(Boolean).join(' ')) +
+    block('What it costs', s('cost_info')) +
+    registerHtml +
+    workersHtml +
     (creds.length ? `<h2>Checking credentials</h2><ul>${creds.map((c: any) => `<li><strong>${esc(plain(c.title))}</strong> ${esc(plain(c.description ?? ''))}</li>`).join('')}</ul>` : '') +
     (cards.length ? `<h2>${esc(s('regulations_heading') || 'Regulation and safeguards')}</h2>${s('regulations_intro') ? `<p>${esc(s('regulations_intro'))}</p>` : ''}<ul>${cards.map((c: any) => `<li><strong>${esc(plain(c.title))}</strong> ${esc(plain(c.description ?? ''))}${c.phone ? ` Phone: ${esc(String(c.phone))}.` : ''}</li>`).join('')}</ul>` : '') +
     (related.length ? `<h2>Related services</h2><ul>${related.map((r: any) => li(`/services/${r.slug}`, plain(r.title))).join('')}</ul>` : '') +
     (faqs.length ? `<h2>Frequently asked questions</h2>${faqs.map((f: any) => `<h3>${esc(plain(f.question))}</h3><p>${esc(plain(f.answer))}</p>`).join('')}` : '') +
+    (sources.length ? `<h2>Sources and further reading</h2><ul>${sources.map((x: any) => `<li><a href="${esc(String(x.url))}" rel="noopener nofollow">${esc(plain(x.title))}</a></li>`).join('')}</ul>` : '') +
     `<p><a href="/directory">Browse the provider directory</a></p>`;
 
   return {

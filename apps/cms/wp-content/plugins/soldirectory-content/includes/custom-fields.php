@@ -103,8 +103,13 @@ function soldirectory_field_groups(): array {
             [
                 'id' => 'service_fields', 'title' => 'Service Information',
                 'fields' => [
+                    ['name' => 'short_answer', 'label' => 'The short answer', 'type' => 'textarea', 'rows' => 3, 'instructions' => 'Two or three plain sentences shown in a highlighted box at the top of the page. Also the first thing a search engine reads.'],
                     ['name' => 'overview_heading', 'label' => 'Overview Heading', 'type' => 'text'],
-                    ['name' => 'overview_content', 'label' => 'Overview Content', 'type' => 'textarea', 'rows' => 4],
+                    ['name' => 'overview_content', 'label' => 'Overview Content', 'type' => 'textarea', 'rows' => 10, 'instructions' => 'Separate paragraphs with a blank line.'],
+                    ['name' => 'how_to_choose', 'label' => 'How to choose a provider', 'type' => 'textarea', 'rows' => 6, 'instructions' => 'One point per line. Shown as a list.'],
+                    ['name' => 'getting_started', 'label' => 'Getting started', 'type' => 'textarea', 'rows' => 5, 'instructions' => 'One step per line. Shown as a numbered list.'],
+                    ['name' => 'cost_info', 'label' => 'How costs work', 'type' => 'textarea', 'rows' => 4, 'instructions' => 'Explain how this is priced and paid for. Do not put specific prices here unless you can keep them current.'],
+                    ['name' => 'register_category', 'label' => 'Register category', 'type' => 'select', 'choices' => ['' => 'None (no register block)', 'Support coordination' => 'Support coordination', 'Plan management' => 'Plan management', 'Personal care' => 'Personal care', 'Domestic assistance' => 'Domestic assistance', 'Transport' => 'Transport', 'Therapy services' => 'Therapy services', 'Nursing' => 'Nursing', 'Housing (SDA & SIL)' => 'Housing (SDA & SIL)', 'Community access' => 'Community access', 'Respite care' => 'Respite care', 'Behaviour support' => 'Behaviour support', 'Employment & education support' => 'Employment & education support', 'Life skills' => 'Life skills', 'Assistive technology & equipment' => 'Assistive technology & equipment', 'Home modifications' => 'Home modifications', 'Dementia care' => 'Dementia care', 'Palliative care' => 'Palliative care', 'Residential aged care' => 'Residential aged care', 'Support workers' => 'Support workers'], 'default' => '', 'instructions' => 'Which public-register support category this service belongs to. Drives the live "providers on the register" tables on the page. Leave as None if no category fits honestly.'],
                     ['name' => 'who_for', 'label' => 'Who Is This Service For?', 'type' => 'textarea', 'rows' => 3],
                     ['name' => 'eligibility', 'label' => 'Eligibility', 'type' => 'textarea', 'rows' => 3],
                     ['name' => 'funding_info', 'label' => 'Funding Options', 'type' => 'textarea', 'rows' => 3],
@@ -213,6 +218,19 @@ function soldirectory_field_groups(): array {
                         'sub_fields' => [
                             ['name' => 'title', 'label' => 'Title', 'type' => 'text'],
                             ['name' => 'description', 'label' => 'Description', 'type' => 'textarea', 'rows' => 2],
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'id' => 'service_sources_fields', 'title' => 'Sources',
+                'fields' => [
+                    [
+                        'name' => 'sources_repeater', 'label' => 'Sources and further reading', 'type' => 'repeater', 'layout' => 'block', 'row_label_field' => 'title',
+                        'instructions' => 'Official pages this content relies on. Shown as links at the bottom of the page.',
+                        'sub_fields' => [
+                            ['name' => 'title', 'label' => 'Title', 'type' => 'text', 'width' => 50],
+                            ['name' => 'url', 'label' => 'URL', 'type' => 'text', 'width' => 50],
                         ],
                     ],
                 ],

@@ -161,3 +161,21 @@ fields, uses `seo_title` / `seo_description` for the title and meta description,
 crawlers as full HTML from the API (`/seo-shell/services/<slug>`, wired in
 `deploy/nginx-soldirectory.conf`). If WordPress is down the shell answers 502 so nginx serves the
 normal app instead of a false 404. `seo_noindex` on a post is honoured.
+
+### Long-form guides (v3)
+
+Each of the 89 services now has a written guide on top of the shorter fields: a short answer, a
+three-paragraph overview, how to choose a provider, getting started, "what it costs" (how pricing
+works, never a price), eight FAQs and a sources list (official root sites only). About 1,200 words
+per page from WordPress, before the live data. The text lives in `includes/content-long-1..8.php`
+and `content-services-1..3.php`; `content-services.php` writes it. Text this tool wrote earlier
+(the short overview, the earlier five-question FAQ) is upgraded automatically if nobody has edited
+it; anything an editor changed is left alone.
+
+New fields on the Service post: The short answer, How to choose a provider (one per line), Getting
+started (one per line), How costs work, Register category (drives the live register tables on the
+page), and Sources. The "Register category" is set per service in the content files, so the
+service-to-category match is explicit rather than guessed.
+
+Live data on the page (from the imported register, not written by hand): listings per state, the
+suburbs with the most listings, and the listings covering the most areas, for the service's category.

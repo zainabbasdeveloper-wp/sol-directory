@@ -7,6 +7,7 @@ import { PublicHeader, PublicFooter } from '../public/PublicLayout';
 import WordPressTemplate from '../../components/wordpress/WordPressTemplate';
 import ProviderMap from '../../components/ProviderMap';
 import ServiceRegisterBlock from './ServiceRegisterBlock';
+import ServiceWorkersBlock from './ServiceWorkersBlock';
 import { categoryForService } from '../../lib/registerMeta';
 import { setJsonLd } from '../../lib/seo';
 import NotFound from './NotFound';
@@ -126,6 +127,14 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
   // --- Service Information ---
   const overviewHeading = str(meta.overview_heading);
   const overviewContent = str(meta.overview_content);
+  const overviewParagraphs = overviewContent.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+  const lines = (v: unknown) => str(v).split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const shortAnswer = str(meta.short_answer);
+  const howToChoose = lines(meta.how_to_choose);
+  const gettingStarted = lines(meta.getting_started);
+  const costInfo = str(meta.cost_info);
+  const registerCategory = str(meta.register_category);
+  const sources = safeParseJson<{ title: string; url: string }[]>(meta.sources_json, []).filter((s) => s.title && /^https?:\/\//i.test(s.url));
   const whoFor = str(meta.who_for);
   const eligibility = str(meta.eligibility);
   const fundingInfo = str(meta.funding_info);
@@ -171,14 +180,23 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
   const tocItems: { href: string; label: string }[] = [];
   if (content) {
     tocItems.push({ href: '#wp-cpt-overview', label: 'Overview' });
+    if (shortAnswer) tocItems.push({ href: '#wp-cpt-short', label: 'The short answer' });
+    if (howToChoose.length > 0) tocItems.push({ href: '#wp-cpt-choose', label: 'How to choose a provider' });
+    if (gettingStarted.length > 0) tocItems.push({ href: '#wp-cpt-start', label: 'Getting started' });
     if (glanceRows.length > 0) tocItems.push({ href: '#wp-cpt-glance', label: 'At a glance' });
     if (eligibility) tocItems.push({ href: '#wp-cpt-eligibility', label: 'Eligibility' });
     if (fundingInfo) tocItems.push({ href: '#wp-cpt-funding', label: 'Funding' });
+    if (costInfo) tocItems.push({ href: '#wp-cpt-cost', label: 'What it costs' });
     if (hasRelatedProviders) tocItems.push({ href: '#wp-cpt-providers', label: 'Providers near you' });
+    if (config.pathPrefix === 'services') {
+      if (registerCategory || categoryForService(content.title)) tocItems.push({ href: '#wp-cpt-register', label: 'Providers on the register' });
+      tocItems.push({ href: '#wp-cpt-workers', label: 'Independent workers' });
+    }
     if (regulatorCards.length > 0) tocItems.push({ href: '#wp-cpt-regulations', label: regulationsHeading || 'Regulations & compliance' });
     if (credentials.length > 0) tocItems.push({ href: '#wp-cpt-credentials', label: 'Checking credentials' });
     if (relatedServices.length > 0) tocItems.push({ href: '#wp-cpt-related', label: 'Related services' });
     if (faqs.length > 0) tocItems.push({ href: '#wp-cpt-faq', label: 'FAQ' });
+    if (sources.length > 0) tocItems.push({ href: '#wp-cpt-sources', label: 'Sources' });
     tocItems.push({ href: '#wp-cpt-cta', label: 'Get matched' });
   }
 
@@ -251,6 +269,13 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
               </div>
             </section>
 
+            {shortAnswer && (
+              <section id="wp-cpt-short" className="wp-cpt-short">
+                <h2>The short answer</h2>
+                <p>{shortAnswer}</p>
+              </section>
+            )}
+
             {/* Native WordPress editor content — the bulk of unique
                 per-service educational writing belongs here as rich
                 text with natural headings, not broken into dozens of
@@ -264,13 +289,27 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
             {(overviewHeading || overviewContent || whoFor) && (
               <section id="wp-cpt-overview-extra" className="wp-cpt-section">
                 {overviewHeading && <h2>{overviewHeading}</h2>}
-                {overviewContent && <p>{overviewContent}</p>}
+                {overviewParagraphs.map((para, i) => <p key={i}>{para}</p>)}
                 {whoFor && (
                   <>
                     <h3>Who is this service for?</h3>
                     <p>{whoFor}</p>
                   </>
                 )}
+              </section>
+            )}
+
+            {howToChoose.length > 0 && (
+              <section id="wp-cpt-choose" className="wp-cpt-section">
+                <h2>How to choose a provider</h2>
+                <ul className="wp-cpt-plain-list">{howToChoose.map((l, i) => <li key={i}>{l}</li>)}</ul>
+              </section>
+            )}
+
+            {gettingStarted.length > 0 && (
+              <section id="wp-cpt-start" className="wp-cpt-section">
+                <h2>Getting started</h2>
+                <ol className="wp-cpt-plain-list">{gettingStarted.map((l, i) => <li key={i}>{l}</li>)}</ol>
               </section>
             )}
 
@@ -301,6 +340,13 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
                 <h2>Funding</h2>
                 {fundingInfo && <p>{fundingInfo}</p>}
                 {planManagementInfo && <p>{planManagementInfo}</p>}
+              </section>
+            )}
+
+            {costInfo && (
+              <section id="wp-cpt-cost" className="wp-cpt-section">
+                <h2>What it costs</h2>
+                <p>{costInfo}</p>
               </section>
             )}
 
@@ -339,7 +385,9 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
               </section>
             )}
 
-            {config.pathPrefix === 'services' && content && <ServiceRegisterBlock serviceName={content.title} />}
+            {config.pathPrefix === 'services' && content && <ServiceRegisterBlock serviceName={content.title} category={registerCategory || undefined} />}
+
+            {config.pathPrefix === 'services' && content && <ServiceWorkersBlock serviceName={content.title} category={registerCategory || categoryForService(content.title)} />}
 
             {regulatorCards.length > 0 && (
               <section id="wp-cpt-regulations" className="wp-cpt-section">
@@ -406,6 +454,16 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
                     </details>
                   ))}
                 </div>
+              </section>
+            )}
+
+            {sources.length > 0 && (
+              <section id="wp-cpt-sources" className="wp-cpt-section">
+                <h2>Sources and further reading</h2>
+                <ul className="wp-cpt-plain-list">
+                  {sources.map((s) => <li key={s.url}><a href={s.url} target="_blank" rel="noopener noreferrer">{s.title}</a></li>)}
+                </ul>
+                <p className="wp-cpt-table-note">General information only, not advice. Confirm details with the NDIS, your planner or the provider.</p>
               </section>
             )}
 

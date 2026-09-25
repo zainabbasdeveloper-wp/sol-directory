@@ -266,7 +266,7 @@ check('content: editor FAQ is never replaced', json_decode($GLOBALS['META'][602]
 check('content: placeholder "ABC" eligibility is replaced', strpos($GLOBALS['META'][607]['eligibility'], 'reasonable and necessary') !== false);
 check('content: real editor funding text is kept', strpos($GLOBALS['META'][607]['funding_info'], 'written by an editor') !== false);
 $faq = json_decode($GLOBALS['META'][603]['faq_repeater'], true);
-check('content: FAQ has 5 rows of {question, answer} incl. the find-a-provider one', count($faq) === 5 && isset($faq[0]['question'], $faq[0]['answer']) && strpos($faq[4]['question'], 'provider near me') !== false);
+check('content: FAQ has 8 rows of {question, answer} (3 short + 3 long + 2 shared) ending with the find-a-provider one', count($faq) === 8 && isset($faq[0]['question'], $faq[0]['answer']) && strpos($faq[7]['question'], 'provider near me') !== false, (string) count($faq));
 $cred = json_decode($GLOBALS['META'][603]['credentials_repeater'], true); $reg = json_decode($GLOBALS['META'][603]['regulator_cards_repeater'], true);
 check('content: credentials + regulator cards have the row shapes the frontend reads', count($cred) === 3 && isset($cred[0]['title'], $cred[0]['description']) && count($reg) === 2 && isset($reg[0]['title'], $reg[0]['phone'], $reg[0]['website'], $reg[0]['cta']));
 $rel = json_decode($GLOBALS['META'][603]['related_services'], true);
@@ -274,7 +274,7 @@ check('content: related services are real sibling post ids, not self, no duplica
 check('content: hero + CTA use action keys the frontend understands', $GLOBALS['META'][603]['hero_cta_url'] === 'get_matched' && $GLOBALS['META'][603]['cta_primary_action'] === 'get_matched' && $GLOBALS['META'][603]['cta_secondary_action'] === '/directory');
 check('content: no cost / wait / hours / availability fields are written', !isset($GLOBALS['META'][603]['typical_cost']) && !isset($GLOBALS['META'][603]['wait_time']) && !isset($GLOBALS['META'][603]['hours']) && !isset($GLOBALS['META'][603]['availability']));
 check('content: the two duplicate posts both get content but related links use ONE post per title', isset($GLOBALS['META'][608]['who_for']) && isset($GLOBALS['META'][609]['who_for']));
-check('content: marked with the version', ($GLOBALS['META'][603]['_sd_content_v2'] ?? '') === '2');
+check('content: marked with the version', ($GLOBALS['META'][603]['_sd_content_v3'] ?? '') === '3');
 $before = $GLOBALS['META'][603];
 $sum2 = soldirectory_apply_service_content(false);
 check('content: second run without force is a no-op', $sum2['posts'] === 0 && $GLOBALS['META'][603] === $before);
@@ -285,5 +285,65 @@ $changedKeys = []; foreach ($GLOBALS['META'] as $pid => $mm) foreach ($mm as $k 
 check('content: forced run re-fills only what is blank', $sum3['fields'] === 1 && $GLOBALS['META'][603]['who_for'] !== '' && $changedKeys === ['603:who_for'], json_encode($changedKeys));
 $phones = []; foreach ($GLOBALS['META'] as $mm) if (isset($mm['regulator_cards_repeater'])) foreach (json_decode($mm['regulator_cards_repeater'], true) as $c) $phones[$c['phone']] = 1;
 check('content: only the two known regulator phone numbers appear', array_keys($phones) == ['1800 035 544', '1800 800 110']);
+
+
+// 11) Long-form guides ---------------------------------------------------------------------
+$long = soldirectory_service_long();
+$baseTitles = array_keys(soldirectory_baseline_service_text());
+check('long: every one of the 89 services has a long-form guide', count($long) === 89 && !array_diff($baseTitles, array_keys($long)) && !array_diff(array_keys($long), $baseTitles), (string) count($long) . ' missing: ' . implode('; ', array_diff($baseTitles, array_keys($long))));
+$cats = ['', 'Support coordination', 'Plan management', 'Personal care', 'Domestic assistance', 'Transport', 'Therapy services', 'Nursing', 'Housing (SDA & SIL)', 'Community access', 'Respite care', 'Behaviour support', 'Employment & education support', 'Life skills', 'Assistive technology & equipment', 'Home modifications', 'Dementia care', 'Palliative care', 'Residential aged care', 'Support workers'];
+$bad = []; $badNum = []; $badBs = []; $words = 0; $allQ = [];
+foreach ($long as $t => $l) {
+    $paras = preg_split('/\n\n/', $l['overview']);
+    if (!in_array($l['cat'], $cats, true)) $bad[] = "$t (cat {$l['cat']})";
+    if (strlen($l['short']) < 80 || count($paras) !== 3 || strlen($l['overview']) < 600 || count($l['choose']) !== 5 || count($l['start']) !== 4 || count($l['faq']) !== 3) $bad[] = "$t (shape " . count($paras) . '/' . strlen($l['overview']) . '/' . count($l['choose']) . '/' . count($l['start']) . '/' . count($l['faq']) . ')';
+    foreach ($l['faq'] as $qa) { if (substr($qa[0], -1) !== '?' || strlen($qa[1]) < 30) $bad[] = "$t (faq)"; $allQ[] = strtolower($qa[0]); }
+    $blob = $l['short'] . ' ' . $l['overview'] . ' ' . implode(' ', $l['choose']) . ' ' . implode(' ', $l['start']) . ' ' . implode(' ', array_map(fn($qa) => $qa[0] . ' ' . $qa[1], $l['faq']));
+    if (preg_match('/\$|\d+\s*(%|percent|weeks|months|years|days|hours)|\b\d{2,}\b/i', $blob)) $badNum[] = $t;
+    if (strpos($blob, '\\') !== false) $badBs[] = $t;
+    $words += str_word_count($blob);
+}
+check('long: every guide has the full shape (3 paragraphs, 5 choose, 4 steps, 3 FAQs) and a valid register category', !$bad, implode('; ', array_slice($bad, 0, 4)));
+check('long: no prices, percentages, or timeframes stated as fact', !$badNum, implode('; ', $badNum));
+check('long: no stray backslashes (PHP quoting bug) in any text', !$badBs, implode('; ', $badBs));
+foreach ($editorial as $t => $e) foreach ($e[2] as $qa) $allQ[] = strtolower($qa[0]);
+check('long: FAQ questions stay unique across short + long sets', count($allQ) === count(array_unique($allQ)), implode(' | ', array_slice(array_keys(array_filter(array_count_values($allQ), fn($n) => $n > 1)), 0, 4)));
+check('long: guides average at least 300 words of unique writing each', $words / count($long) >= 300, (string) round($words / count($long)));
+
+// apply with long content: upgrade rules
+$GLOBALS['POSTS'] = []; $GLOBALS['OPTIONS'] = []; $GLOBALS['META'] = [];
+$mk = function ($id, $title) { $p = new WP_Post($id, 'service', $title); $GLOBALS['POSTS'][$id] = $p; $GLOBALS['TYPES'][$id] = 'service'; };
+$mk(701, 'Physiotherapy'); $mk(702, 'Occupational therapy'); $mk(703, 'Psychology'); $mk(704, 'Speech pathology'); $mk(705, 'Vehicle modifications');
+$base = soldirectory_baseline_service_text();
+$GLOBALS['META'][701]['overview_content'] = $base['Physiotherapy'];                                  // earlier machine text -> upgraded
+$GLOBALS['META'][701]['faq_repeater'] = json_encode(soldirectory_machine_faq_rows('Physiotherapy', $editorial['Physiotherapy'], null)); // earlier machine FAQ -> upgraded
+$GLOBALS['META'][702]['overview_content'] = 'My own carefully written overview of occupational therapy for our clients.';           // editor -> kept
+$GLOBALS['META'][702]['faq_repeater'] = json_encode([['question' => 'Editor Q?', 'answer' => 'Editor A.']]);                  // editor -> kept
+$sumL = soldirectory_apply_service_content(false);
+$m = $GLOBALS['META'][701];
+check('long: earlier machine overview is upgraded to the long guide (3 paragraphs)', substr_count($m['overview_content'], "\n\n") === 2 && strlen($m['overview_content']) > 600);
+check('long: earlier machine FAQ set is upgraded to 8 rows', count(json_decode($m['faq_repeater'], true)) === 8);
+check('long: an editor-written overview and FAQ are never replaced', $GLOBALS['META'][702]['overview_content'] === 'My own carefully written overview of occupational therapy for our clients.' && count(json_decode($GLOBALS['META'][702]['faq_repeater'], true)) === 1);
+check('long: short answer, how-to-choose (5 lines), getting-started (4 lines), cost info written', strlen($m['short_answer']) > 80 && substr_count($m['how_to_choose'], "\n") === 4 && substr_count($m['getting_started'], "\n") === 3 && strpos($m['cost_info'], 'Pricing Arrangements and Price Limits') !== false);
+check('long: cost text names no price', !preg_match('/\$|\d/', $m['cost_info']));
+check('long: register category is stored (and none when a service fits no category)', $m['register_category'] === 'Therapy services' && !isset($GLOBALS['META'][705]['register_category']));
+$src = json_decode($m['sources_repeater'], true);
+check('long: sources are official root sites, always incl. NDIS + Commission, AHPRA for health services', count($src) === 3 && strpos($src[0]['url'], 'https://www.ndis.gov.au') === 0 && strpos($src[1]['url'], 'ndiscommission.gov.au') !== false && strpos($src[2]['url'], 'ahpra.gov.au') !== false, json_encode($src));
+$srcAll = []; foreach ($long as $t => $l) foreach (soldirectory_source_links($l['src'] ?? []) as $x) $srcAll[$x['url']] = 1;
+check('long: only the known source sites are ever linked', !array_diff(array_keys($srcAll), ['https://www.ndis.gov.au', 'https://www.ndiscommission.gov.au', 'https://www.ahpra.gov.au', 'https://www.jobaccess.gov.au']), implode(',', array_keys($srcAll)));
+// Optional: dump what the REST API would return for a real service, so the web/API side can be tested against the true shape.
+if (getenv('SD_EMIT_REST')) {
+    $out = [];
+    foreach ([701 => 'physiotherapy', 705 => 'vehicle-modifications'] as $pid => $slug) {
+        $post = $GLOBALS['POSTS'][$pid];
+        $post->post_name = $slug;
+        $resp = new WP_REST_Response(['id' => $pid, 'slug' => $slug, 'title' => ['rendered' => $post->post_title], 'excerpt' => ['rendered' => '<p>' . $post->post_excerpt . '</p>'], 'content' => ['rendered' => '']]);
+        foreach ($GLOBALS['FILTERS']['rest_prepare_service'] ?? [] as $cb) $resp = $cb($resp, $post);
+        $out[] = $resp->get_data();
+    }
+    file_put_contents(getenv('SD_EMIT_REST'), json_encode($out));
+}
+$again = soldirectory_apply_service_content(true);
+check('long: forced re-run changes nothing further (idempotent)', $again['fields'] === 0, json_encode($again));
 
 echo "\n$pass passed, $fail failed\n";

@@ -117,3 +117,38 @@
 .wp-cpt-credentials-title { font-weight: 600; margin: 0 0 2px; font-size: 13.5px; }
 .wp-cpt-cta-secondary { background: transparent; border: 1px solid var(--color-border, #E8EEF7); border-radius: 999px; padding: 10px 20px; font-weight: 600; font-size: 13.5px; }
 .wp-cpt-howtopay { margin-top: 12px; font-size: 13.5px; color: var(--color-text-muted, #5A6B84); }
+
+/* Long-form service guide sections */
+.wp-cpt-short { margin: 0 0 8px; padding: 18px 20px; background: var(--color-primary-tint, #F2F7FF); border-left: 4px solid var(--color-primary, #1769E0); border-radius: 0 12px 12px 0; }
+.wp-cpt-short h2 { margin: 0 0 6px; font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #0F4FA8; }
+.wp-cpt-short p { margin: 0; font-size: 16.5px; line-height: 1.65; }
+.wp-cpt-section p { line-height: 1.7; overflow-wrap: anywhere; }
+.wp-cpt-h3 { margin: 22px 0 8px; font-size: 14.5px; font-weight: 700; }
+.wp-cpt-plain-list { margin: 0; padding-left: 22px; display: grid; gap: 8px; line-height: 1.6; }
+.wp-cpt-table { width: 100%; border-collapse: collapse; font-size: 14px; background: #fff; border: 1px solid var(--color-border, #E8EEF7); border-radius: 10px; overflow: hidden; }
+.wp-cpt-table th, .wp-cpt-table td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--color-border, #E8EEF7); }
+.wp-cpt-table thead th { background: var(--color-primary-tint, #F2F7FF); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted, #5A6B84); }
+.wp-cpt-table tbody th { font-weight: 600; }
+.wp-cpt-table td:last-child, .wp-cpt-table thead th:last-child { text-align: right; }
+.wp-cpt-table a { color: inherit; text-decoration: none; }
+.wp-cpt-table a:hover { text-decoration: underline; }
+.wp-cpt-table-note { margin: 8px 0 0; font-size: 12.5px; color: var(--color-text-muted, #5A6B84); }
+
+/* Provider and worker lists on service pages */
+.wp-cpt-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
+.wp-cpt-chip { border: 1px solid var(--color-border, #E8EEF7); background: #fff; border-radius: 999px; padding: 6px 12px; font-size: 13px; cursor: pointer; color: inherit; }
+.wp-cpt-chip:hover { border-color: var(--color-primary, #2563EB); }
+.wp-cpt-chip.is-on { background: var(--color-primary, #2563EB); border-color: var(--color-primary, #2563EB); color: #fff; }
+.wp-cpt-cards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.wp-cpt-card { border: 1px solid var(--color-border, #E8EEF7); border-radius: 12px; padding: 14px 16px; background: #fff; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.wp-cpt-card-head { display: flex; gap: 12px; align-items: center; }
+.wp-cpt-card-title { margin: 0; font-size: 15px; line-height: 1.3; overflow-wrap: anywhere; }
+.wp-cpt-card-title a { color: inherit; text-decoration: none; }
+.wp-cpt-card-title a:hover { text-decoration: underline; }
+.wp-cpt-card-meta { margin: 0; font-size: 13px; color: var(--color-text-muted, #5A6B84); overflow-wrap: anywhere; }
+.wp-cpt-card-link { font-size: 13.5px; font-weight: 600; color: var(--color-primary, #2563EB); text-decoration: none; margin-top: auto; }
+.wp-cpt-card-link:hover { text-decoration: underline; }
+.wp-cpt-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.wp-cpt-tag { font-size: 12px; padding: 3px 9px; border-radius: 999px; background: var(--color-primary-tint, #F2F7FF); color: var(--color-text-muted, #5A6B84); }
+.wp-cpt-plist-foot { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin-top: 14px; }
+.wp-cpt-plist { margin-bottom: 8px; }
