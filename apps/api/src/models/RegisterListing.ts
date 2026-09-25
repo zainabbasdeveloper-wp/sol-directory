@@ -38,6 +38,18 @@ export interface RegisterListingDoc extends Document {
   providerId?: mongoose.Types.ObjectId;
   importedAt: Date;
   sourceUpdatedAt?: Date;
+  /**
+   * A logo/icon URL found on the business's OWN website (see
+   * services/logoDiscovery.ts) — never copied or re-hosted from anywhere
+   * else, and never from a competitor's site. This is a link to an image
+   * that still lives on the business's own domain; if they take it down
+   * the frontend just falls back to initials, same as any other Avatar.
+   * A claimed listing's real Provider-uploaded logo always takes
+   * priority over this — see register.controller.ts.
+   */
+  logoUrl?: string;
+  /** When logoUrl was last looked up (or last tried and found nothing) — skip re-checking too often. */
+  logoCheckedAt?: Date;
 }
 
 const areaSchema = new Schema<RegisterArea>(
@@ -61,6 +73,8 @@ const registerListingSchema = new Schema<RegisterListingDoc>(
     providerId: { type: Schema.Types.ObjectId, ref: 'Provider' },
     importedAt: { type: Date, default: Date.now },
     sourceUpdatedAt: Date,
+    logoUrl: String,
+    logoCheckedAt: Date,
   },
   { timestamps: true }
 );

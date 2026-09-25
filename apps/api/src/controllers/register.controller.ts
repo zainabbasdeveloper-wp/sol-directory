@@ -59,7 +59,10 @@ async function listItemsWithLogos(docs: any[], preferredArea?: { state?: string;
     for (const p of providers) { const u = publicLogoUrl(p); if (u) logos.set(String(p._id), u); }
   }
   const locations = await primaryLocations(docs, preferredArea);
-  return docs.map((d) => toListItem(d as never, d.providerId ? logos.get(String(d.providerId)) ?? null : null, locations.get(String(d._id)) ?? null));
+  // Priority: a claimed listing's real Provider-uploaded logo, then a logo
+  // found on the business's own website (fetchRegisterLogos.ts), else none
+  // (the frontend shows initials) — never a competitor's image.
+  return docs.map((d) => toListItem(d as never, (d.providerId && logos.get(String(d.providerId))) || d.logoUrl || null, locations.get(String(d._id)) ?? null));
 }
 
 /**
@@ -140,7 +143,7 @@ export async function searchRegister(req: Request, res: Response) {
   const wantFacets = req.query.facets === '1';
   const [docs, total, facets] = await Promise.all([
     RegisterListing.find(filter)
-      .select('type slug name states areaCount areas supportCategories website providerId claimStatus')
+      .select('type slug name states areaCount areas supportCategories website providerId claimStatus logoUrl')
       .sort({ nameLower: 1, _id: 1 })
       .skip((page - 1) * limit)
       .limit(limit)
@@ -223,7 +226,7 @@ export async function computeCategoryOverview(type: RegisterType, category: stri
 /** First listings (A-Z) for one support category, in the list-card shape; used by the crawler HTML of service pages. */
 export async function categoryListings(type: RegisterType, category: string, limit = 12) {
   const docs = await RegisterListing.find({ type, supportCategories: category })
-    .select('type slug name states areaCount areas supportCategories website providerId claimStatus')
+    .select('type slug name states areaCount areas supportCategories website providerId claimStatus logoUrl')
     .sort({ nameLower: 1, _id: 1 })
     .limit(limit)
     .lean();
@@ -309,11 +312,20 @@ export async function getRegisterListing(req: Request, res: Response) {
   const first = doc.areas[0];
   const related = first
     ? await RegisterListing.find({ type, areas: { $elemMatch: { state: first.state, suburbSlug: first.suburbSlug } }, _id: { $ne: doc._id } })
-        .select('type slug name states areaCount areas supportCategories website')
+        .select('type slug name states areaCount areas supportCategories website logoUrl')
         .sort({ nameLower: 1 })
         .limit(6)
         .lean()
     : [];
+
+  // Same priority as listItemsWithLogos: a claimed listing's real
+  // Provider-uploaded logo first, then one found on the business's own
+  // website, else none.
+  let logoUrl: string | null = doc.logoUrl ?? null;
+  if (doc.providerId && doc.claimStatus === 'claimed') {
+    const p: any = await Provider.findOne({ _id: doc.providerId, hasLogoUpload: true, ...VISIBLE_PROVIDER }).select('slug logoUrl hasLogoUpload updatedAt').lean();
+    if (p) logoUrl = publicLogoUrl(p) || logoUrl;
+  }
 
   res.set('Cache-Control', 'public, max-age=300');
   res.json({
@@ -327,6 +339,7 @@ export async function getRegisterListing(req: Request, res: Response) {
     services: doc.services,
     supportCategories: doc.supportCategories,
     claimStatus: doc.claimStatus,
+    logoUrl,
     location: (await primaryLocations([doc as never])).get(String(doc._id)) ?? null,
     related: await listItemsWithLogos(related as never[], first ? { state: first.state, suburbSlug: first.suburbSlug } : undefined),
   });
