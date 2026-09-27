@@ -29,16 +29,24 @@ if (!defined('ABSPATH')) exit;
  * leaving Gutenberg.
  */
 add_filter('use_block_editor_for_post_type', function ($use_block_editor, $post_type) {
-    if (in_array($post_type, ['mega_menu_tab', 'provider', 'service', 'service_area_page', 'location', 'guide'], true)) return false;
+    if (in_array($post_type, ['mega_menu_tab', 'provider', 'register_listing', 'service', 'service_area_page', 'location', 'guide'], true)) return false;
     return $use_block_editor;
 }, 10, 2);
 
-/** Tells editors exactly what is (and isn't) editable on a synced provider. */
+/** Tells editors exactly what is (and isn't) editable on a synced provider or register listing. */
 add_action('admin_notices', function () {
     $screen = function_exists('get_current_screen') ? get_current_screen() : null;
-    if (!$screen || $screen->post_type !== 'provider' || $screen->base !== 'post') return;
-    echo '<div class="notice notice-info"><p><strong>This provider is synced from the SolDirectory application.</strong> '
-        . 'Details below are overwritten the next time the provider is saved in the application, so edit them there. '
-        . 'The one thing you <em>can</em> manage here is the logo: set the <strong>Featured image</strong> and it '
-        . 'flows back to the live site automatically.</p></div>';
+    if (!$screen || $screen->base !== 'post') return;
+
+    if ($screen->post_type === 'provider') {
+        echo '<div class="notice notice-info"><p><strong>This provider is synced from the SolDirectory application.</strong> '
+            . 'Details below are overwritten the next time the provider is saved in the application, so edit them there. '
+            . 'The one thing you <em>can</em> manage here is the logo: set the <strong>Featured image</strong> and it '
+            . 'flows back to the live site automatically.</p></div>';
+    } elseif ($screen->post_type === 'register_listing') {
+        echo '<div class="notice notice-info"><p><strong>This is a public-register listing, not a real SolDirectory provider account.</strong> '
+            . 'It was imported from the NDIS or My Aged Care register and has no login or contact details. '
+            . 'Everything here is read-only and overwritten from the application database — nothing can be edited on this screen. '
+            . 'It only becomes a real, matching-eligible Provider if the business claims it and an admin verifies the claim.</p></div>';
+    }
 });

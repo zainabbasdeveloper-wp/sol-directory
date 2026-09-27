@@ -14,6 +14,7 @@
     "recompute:worker-ratings": "tsx src/scripts/recomputeWorkerRatings.ts",
     "geocode:suburbs": "tsx src/scripts/geocodeSuburbs.ts",
     "fetch:register-logos": "tsx src/scripts/fetchRegisterLogos.ts",
+    "sync:register-wp": "tsx src/scripts/syncRegisterListingsToWordPress.ts",
     "job:capacity-check": "tsx src/scripts/weeklyCapacityCheck.ts"
   },
   "dependencies": {

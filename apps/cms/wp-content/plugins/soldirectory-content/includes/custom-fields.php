@@ -296,6 +296,30 @@ function soldirectory_field_groups(): array {
             ],
         ],
 
+        // Display MIRROR of a RegisterListing record (public NDIS/Aged
+        // Care register data) — see post-types.php's 'register_listing'
+        // CPT comment for why this is deliberately separate from
+        // 'provider'. Entirely read-only: there is nothing to manage
+        // here, this exists so an admin can browse/search the imported
+        // register inventory from wp-admin.
+        'register_listing' => [
+            [
+                'id' => 'register_listing_fields', 'title' => 'Register Listing Details (synced from the public NDIS/Aged Care registers)', 'readonly' => true,
+                'fields' => [
+                    ['name' => 'mongo_id', 'label' => 'Application Record ID', 'type' => 'text', 'instructions' => 'Links this post to its real record. Do not edit.'],
+                    ['name' => 'mongo_slug', 'label' => 'Application Slug', 'type' => 'text', 'width' => 34],
+                    ['name' => 'register_type', 'label' => 'Register', 'type' => 'text', 'width' => 33, 'instructions' => '"ndis" or "aged_care".'],
+                    ['name' => 'claim_status', 'label' => 'Claim Status', 'type' => 'text', 'width' => 33, 'instructions' => 'unclaimed, requested, or claimed.'],
+                    ['name' => 'website', 'label' => 'Website', 'type' => 'text'],
+                    ['name' => 'states', 'label' => 'States', 'type' => 'text', 'width' => 34],
+                    ['name' => 'area_count', 'label' => 'Areas Listed', 'type' => 'text', 'width' => 33],
+                    ['name' => 'primary_suburb', 'label' => 'Primary Suburb', 'type' => 'text', 'width' => 33],
+                    ['name' => 'services_json', 'label' => 'Support Categories', 'type' => 'textarea', 'rows' => 2, 'instructions' => 'Stored as a JSON array — matches the *_json convention used elsewhere in this plugin.'],
+                    ['name' => 'logo_url', 'label' => 'Discovered Logo URL', 'type' => 'text', 'instructions' => 'Found on the business\'s own website (services/logoDiscovery.ts); never uploaded here, and only used once the listing is claimed.'],
+                ],
+            ],
+        ],
+
         'service_area_page' => [
             [
                 'id' => 'service_area_page_fields', 'title' => 'Service Area Page Details',

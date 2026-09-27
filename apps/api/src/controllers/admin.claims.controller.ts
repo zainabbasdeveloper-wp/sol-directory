@@ -4,6 +4,7 @@ import type { AuthedRequest } from '../middleware/auth.middleware.js';
 import ClaimRequest from '../models/ClaimRequest.js';
 import RegisterListing from '../models/RegisterListing.js';
 import { logActivity } from '../models/AdminActivity.js';
+import { syncRegisterListingToWordPress } from '../services/registerWordpressSync.service.js';
 
 const STATUSES = ['new', 'verified', 'rejected'] as const;
 const PAGE_SIZE = 25;
@@ -80,7 +81,13 @@ export async function updateClaimStatus(req: AuthedRequest, res: Response) {
     ClaimRequest.exists({ listingId: claim.listingId, status: 'new' }),
   ]);
   const claimStatus = verified ? 'claimed' : open ? 'requested' : 'unclaimed';
-  await RegisterListing.updateOne({ _id: claim.listingId }, { $set: { claimStatus } });
+  const listing = await RegisterListing.findOneAndUpdate({ _id: claim.listingId }, { $set: { claimStatus } }, { new: true });
+
+  // Fire-and-forget: keep the wp-admin mirror's draft/publish state (and
+  // claim_status meta) in step with what just changed here. Never blocks
+  // or fails this request — same reliability contract as every other
+  // WordPress sync call site.
+  if (listing) void syncRegisterListingToWordPress(listing);
 
   await logActivity('claim_request_updated', `Claim request for ${claim.listingName} marked ${status}`);
   res.json({ id: String(claim._id), status, listingClaimStatus: claimStatus });

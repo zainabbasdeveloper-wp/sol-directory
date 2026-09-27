@@ -50,6 +50,14 @@ export interface RegisterListingDoc extends Document {
   logoUrl?: string;
   /** When logoUrl was last looked up (or last tried and found nothing) — skip re-checking too often. */
   logoCheckedAt?: Date;
+  /**
+   * The wp-admin 'register_listing' post mirroring this record (see
+   * services/registerWordpressSync.service.ts) — a separate post type from
+   * 'provider', so an imported/unclaimed listing is never mixed into the
+   * same wp-admin list as a real, matching-eligible Provider. Set once on
+   * first sync so re-syncs PUT the same post instead of duplicating it.
+   */
+  wpPostId?: number;
 }
 
 const areaSchema = new Schema<RegisterArea>(
@@ -75,6 +83,7 @@ const registerListingSchema = new Schema<RegisterListingDoc>(
     sourceUpdatedAt: Date,
     logoUrl: String,
     logoCheckedAt: Date,
+    wpPostId: Number,
   },
   { timestamps: true }
 );
