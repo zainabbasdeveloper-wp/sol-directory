@@ -85,6 +85,8 @@ export interface RegisterListing {
   services: string[];
   supportCategories: string[];
   claimStatus: 'unclaimed' | 'requested' | 'claimed';
+  /** A claimed listing's own uploaded logo, else one found on the business's own website, else null (initials shown). */
+  logoUrl: string | null;
   location: { lat: number; lng: number } | null;
   related: RegisterListItem[];
 }

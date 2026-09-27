@@ -13,6 +13,7 @@
     "import:register": "tsx src/scripts/importRegisterListings.ts",
     "recompute:worker-ratings": "tsx src/scripts/recomputeWorkerRatings.ts",
     "geocode:suburbs": "tsx src/scripts/geocodeSuburbs.ts",
+    "fetch:register-logos": "tsx src/scripts/fetchRegisterLogos.ts",
     "job:capacity-check": "tsx src/scripts/weeklyCapacityCheck.ts"
   },
   "dependencies": {

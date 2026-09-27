@@ -1,10 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PublicHeader, PublicFooter } from './PublicLayout';
 import { setJsonLd } from '../../lib/seo';
 import Counter from '../../components/Counter';
 import PhotoSlot from '../../components/PhotoSlot';
 import { useSiteStats } from '../../hooks/useSiteStats';
+import { getRegisterHub } from '../../api/registerApi';
 import { siteConfig, phoneHref } from '../../config/siteConfig';
 import { providerCountLabel } from '../../lib/statsCounts';
 import SupportFinder from '../../components/home/SupportFinder';
@@ -24,6 +25,18 @@ export default function Home() {
   // real data to publish an honest median. Each stat below hides itself
   // when it has nothing true to show.
   const stats = useSiteStats();
+
+  // Organisations imported from the public NDIS/My Aged Care registers —
+  // real, but not SolDirectory members and not counted in the figures
+  // above. Fetched and shown separately, with its own label, so it can
+  // never read as "providers accepting enquiries".
+  const [registerTotal, setRegisterTotal] = useState<number | null>(null);
+  useEffect(() => {
+    let alive = true;
+    Promise.all([getRegisterHub('ndis').catch(() => null), getRegisterHub('aged_care').catch(() => null)])
+      .then(([ndis, agedCare]) => { if (alive) setRegisterTotal((ndis?.total ?? 0) + (agedCare?.total ?? 0)); });
+    return () => { alive = false; };
+  }, []);
 
   // Each figure appears only when the database can back it (see
   // stats.controller.ts); nothing here is estimated or padded.
@@ -183,6 +196,17 @@ export default function Home() {
             ))}
           </dl>
           <p className="home-stats-note">Providers confirm their availability every week. Figures are calculated from live directory records.</p>
+        </section>
+      )}
+
+      {registerTotal !== null && registerTotal > 0 && (
+        <section className="stats-section home-register-note" aria-label="Public register inventory">
+          <p>
+            SolDirectory's directory also draws on <Counter value={registerTotal} /> organisations listed on the public{' '}
+            <Link to="/ndis-providers">NDIS</Link> and <Link to="/aged-care-providers">My Aged Care</Link> registers. These are real
+            businesses, but they haven't signed up to or claimed a listing on SolDirectory yet, so they can't receive enquiries here —
+            browse them on the register pages, or a business can <Link to="/ndis-providers">claim its own listing</Link>.
+          </p>
         </section>
       )}
 
