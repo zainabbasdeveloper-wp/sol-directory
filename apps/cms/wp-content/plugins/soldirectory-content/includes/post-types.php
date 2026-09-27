@@ -105,6 +105,37 @@ add_action('init', function () {
         'publicly_queryable' => true,
     ]);
 
+    // --- Register Listing ---
+    // A read-only MIRROR of a RegisterListing record (public NDIS/Aged
+    // Care register data, imported in bulk) — deliberately its OWN post
+    // type, never mixed into 'provider' above. A RegisterListing is not a
+    // real signed-up business: it has no login, no contact details, and
+    // never appears in matching, so a content admin browsing wp-admin
+    // must always be able to tell "real provider accepting enquiries"
+    // apart from "just on the public register" at a glance. Mongo remains
+    // the source of truth (services/registerWordpressSync.service.ts in
+    // apps/api pushes every create/claim-status change here, keyed by
+    // mongo_id so re-syncs PUT the same post). Nothing flows back the
+    // other way — unlike 'provider', there's no featured-image/logo
+    // webhook, since the logo (if any) is discovered from the business's
+    // own website, not uploaded in wp-admin.
+    // publicly_queryable is false: this is a wp-admin inventory view only.
+    // The public pages for these listings (/ndis-providers/{slug} etc.)
+    // are served by the React app straight from the Node API/Mongo, and
+    // giving this CPT its own public URL would just create a competing,
+    // unmanaged duplicate of that canonical page.
+    register_post_type('register_listing', [
+        'labels' => ['name' => 'Register Listings', 'singular_name' => 'Register Listing'],
+        'public' => true,
+        'show_in_rest' => true,
+        'rest_base' => 'register-listings',
+        'supports' => ['title'],
+        'has_archive' => false,
+        'publicly_queryable' => false,
+        'show_in_menu' => true,
+        'menu_icon' => 'dashicons-list-view',
+    ]);
+
     // --- Taxonomies ---
     // 'provider' added alongside 'service'/'service_area_page' below —
     // these 4 categories already existed for editorial content and are

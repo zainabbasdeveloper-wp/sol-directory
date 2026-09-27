@@ -166,7 +166,7 @@ function soldirectory_inject_group_meta(array &$meta, array $fields, int $post_i
     }
 }
 
-foreach (['service', 'location', 'guide', 'service_area_page', 'mega_menu_tab', 'provider'] as $post_type) {
+foreach (['service', 'location', 'guide', 'service_area_page', 'mega_menu_tab', 'provider', 'register_listing'] as $post_type) {
     add_filter("rest_prepare_{$post_type}", function ($response, $post) {
         // Adding these fields is decoration. If it ever fails, the page must
         // still be served (without the extras) rather than fatal the endpoint.
@@ -232,21 +232,25 @@ add_action('rest_api_init', function () {
     ]);
 });
 
-// The provider sync (apps/api's wordpressSync.service.ts) writes
-// these via the REST API's `meta` object on POST /wp/v2/providers/{id}.
-// ACF/SCF used to auto-register each of its fields as REST-editable
-// meta; now that 'provider' has no ACF field group at all, that has
-// to be done explicitly, or the sync's writes would silently stop
-// persisting (reads are unaffected — the REST filter above always
-// reads directly from post meta regardless of registration).
+// The provider and register-listing syncs (apps/api's
+// wordpressSync.service.ts / registerWordpressSync.service.ts) write
+// these via the REST API's `meta` object on POST /wp/v2/providers/{id}
+// and /wp/v2/register-listings/{id}. ACF/SCF used to auto-register each
+// of its fields as REST-editable meta; now that neither CPT has an ACF
+// field group at all, that has to be done explicitly, or the syncs'
+// writes would silently stop persisting (reads are unaffected — the
+// REST filter above always reads directly from post meta regardless of
+// registration).
 add_action('init', function () {
-    $numericFields = ['latitude', 'longitude', 'travel_radius_km', 'weekly_capacity_hours', 'roster_size'];
-    foreach (soldirectory_field_groups()['provider'][0]['fields'] as $field) {
-        register_post_meta('provider', $field['name'], [
-            'show_in_rest' => true,
-            'single' => true,
-            'type' => in_array($field['name'], $numericFields, true) ? 'number' : 'string',
-            'auth_callback' => fn() => current_user_can('edit_posts'),
-        ]);
+    $numericFields = ['latitude', 'longitude', 'travel_radius_km', 'weekly_capacity_hours', 'roster_size', 'area_count'];
+    foreach (['provider', 'register_listing'] as $post_type) {
+        foreach (soldirectory_field_groups()[$post_type][0]['fields'] as $field) {
+            register_post_meta($post_type, $field['name'], [
+                'show_in_rest' => true,
+                'single' => true,
+                'type' => in_array($field['name'], $numericFields, true) ? 'number' : 'string',
+                'auth_callback' => fn() => current_user_can('edit_posts'),
+            ]);
+        }
     }
 });
