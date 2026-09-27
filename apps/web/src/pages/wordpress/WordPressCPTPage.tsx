@@ -186,6 +186,13 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
   if (content) {
     tocItems.push({ href: '#wp-cpt-overview', label: 'Overview' });
     if (shortAnswer) tocItems.push({ href: '#wp-cpt-short', label: 'The short answer' });
+    // Providers/register/workers come right after the short answer — visitors
+    // land here to find someone to contact, not to read a guide first.
+    if (hasRelatedProviders) tocItems.push({ href: '#wp-cpt-providers', label: 'Providers near you' });
+    if (config.pathPrefix === 'services') {
+      if (registerCategory || categoryForService(content.title)) tocItems.push({ href: '#wp-cpt-register', label: 'Providers on the register' });
+      tocItems.push({ href: '#wp-cpt-workers', label: 'Independent workers' });
+    }
     if (sessionParagraphs.length > 0) tocItems.push({ href: '#wp-cpt-session', label: 'What a session looks like' });
     if (howToChoose.length > 0) tocItems.push({ href: '#wp-cpt-choose', label: 'How to choose a provider' });
     if (questionsToAsk.length > 0) tocItems.push({ href: '#wp-cpt-ask', label: 'Questions to ask' });
@@ -195,11 +202,6 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
     if (eligibility) tocItems.push({ href: '#wp-cpt-eligibility', label: 'Eligibility' });
     if (fundingInfo) tocItems.push({ href: '#wp-cpt-funding', label: 'Funding' });
     if (costInfo) tocItems.push({ href: '#wp-cpt-cost', label: 'What it costs' });
-    if (hasRelatedProviders) tocItems.push({ href: '#wp-cpt-providers', label: 'Providers near you' });
-    if (config.pathPrefix === 'services') {
-      if (registerCategory || categoryForService(content.title)) tocItems.push({ href: '#wp-cpt-register', label: 'Providers on the register' });
-      tocItems.push({ href: '#wp-cpt-workers', label: 'Independent workers' });
-    }
     if (regulatorCards.length > 0) tocItems.push({ href: '#wp-cpt-regulations', label: regulationsHeading || 'Regulations & compliance' });
     if (credentials.length > 0) tocItems.push({ href: '#wp-cpt-credentials', label: 'Checking credentials' });
     if (relatedServices.length > 0) tocItems.push({ href: '#wp-cpt-related', label: 'Related services' });
@@ -283,6 +285,50 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
                 <p>{shortAnswer}</p>
               </section>
             )}
+
+            {/* Providers, register listings and independent workers come right
+                after the short answer — before the long-form guide — because
+                most visitors are here to find someone to contact, not to read
+                first. See ARCH_NOTES / user request: "providers should come on
+                top of page". */}
+            {hasRelatedProviders && (
+              <section id="wp-cpt-providers" className="wp-cpt-section">
+                <h2>{finderHeading}</h2>
+                {finderDescription && <p className="wp-cpt-finder-desc">{finderDescription}</p>}
+                {finderShowCount && <p className="wp-cpt-showing">Showing {providers.length} of {providersTotal} {providersTotal === 1 ? 'provider' : 'providers'} on SolDirectory</p>}
+                {finderShowMap && (
+                  <div style={{ marginBottom: 20 }}>
+                    <ProviderMap
+                      providers={providers.map((p) => ({
+                        id: p.id,
+                        name: p.tradingName || p.legalEntityName,
+                        location: p.location,
+                        category: p.registrationGroups[0] ?? null,
+                        suburb: p.serviceSuburbs[0] ?? null,
+                        href: p.slug ? `/providers/${p.slug}` : null,
+                      }))}
+                    />
+                  </div>
+                )}
+                <div className="wp-cpt-provider-grid">
+                  {providers.map((p) => (
+                    p.slug ? (
+                      // The public profile page (/directory/:slug) - no login needed.
+                      <Link key={p.id} to={`/directory/${p.slug}`} className="wp-cpt-provider-card">
+                        {p.tradingName || p.legalEntityName}
+                      </Link>
+                    ) : (
+                      <div key={p.id} className="wp-cpt-provider-card">{p.tradingName || p.legalEntityName}</div>
+                    )
+                  ))}
+                </div>
+                <button type="button" className="btn-gradient" style={{ marginTop: 16 }} onClick={() => openMatchModal()}>{finderCtaLabel}</button>
+              </section>
+            )}
+
+            {config.pathPrefix === 'services' && content && <ServiceRegisterBlock serviceName={content.title} category={registerCategory || undefined} />}
+
+            {config.pathPrefix === 'services' && content && <ServiceWorkersBlock serviceName={content.title} category={registerCategory || categoryForService(content.title)} />}
 
             {/* Native WordPress editor content — the bulk of unique
                 per-service educational writing belongs here as rich
@@ -391,45 +437,6 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
                 <p>{costInfo}</p>
               </section>
             )}
-
-            {hasRelatedProviders && (
-              <section id="wp-cpt-providers" className="wp-cpt-section">
-                <h2>{finderHeading}</h2>
-                {finderDescription && <p className="wp-cpt-finder-desc">{finderDescription}</p>}
-                {finderShowCount && <p className="wp-cpt-showing">Showing {providers.length} of {providersTotal} {providersTotal === 1 ? 'provider' : 'providers'} on SolDirectory</p>}
-                {finderShowMap && (
-                  <div style={{ marginBottom: 20 }}>
-                    <ProviderMap
-                      providers={providers.map((p) => ({
-                        id: p.id,
-                        name: p.tradingName || p.legalEntityName,
-                        location: p.location,
-                        category: p.registrationGroups[0] ?? null,
-                        suburb: p.serviceSuburbs[0] ?? null,
-                        href: p.slug ? `/providers/${p.slug}` : null,
-                      }))}
-                    />
-                  </div>
-                )}
-                <div className="wp-cpt-provider-grid">
-                  {providers.map((p) => (
-                    p.slug ? (
-                      // The public profile page (/directory/:slug) - no login needed.
-                      <Link key={p.id} to={`/directory/${p.slug}`} className="wp-cpt-provider-card">
-                        {p.tradingName || p.legalEntityName}
-                      </Link>
-                    ) : (
-                      <div key={p.id} className="wp-cpt-provider-card">{p.tradingName || p.legalEntityName}</div>
-                    )
-                  ))}
-                </div>
-                <button type="button" className="btn-gradient" style={{ marginTop: 16 }} onClick={() => openMatchModal()}>{finderCtaLabel}</button>
-              </section>
-            )}
-
-            {config.pathPrefix === 'services' && content && <ServiceRegisterBlock serviceName={content.title} category={registerCategory || undefined} />}
-
-            {config.pathPrefix === 'services' && content && <ServiceWorkersBlock serviceName={content.title} category={registerCategory || categoryForService(content.title)} />}
 
             {regulatorCards.length > 0 && (
               <section id="wp-cpt-regulations" className="wp-cpt-section">

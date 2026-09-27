@@ -16,7 +16,7 @@ const PAGE_SIZE = 12;
 // suburb by name are always included regardless.
 const NEARBY_RADIUS_KM = 25;
 
-interface Place { label: string; suburb: string; lat: number | null; lng: number | null }
+interface Place { label: string; suburb: string; lat: number | null; lng: number | null; state?: string }
 
 const STATUS_STYLE: Record<string, { label: string; tone: 'ok' | 'limited' | 'wait' | 'closed' }> = {
   'Open to referrals': { label: 'Accepting referrals', tone: 'ok' },
@@ -29,6 +29,14 @@ function initials(name: string): string {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('') || '?';
 }
 
+/**
+ * The main "Find a provider" directory. Real SolDirectory providers only —
+ * organisations imported from the public NDIS/My Aged Care registers but
+ * not yet claimed live on their own register pages (/ndis-providers,
+ * /aged-care-providers) and on every service/location page, not mixed in
+ * here. This page is specifically the "these businesses are on SolDirectory
+ * and can be matched/contacted" directory.
+ */
 export default function Directory() {
   const [params, setParams] = useSearchParams();
   const { openMatchModal } = useMatchModal();
@@ -238,7 +246,7 @@ export default function Directory() {
                 const s = placeItems.find((p) => p.id === item.key);
                 if (!s) return;
                 const label = formatPlace(s);
-                setPlace({ label, suburb: s.suburb, lat: s.lat, lng: s.lng });
+                setPlace({ label, suburb: s.suburb, lat: s.lat, lng: s.lng, state: s.state });
                 setPlaceText(label);
               }}
               // Enter on typed text (no suggestion chosen) searches that suburb by name.
@@ -353,6 +361,11 @@ export default function Directory() {
         {!loading && !error && total > PAGE_SIZE && (
           <Pagination page={page} totalPages={totalPages} onChange={goToPage} disabled={pageLoading} />
         )}
+
+        <p className="dir-register-hint">
+          Looking for a wider list, including businesses that haven’t signed up to SolDirectory yet? Browse the{' '}
+          <Link to="/ndis-providers">NDIS provider register</Link> or the <Link to="/aged-care-providers">My Aged Care register</Link>.
+        </p>
       </section>
 
       <PublicFooter />

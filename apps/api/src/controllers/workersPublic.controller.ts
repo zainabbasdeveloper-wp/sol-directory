@@ -4,6 +4,7 @@ import WorkerPhoto, { photoBytes } from '../models/WorkerPhoto.js';
 import { STATE_CODES } from '../services/registerNormalise.js';
 import { ratingsFor } from './workersReviews.controller.js';
 import { workerServiceCandidates } from '../services/workerServiceMatch.js';
+import SuburbGeo from '../models/SuburbGeo.js';
 
 /**
  * PUBLIC independent-worker listings — no login.
@@ -12,8 +13,10 @@ import { workerServiceCandidates } from '../services/workerServiceMatch.js';
  * approved by an admin appear. What's shown: first name + last initial,
  * job title, suburb and state, supports, languages, experience, availability
  * days, an indicative rate and their own bio and photo. NEVER a surname,
- * email, phone, exact address, coordinates or clearance details. Contact
- * stays behind the existing organisation-only contact-request flow.
+ * email, phone, exact address or clearance details. Contact stays behind
+ * the existing organisation-only contact-request flow. A worker's `location`
+ * is only ever their suburb's centroid (see SuburbGeo) — the same precision
+ * as the suburb text already shown, never a street address.
  */
 
 const PUBLIC_MAX_LIMIT = 30;
@@ -30,8 +33,24 @@ const visible = () => ({
   publicSlug: { $exists: true, $ne: null },
 });
 
-function toPublic(w: any, rating?: { rating: number; count: number }) {
+const slugify = (s: string) => s.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
+/** Batch-attaches each worker's suburb centroid (see the file comment) — one query, not one per worker. */
+async function withLocations(docs: any[]): Promise<Map<string, { lat: number; lng: number }>> {
+  const pairs = new Map<string, { state: string; suburbSlug: string }>();
+  for (const w of docs) { if (w.suburb && w.state) pairs.set(`${w.state}|${slugify(w.suburb)}`, { state: w.state, suburbSlug: slugify(w.suburb) }); }
+  const out = new Map<string, { lat: number; lng: number }>();
+  if (!pairs.size) return out;
+  const geos = await SuburbGeo.find({ $or: [...pairs.values()] }).select('state suburbSlug location').lean();
+  const bySuburb = new Map<string, { lat: number; lng: number }>();
+  for (const g of geos) { if (!g.location?.coordinates) continue; const [lng, lat] = g.location.coordinates; bySuburb.set(`${g.state}|${g.suburbSlug}`, { lat, lng }); }
+  for (const w of docs) { if (w.suburb && w.state) { const loc = bySuburb.get(`${w.state}|${slugify(w.suburb)}`); if (loc) out.set(String(w._id), loc); } }
+  return out;
+}
+
+function toPublic(w: any, rating?: { rating: number; count: number }, location: { lat: number; lng: number } | null = null) {
   return {
+    location,
     slug: w.publicSlug as string,
     firstName: w.firstName as string,
     lastInitial: w.lastName ? String(w.lastName).charAt(0).toUpperCase() : '',
@@ -83,8 +102,8 @@ export async function listPublicWorkers(req: Request, res: Response) {
   ]);
 
   res.set('Cache-Control', 'public, max-age=60');
-  const ratings = await ratingsFor(docs.map((d: any) => d._id));
-  res.json({ items: docs.map((d: any) => toPublic(d, ratings.get(String(d._id)))), page, limit, total, hasMore: page * limit < total });
+  const [ratings, locations] = await Promise.all([ratingsFor(docs.map((d: any) => d._id)), withLocations(docs)]);
+  res.json({ items: docs.map((d: any) => toPublic(d, ratings.get(String(d._id)), locations.get(String(d._id)) ?? null)), page, limit, total, hasMore: page * limit < total });
 }
 
 /**
@@ -112,11 +131,11 @@ export async function workersForService(title: string, category: string | undefi
         { $group: { _id: '$services', n: { $sum: 1 } } }, { $sort: { n: -1, _id: 1 } },
       ]),
     ]);
-    const ratings = await ratingsFor(docs.map((d: any) => d._id));
+    const [ratings, locations] = await Promise.all([ratingsFor(docs.map((d: any) => d._id)), withLocations(docs)]);
     return {
       level: cand.level,
       matchedNames: (present as { _id: string }[]).map((p) => p._id),
-      items: docs.map((d: any) => toPublic(d, ratings.get(String(d._id)))),
+      items: docs.map((d: any) => toPublic(d, ratings.get(String(d._id)), locations.get(String(d._id)) ?? null)),
       total: filtered,
       allTotal: total,
       states: Object.fromEntries((byState as { _id: string | null; n: number }[]).filter((s) => s._id).map((s) => [s._id, s.n])),
@@ -134,7 +153,8 @@ export async function workersInArea(state: string, suburb?: string, limit = 6) {
     Worker.find(filter).select(PROJECTION).sort({ firstName: 1, _id: 1 }).limit(limit).lean(),
     Worker.countDocuments(filter),
   ]);
-  return { total, items: docs.map((d: any) => toPublic(d)) };
+  const locations = await withLocations(docs);
+  return { total, items: docs.map((d: any) => toPublic(d, undefined, locations.get(String(d._id)) ?? null)) };
 }
 
 // GET /api/workers/public/for-service?title=&category=&state=&page=&limit=
@@ -157,7 +177,8 @@ export async function getPublicWorker(req: Request, res: Response) {
   const w = await Worker.findOne({ ...visible(), publicSlug: slug }).select(PROJECTION).lean();
   if (!w) return res.status(404).json({ error: 'Not found.' });
   res.set('Cache-Control', 'public, max-age=60');
-  res.json(toPublic(w, (await ratingsFor([(w as any)._id])).get(String((w as any)._id))));
+  const [rating, location] = await Promise.all([ratingsFor([(w as any)._id]), withLocations([w])]);
+  res.json(toPublic(w, rating.get(String((w as any)._id)), location.get(String((w as any)._id)) ?? null));
 }
 
 // GET /api/workers/public/:slug/photo

@@ -155,15 +155,32 @@ async function main() {
   await connectDB();
 
   let written = 0;
+  let protectedCount = 0;
   for (let i = 0; i < docs.length; i += BATCH) {
-    const ops = docs.slice(i, i + BATCH).map((d) => {
+    const batch = docs.slice(i, i + BATCH);
+
+    // A claimed listing belongs to a real business now — a fresh scrape
+    // must never silently overwrite its name, services, areas or website
+    // out from under it. Find which of this batch are already claimed
+    // before deciding what to write for each.
+    const claimedDocs = await RegisterListing.find({ $or: batch.map((d) => ({ type: d.type, slug: d.slug })), claimStatus: 'claimed' })
+      .select('type slug').lean();
+    const claimed = new Set(claimedDocs.map((r) => `${r.type}|${r.slug}`));
+
+    const ops = batch.map((d) => {
       const { website, sourceUpdatedAt, ...rest } = d;
+      const isClaimed = claimed.has(`${d.type}|${d.slug}`);
+      if (isClaimed) protectedCount++;
       return {
         updateOne: {
           filter: { type: d.type, slug: d.slug },
           update: {
-            $set: { ...rest, ...(website ? { website } : {}), ...(sourceUpdatedAt ? { sourceUpdatedAt } : {}) },
-            ...(website ? {} : { $unset: { website: '' } }),
+            // Claimed: only note that the source still lists this business — never touch its facts.
+            // Not claimed (or new): the full re-import, same as before.
+            $set: isClaimed
+              ? (sourceUpdatedAt ? { sourceUpdatedAt } : {})
+              : { ...rest, ...(website ? { website } : {}), ...(sourceUpdatedAt ? { sourceUpdatedAt } : {}) },
+            ...(!isClaimed && !website ? { $unset: { website: '' } } : {}),
             // Only on first insert: a re-import must never reset a listing that's been claimed.
             $setOnInsert: { claimStatus: 'unclaimed', importedAt: new Date() },
           },
@@ -175,7 +192,7 @@ async function main() {
     written += (res.upsertedCount ?? 0) + (res.modifiedCount ?? 0);
     process.stdout.write(`\r[register-import] ${Math.min(i + BATCH, docs.length)}/${docs.length}`);
   }
-  console.log(`\n[register-import] Done. ${written} listing(s) created or updated.`);
+  console.log(`\n[register-import] Done. ${written} listing(s) created or updated. ${protectedCount} already-claimed listing(s) left untouched (only their "still on the register" date was refreshed).`);
 }
 
 main()

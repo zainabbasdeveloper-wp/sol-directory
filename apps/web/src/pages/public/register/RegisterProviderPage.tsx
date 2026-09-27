@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { PublicHeader, PublicFooter } from '../PublicLayout';
 import Avatar from '../../../components/ui/Avatar';
+import ProviderMap from '../../../components/ProviderMap';
 import { getRegisterListing, submitClaimRequest, type RegisterListing } from '../../../api/registerApi';
 import { ApiError } from '../../../api/client';
 import { absoluteUrl, areaLabel, registerPath, stateByCode, type RegisterKind } from '../../../lib/registerMeta';
@@ -103,7 +104,7 @@ export default function RegisterProviderPage({ kind, slug }: { kind: RegisterKin
         <Breadcrumbs items={[{ label: 'Home', to: '/' }, { label: `${kind.label} providers`, to: registerPath(kind) }, { label: listing.name }]} />
 
         <div className="reg-detail-head">
-          <Avatar name={listing.name} size="lg" shape="square" />
+          <Avatar src={listing.logoUrl} name={listing.name} size="lg" shape="square" />
           <h1>{listing.name}</h1>
           <span className="reg-badge">Listed on the {kind.label} register</span>
           {listing.claimStatus !== 'claimed' && <span className="reg-badge reg-badge-muted">Not yet claimed by this business</span>}
@@ -122,6 +123,11 @@ export default function RegisterProviderPage({ kind, slug }: { kind: RegisterKin
             <dd>{listing.website ? <a href={listing.website} target="_blank" rel="nofollow noopener noreferrer">{host}</a> : 'Not listed'}</dd>
           </div>
         </dl>
+
+        <ProviderMap
+          providers={[{ id: listing.slug, name: listing.name, location: listing.location, suburb: first ? `${first.suburb}, ${first.state}` : null }]}
+          address={first ? `${first.suburb}, ${first.state}` : null}
+        />
 
         {listing.services.length > 0 && (
           <>
