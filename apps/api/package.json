@@ -16,6 +16,7 @@
     "fetch:register-logos": "tsx src/scripts/fetchRegisterLogos.ts",
     "sync:register-wp": "tsx src/scripts/syncRegisterListingsToWordPress.ts",
     "remove:demo-providers": "tsx src/scripts/removeDemoProviders.ts",
+    "list:providers": "tsx src/scripts/listProviders.ts",
     "job:capacity-check": "tsx src/scripts/weeklyCapacityCheck.ts"
   },
   "dependencies": {
