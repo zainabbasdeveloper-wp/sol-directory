@@ -4,6 +4,7 @@ import Combobox, { type ComboItem } from '../ui/Combobox';
 import { listActiveServices } from '../../api/serviceCatalogue';
 import { useMatchModal } from '../../context/MatchModalContext';
 import { providerCountLabel, serviceCount } from '../../lib/statsCounts';
+import { categoryForService } from '../../lib/registerMeta';
 import type { PublicStats } from '../../api/resources';
 import './SupportFinder.css';
 
@@ -142,6 +143,8 @@ function matches(text: string, hay: string): boolean {
 
 interface Props {
   stats: PublicStats | null;
+  /** Combined NDIS + Aged Care register counts per category — shown on a card only when there's no real Provider count yet, and always labelled distinctly ("listed", never "providers") so it's never read as accepting-enquiries capacity. */
+  registerCounts?: Record<string, number>;
 }
 
 /**
@@ -151,7 +154,7 @@ interface Props {
  * because it doesn't have a tile. Provider counts only appear when the
  * stats endpoint has a real number.
  */
-export default function SupportFinder({ stats }: Props) {
+export default function SupportFinder({ stats, registerCounts }: Props) {
   const navigate = useNavigate();
   const { openMatchModal } = useMatchModal();
   const [group, setGroup] = useState<GroupId | 'all'>('all');
@@ -258,7 +261,14 @@ export default function SupportFinder({ stats }: Props) {
 
         <div className="sf-grid">
           {visible.map((s) => {
-            const count = providerCountLabel(serviceCount(stats, s.name));
+            const providerCount = providerCountLabel(serviceCount(stats, s.name));
+            // Falls back to the public-register count for this category
+            // while there's no real Provider count yet — labelled
+            // "listed", never "providers", so it can't read as capacity
+            // to accept enquiries (see registerMeta's categoryForService).
+            const regCategory = categoryForService(s.name);
+            const regCount = !providerCount && regCategory ? registerCounts?.[regCategory] : undefined;
+            const count = providerCount ?? (regCount ? `${regCount.toLocaleString('en-AU')} listed` : null);
             return (
               <button key={s.name} type="button" className="sf-card" onClick={() => go(s.name)}>
                 <span className="sf-icon" aria-hidden="true">
