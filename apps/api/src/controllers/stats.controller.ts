@@ -49,7 +49,11 @@ const MIN_REPLY_SAMPLE = 5;
 // Only look at recent activity so the figure tracks how the directory
 // performs NOW, and the aggregation stays cheap as data grows.
 const REPLY_WINDOW_DAYS = 90;
-const CACHE_TTL_MS = 10 * 60 * 1000;
+// Short enough that an admin action (removing a provider, running an
+// import) is visible on the next real page load within well under a
+// minute, long enough to shield the DB from a burst of home-page
+// traffic all landing in the same second.
+const CACHE_TTL_MS = 30 * 1000;
 
 let cache: { at: number; value: PublicStats } | null = null;
 
@@ -128,6 +132,6 @@ export async function getPublicStats(_req: Request, res: Response) {
       if (!cache) return res.status(503).json({ error: 'Stats temporarily unavailable' });
     }
   }
-  res.set('Cache-Control', 'public, max-age=300');
+  res.set('Cache-Control', 'public, max-age=30');
   res.json(cache!.value);
 }
