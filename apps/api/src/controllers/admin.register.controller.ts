@@ -50,7 +50,7 @@ export async function listRegisterAdmin(req: AuthedRequest, res: Response) {
 
   const [items, total, counts, byType] = await Promise.all([
     RegisterListing.find(filter)
-      .select('type slug name states areaCount supportCategories website claimStatus providerId importedAt sourceUpdatedAt')
+      .select('type slug name states areaCount supportCategories website phone email claimStatus providerId importedAt sourceUpdatedAt')
       .sort({ importedAt: -1, _id: -1 })
       .skip((page - 1) * PAGE_SIZE)
       .limit(PAGE_SIZE)
@@ -75,6 +75,8 @@ export async function listRegisterAdmin(req: AuthedRequest, res: Response) {
       areaCount: d.areaCount,
       supportCategories: d.supportCategories,
       hasWebsite: !!d.website,
+      phone: d.phone ?? null,
+      email: d.email ?? null,
       claimStatus: d.claimStatus,
       providerId: d.providerId ? String(d.providerId) : null,
       importedAt: d.importedAt,
@@ -118,6 +120,8 @@ export async function getRegisterAdminDetail(req: AuthedRequest, res: Response) 
     areas: doc.areas,
     areaCount: doc.areaCount,
     website: doc.website ?? null,
+    phone: doc.phone ?? null,
+    email: doc.email ?? null,
     services: doc.services,
     supportCategories: doc.supportCategories,
     claimStatus: doc.claimStatus,

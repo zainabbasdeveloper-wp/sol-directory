@@ -178,6 +178,21 @@ export function normaliseWebsite(raw: unknown): string | undefined {
   return `https://${cleaned.toLowerCase()}`;
 }
 
+/**
+ * A provider's own published phone number, lightly cleaned — kept as the
+ * source's formatted string (e.g. "(02) 6171 8000") rather than forced
+ * into E.164, since it's only ever displayed, never dialled
+ * programmatically. Rejected if it doesn't have a plausible AU-length
+ * digit count, so page copy or stray numbers never sneak in as a phone.
+ */
+export function normalisePhone(raw: unknown): string | undefined {
+  if (typeof raw !== 'string') return undefined;
+  const cleaned = raw.trim();
+  const digits = cleaned.replace(/\D/g, '');
+  if (digits.length < 8 || digits.length > 12) return undefined;
+  return cleaned;
+}
+
 export function normaliseName(raw: unknown): string {
   return typeof raw === 'string' ? raw.replace(/\s+/g, ' ').trim() : '';
 }
