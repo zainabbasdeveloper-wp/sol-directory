@@ -7,8 +7,14 @@ import { listPublicProviders, type PublicProviderRow } from '../../api/providerR
 import { listActiveServices } from '../../api/serviceCatalogue';
 import { searchPlaces, formatPlace, placeSearchEnabled, type PlaceSuggestion } from '../../lib/places';
 import { useMatchModal } from '../../context/MatchModalContext';
+import { searchRegister, getRegisterHub, type RegisterListItem } from '../../api/registerApi';
+import { categoryForService, KIND_BY_TYPE, type RegisterType } from '../../lib/registerMeta';
+import { slugify } from '../../lib/slugify';
+import RegisterCard from './register/RegisterCard';
+import { formatCount } from './register/RegisterParts';
 import './Home.css';
 import './Directory.css';
+import './register/register.css';
 
 const PAGE_SIZE = 12;
 // "Near a suburb" search radius. Wide enough to catch providers based in
@@ -30,12 +36,14 @@ function initials(name: string): string {
 }
 
 /**
- * The main "Find a provider" directory. Real SolDirectory providers only —
- * organisations imported from the public NDIS/My Aged Care registers but
- * not yet claimed live on their own register pages (/ndis-providers,
- * /aged-care-providers) and on every service/location page, not mixed in
- * here. This page is specifically the "these businesses are on SolDirectory
- * and can be matched/contacted" directory.
+ * The main "Find a provider" directory. Two clearly separate sections on
+ * one page, sharing the same search box:
+ *  - SolDirectory providers: real accounts, can be matched/contacted.
+ *  - The public register: organisations imported from the NDIS/My Aged
+ *    Care registers, not yet claimed. Browsable here too (not hidden away
+ *    on /ndis-providers, /aged-care-providers only), but never merged into
+ *    the provider grid or its count, never given a "Get matched" CTA, and
+ *    never implied to be verified/accepting enquiries — see RegisterCard.
  */
 export default function Directory() {
   const [params, setParams] = useSearchParams();
@@ -177,6 +185,87 @@ export default function Directory() {
   }, [loading]);
 
   const retry = () => setReloadKey((k) => k + 1);
+
+  // ---- Public register section (separate dataset, separate pagination —
+  // see the file doc comment for why this is never merged with the
+  // providers above). Its own request-id ref: an earlier version of this
+  // page shared one counter between the two fetches, which let each
+  // invalidate the other's in-flight request. ----
+  const [registerType, setRegisterType] = useState<RegisterType>('ndis');
+  const [regResults, setRegResults] = useState<RegisterListItem[]>([]);
+  const [regTotal, setRegTotal] = useState(0);
+  const [regPage, setRegPage] = useState(1);
+  const [regLoading, setRegLoading] = useState(true);
+  const [regPageLoading, setRegPageLoading] = useState(false);
+  const [regError, setRegError] = useState('');
+  const [regReloadKey, setRegReloadKey] = useState(0);
+  const registerRequestId = useRef(0);
+  const regTotalPages = Math.max(1, Math.ceil(regTotal / PAGE_SIZE));
+
+  // Unfiltered grand totals for both registers — fetched once, shown next
+  // to the toggle so the true scale is visible regardless of what's
+  // currently filtered/paginated.
+  const [registerGrandTotal, setRegisterGrandTotal] = useState<{ ndis: number; aged_care: number } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    Promise.all([getRegisterHub('ndis').catch(() => null), getRegisterHub('aged_care').catch(() => null)])
+      .then(([ndis, agedCare]) => { if (alive) setRegisterGrandTotal({ ndis: ndis?.total ?? 0, aged_care: agedCare?.total ?? 0 }); });
+    return () => { alive = false; };
+  }, []);
+
+  // The register only has a fixed set of canonical support categories, and
+  // suburb filtering needs a known state — so the shared search box maps
+  // onto it on a best-effort basis rather than an exact filter.
+  const regCategory = service ? categoryForService(service) : undefined;
+  const regState = place?.state;
+  const regSuburbSlug = regState && place?.suburb ? slugify(place.suburb) : undefined;
+
+  function regSearchArgs(pageNumber: number) {
+    return {
+      type: registerType,
+      state: regState,
+      suburb: regSuburbSlug,
+      category: regCategory,
+      q: nameQuery || undefined,
+      page: pageNumber,
+      limit: PAGE_SIZE,
+    };
+  }
+
+  useEffect(() => {
+    const id = ++registerRequestId.current;
+    setRegLoading(true);
+    setRegError('');
+    searchRegister(regSearchArgs(1))
+      .then((res) => {
+        if (id !== registerRequestId.current) return;
+        setRegResults(res.items);
+        setRegTotal(res.total);
+        setRegPage(1);
+      })
+      .catch(() => { if (id === registerRequestId.current) setRegError('We couldn’t load the register just now. Please try again.'); })
+      .finally(() => { if (id === registerRequestId.current) setRegLoading(false); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [service, place, nameQuery, registerType, regReloadKey]);
+
+  function goToRegPage(n: number) {
+    const target = Math.min(Math.max(1, n), regTotalPages);
+    if (target === regPage) return;
+    const id = ++registerRequestId.current;
+    setRegPageLoading(true);
+    setRegError('');
+    searchRegister(regSearchArgs(target))
+      .then((res) => {
+        if (id !== registerRequestId.current) return;
+        setRegResults(res.items);
+        setRegTotal(res.total);
+        setRegPage(target);
+      })
+      .catch(() => { if (id === registerRequestId.current) setRegError('We couldn’t load that page. Please try again.'); })
+      .finally(() => { if (id === registerRequestId.current) setRegPageLoading(false); });
+  }
+
+  const retryRegister = () => setRegReloadKey((k) => k + 1);
 
   const serviceItems: ComboItem[] = useMemo(() => {
     // While the box holds the committed value, show the whole list;
@@ -362,15 +451,73 @@ export default function Directory() {
           <Pagination page={page} totalPages={totalPages} onChange={goToPage} disabled={pageLoading} />
         )}
 
-        <p className="dir-register-hint">
-          Looking for a wider list, including businesses that haven’t signed up to SolDirectory yet? Browse the{' '}
-          <Link to="/ndis-providers">NDIS provider register</Link> or the <Link to="/aged-care-providers">My Aged Care register</Link>.
-        </p>
+        <div className="dir-register-hint">
+          <h2 className="reg-h2" style={{ marginTop: 0 }}>On the public register — not yet claimed</h2>
+          <p className="reg-note">
+            These organisations appear on the NDIS or My Aged Care register but haven’t signed up to or claimed a
+            listing on SolDirectory yet, so they can’t receive enquiries here — this is a factual listing only, not a
+            verified SolDirectory provider.
+            {registerGrandTotal && (
+              <> {formatCount(registerGrandTotal.ndis + registerGrandTotal.aged_care)} organisations are listed across both registers in total.</>
+            )}{' '}
+            A business can{' '}
+            <Link to={registerType === 'ndis' ? '/ndis-providers' : '/aged-care-providers'}>claim its own listing</Link>.
+          </p>
+
+          <div className="reg-filters" role="group" aria-label="Choose a register">
+            <button type="button" className="reg-chip" aria-pressed={registerType === 'ndis'} onClick={() => setRegisterType('ndis')}>
+              {KIND_BY_TYPE.ndis.label} register{registerGrandTotal && <small>{formatCount(registerGrandTotal.ndis)}</small>}
+            </button>
+            <button type="button" className="reg-chip" aria-pressed={registerType === 'aged_care'} onClick={() => setRegisterType('aged_care')}>
+              {KIND_BY_TYPE.aged_care.label} register{registerGrandTotal && <small>{formatCount(registerGrandTotal.aged_care)}</small>}
+            </button>
+          </div>
+
+          <div className="dir-results-head" aria-live="polite">
+            {regLoading || regPageLoading
+              ? 'Searching…'
+              : regError || regTotal === 0
+                ? ''
+                : regTotal <= PAGE_SIZE
+                  ? `${formatCount(regTotal)} ${regTotal === 1 ? 'listing' : 'listings'}${anyFilter ? ' match your search' : ''}`
+                  : `Showing ${formatCount((regPage - 1) * PAGE_SIZE + 1)}–${formatCount(Math.min(regPage * PAGE_SIZE, regTotal))} of ${formatCount(regTotal)} listings${anyFilter ? ' matching your search' : ''}`}
+          </div>
+
+          {regError && (
+            <div className="dir-empty" role="alert">
+              <p>{regError}</p>
+              <button type="button" className="btn-gradient" onClick={retryRegister}>Try again</button>
+            </div>
+          )}
+
+          {!regError && !regLoading && regResults.length === 0 && (
+            <div className="dir-empty">
+              <h2>No {KIND_BY_TYPE[registerType].label} register listings match this search</h2>
+              <p>Try removing a filter, or browse the full <Link to={registerPathFor(registerType)}>{KIND_BY_TYPE[registerType].label} register</Link>.</p>
+            </div>
+          )}
+
+          <ul className={`dir-grid${regPageLoading ? ' dir-grid-loading' : ''}`} aria-busy={regPageLoading}>
+            {regResults.map((item) => <RegisterCard key={`${item.type}-${item.slug}`} item={item} />)}
+          </ul>
+
+          {!regLoading && !regError && regTotal > PAGE_SIZE && (
+            <Pagination page={regPage} totalPages={regTotalPages} onChange={goToRegPage} disabled={regPageLoading} />
+          )}
+
+          <p className="dir-register-hint-footer">
+            Browse the full <Link to="/ndis-providers">NDIS provider register</Link> or <Link to="/aged-care-providers">My Aged Care register</Link> by state and suburb.
+          </p>
+        </div>
       </section>
 
       <PublicFooter />
     </>
   );
+}
+
+function registerPathFor(type: RegisterType) {
+  return type === 'ndis' ? '/ndis-providers' : '/aged-care-providers';
 }
 
 function SearchIcon() {
