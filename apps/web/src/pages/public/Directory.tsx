@@ -452,23 +452,12 @@ export default function Directory() {
         )}
 
         <div className="dir-register-hint">
-<<<<<<< HEAD
           <h2 className="reg-h2" style={{ marginTop: 0 }}>More providers in our directory</h2>
           <p className="reg-note">
-            Explore organisations listed across the NDIS and My Aged Care registers, with their listed supports and service areas.
+            Browse provider profiles with supports and service areas listed for NDIS and My Aged Care.
             {registerGrandTotal && (
-              <> There are {formatCount(registerGrandTotal.ndis + registerGrandTotal.aged_care)} listings across both registers.</>
+              <> Explore {formatCount(registerGrandTotal.ndis + registerGrandTotal.aged_care)} provider profiles in our directory.</>
             )}
-=======
-          <h2 className="reg-h2" style={{ marginTop: 0 }}>On the public register</h2>
-          <p className="reg-note">
-            These organisations appear on the NDIS or My Aged Care register — a factual listing sourced from the register itself.
-            {registerGrandTotal && (
-              <> {formatCount(registerGrandTotal.ndis + registerGrandTotal.aged_care)} organisations are listed across both registers in total.</>
-            )}{' '}
-            A business can{' '}
-            <Link to={registerType === 'ndis' ? '/ndis-providers' : '/aged-care-providers'}>set up its own SolDirectory listing</Link>.
->>>>>>> 84cd18e22402bc2c062151d3fac16f395488c338
           </p>
 
           <div className="reg-filters" role="group" aria-label="Choose a register">
