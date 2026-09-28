@@ -15,6 +15,7 @@
     "geocode:suburbs": "tsx src/scripts/geocodeSuburbs.ts",
     "fetch:register-logos": "tsx src/scripts/fetchRegisterLogos.ts",
     "sync:register-wp": "tsx src/scripts/syncRegisterListingsToWordPress.ts",
+    "remove:demo-providers": "tsx src/scripts/removeDemoProviders.ts",
     "job:capacity-check": "tsx src/scripts/weeklyCapacityCheck.ts"
   },
   "dependencies": {
