@@ -452,16 +452,12 @@ export default function Directory() {
         )}
 
         <div className="dir-register-hint">
-          <h2 className="reg-h2" style={{ marginTop: 0 }}>On the public register — not yet claimed</h2>
+          <h2 className="reg-h2" style={{ marginTop: 0 }}>More providers in our directory</h2>
           <p className="reg-note">
-            These organisations appear on the NDIS or My Aged Care register but haven’t signed up to or claimed a
-            listing on SolDirectory yet, so they can’t receive enquiries here — this is a factual listing only, not a
-            verified SolDirectory provider.
+            Explore organisations listed across the NDIS and My Aged Care registers, with their listed supports and service areas.
             {registerGrandTotal && (
-              <> {formatCount(registerGrandTotal.ndis + registerGrandTotal.aged_care)} organisations are listed across both registers in total.</>
-            )}{' '}
-            A business can{' '}
-            <Link to={registerType === 'ndis' ? '/ndis-providers' : '/aged-care-providers'}>claim its own listing</Link>.
+              <> There are {formatCount(registerGrandTotal.ndis + registerGrandTotal.aged_care)} listings across both registers.</>
+            )}
           </p>
 
           <div className="reg-filters" role="group" aria-label="Choose a register">
