@@ -40,8 +40,8 @@ function initials(name: string): string {
  * one page, sharing the same search box:
  *  - SolDirectory providers: real accounts, can be matched/contacted.
  *  - The public register: organisations imported from the NDIS/My Aged
- *    Care registers, not yet claimed. Browsable here too (not hidden away
- *    on /ndis-providers, /aged-care-providers only), but never merged into
+ *    Care registers. Browsable here too (not hidden away on
+ *    /ndis-providers, /aged-care-providers only), but never merged into
  *    the provider grid or its count, never given a "Get matched" CTA, and
  *    never implied to be verified/accepting enquiries — see RegisterCard.
  */
@@ -452,16 +452,14 @@ export default function Directory() {
         )}
 
         <div className="dir-register-hint">
-          <h2 className="reg-h2" style={{ marginTop: 0 }}>On the public register — not yet claimed</h2>
+          <h2 className="reg-h2" style={{ marginTop: 0 }}>On the public register</h2>
           <p className="reg-note">
-            These organisations appear on the NDIS or My Aged Care register but haven’t signed up to or claimed a
-            listing on SolDirectory yet, so they can’t receive enquiries here — this is a factual listing only, not a
-            verified SolDirectory provider.
+            These organisations appear on the NDIS or My Aged Care register — a factual listing sourced from the register itself.
             {registerGrandTotal && (
               <> {formatCount(registerGrandTotal.ndis + registerGrandTotal.aged_care)} organisations are listed across both registers in total.</>
             )}{' '}
             A business can{' '}
-            <Link to={registerType === 'ndis' ? '/ndis-providers' : '/aged-care-providers'}>claim its own listing</Link>.
+            <Link to={registerType === 'ndis' ? '/ndis-providers' : '/aged-care-providers'}>set up its own SolDirectory listing</Link>.
           </p>
 
           <div className="reg-filters" role="group" aria-label="Choose a register">

@@ -107,7 +107,6 @@ export default function RegisterProviderPage({ kind, slug }: { kind: RegisterKin
           <Avatar src={listing.logoUrl} name={listing.name} size="lg" shape="square" />
           <h1>{listing.name}</h1>
           <span className="reg-badge">Listed on the {kind.label} register</span>
-          {listing.claimStatus !== 'claimed' && <span className="reg-badge reg-badge-muted">Not yet claimed by this business</span>}
         </div>
         <p className="reg-lede">
           {listing.name} is {kind.listedAs}
