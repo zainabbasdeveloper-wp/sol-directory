@@ -298,11 +298,13 @@ export async function getServiceSuburbs(req: Request, res: Response) {
   if (!(REGISTER_SUPPORT_CATEGORIES as readonly string[]).includes(category)) return res.status(400).json({ error: 'Unknown category.' });
   const suburbs = await computeServiceSuburbs(category);
   // Optional cap for callers that only need the top few (e.g. a homepage
-  // teaser) — the full, uncapped list (already sorted by count) is what
-  // the sitemap and route validation need, so it stays the default.
-  const limit = Math.min(500, Math.max(1, Number(req.query.limit) || Infinity));
+  // teaser) — omitting ?limit at all returns the full, uncapped list
+  // (already sorted by count), which is what the sitemap, route
+  // validation and any bulk export need.
+  const rawLimit = Number(req.query.limit);
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(5000, Math.floor(rawLimit)) : null;
   res.set('Cache-Control', 'public, max-age=600');
-  res.json({ category, suburbs: Number.isFinite(limit) ? suburbs.slice(0, limit) : suburbs });
+  res.json({ category, suburbs: limit ? suburbs.slice(0, limit) : suburbs });
 }
 
 // ---------------------------------------------------------------
