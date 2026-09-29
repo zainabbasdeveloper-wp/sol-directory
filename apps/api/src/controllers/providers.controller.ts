@@ -55,6 +55,13 @@ export function buildProviderFilter(query: Request['query']): Record<string, unk
   if (typeof query.condition === 'string' && query.condition.trim()) {
     filter.conditionExperience = new RegExp(`^\\s*${escapeRegex(query.condition.trim())}\\s*$`, 'i');
   }
+  // Plan-management style - powers the /funding/:slug pages (only the 3
+  // NDIS management-style topics actually map to this real field; other
+  // funding topics like "Home Care Packages" or "DVA Home Care" aren't a
+  // Provider attribute at all, so those pages carry no provider filter).
+  if (typeof query.funding === 'string' && query.funding.trim()) {
+    filter.acceptedFunding = new RegExp(`^\\s*${escapeRegex(query.funding.trim())}\\s*$`, 'i');
+  }
   if (typeof query.q === 'string' && query.q.trim()) {
     const rx = new RegExp(escapeRegex(query.q.trim()), 'i');
     and.push({ $or: [{ legalEntityName: rx }, { tradingName: rx }] });

@@ -404,17 +404,6 @@ export default function Directory() {
               </div>
             )}
 
-            {!error && !loading && results.length === 0 && (
-              <div className="dir-empty">
-                <h2>No providers listed for this search yet</h2>
-                <p>Try removing a filter, or check the spelling. You can also send a request, and we will notify suitable providers in your area as they join.</p>
-                <div className="dir-empty-actions">
-                  <button type="button" className="btn-tint" onClick={clearAll}>Clear search</button>
-                  <button type="button" className="btn-gradient" onClick={() => openMatchModal()}>Submit an enquiry →</button>
-                </div>
-              </div>
-            )}
-
             <ul className={`dir-grid${pageLoading ? ' dir-grid-loading' : ''}`} aria-busy={pageLoading}>
               {results.map((p) => {
                 const name = p.tradingName || p.legalEntityName;
@@ -461,7 +450,7 @@ export default function Directory() {
         )}
 
         <div className="dir-register-hint">
-          <h2 className="reg-h2" style={{ marginTop: 0 }}>Browse NDIS &amp; Aged Care providers</h2>
+          <h2 className="reg-h2" style={{ marginTop: 0 }}>Find providers for NDIS and aged care support</h2>
           <p className="reg-note">
             {registerGrandTotal
               ? <>{formatCount(registerGrandTotal.ndis + registerGrandTotal.aged_care)} organisations listed on the NDIS and My Aged Care registers, sourced directly from each register.</>

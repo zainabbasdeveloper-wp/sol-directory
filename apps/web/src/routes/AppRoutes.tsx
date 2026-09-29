@@ -40,6 +40,7 @@ import WorkerPublicProfile from '../pages/public/WorkerPublicProfile';
 import MyWorkerProfilePage from '../pages/workers/MyWorkerProfile';
 import MyListingPage from '../pages/providers/MyListing';
 import ProviderListingPage, { ConditionsHubPage } from '../pages/public/ProviderListingPage';
+import FundingTopicPage, { FundingHubPage } from '../pages/public/FundingTopicPage';
 import ProviderDirectory from '../pages/providers/ProviderDirectory';
 import ProviderProfilePage from '../pages/providers/ProviderProfilePage';
 import SavedProviders from '../pages/providers/SavedProviders';
@@ -130,6 +131,8 @@ export default function AppRoutes() {
       <Route path="/directory/in/:suburb" element={<ProviderListingPage mode="area" />} />
       <Route path="/directory/for" element={<ConditionsHubPage />} />
       <Route path="/directory/for/:condition" element={<ProviderListingPage mode="condition" />} />
+      <Route path="/funding" element={<FundingHubPage />} />
+      <Route path="/funding/:slug" element={<FundingTopicPage />} />
       <Route path="/directory/:slug" element={<ProviderPublicPage />} />
       <Route path="/services/:serviceSlug/:suburb" element={<ServiceLocationPage />} />
       {/* Public-register pages (data from the NDIS Commission / My Aged Care registers). */}
