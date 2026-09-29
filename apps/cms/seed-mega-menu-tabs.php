@@ -71,6 +71,24 @@ function sd_combo_url(string $title): string {
     return "/services/$slug/$suburb";
 }
 
+// PLAIN slug — no character-stripping before hyphenating, unlike
+// sd_combo_url above. Must match apps/web/src/lib/slugify.ts exactly
+// (and the API's utils/slugify.ts): a straight apostrophe followed by
+// a letter (Parkinson's, Huntington's) becomes its OWN hyphen
+// ("parkinson-s-disease"), not a deleted character ("parkinsons-
+// disease") — verified against the real slugify() output for every
+// name here before using this. Getting this wrong silently 404s the
+// real /condition/:slug/ and /funding/:slug/ pages this points to.
+function sd_plain_slug(string $title): string {
+    return trim(preg_replace('/[^a-z0-9]+/', '-', strtolower($title)), '-');
+}
+function sd_condition_url(string $title): string {
+    return '/condition/' . sd_plain_slug($title) . '/';
+}
+function sd_funding_url(string $title): string {
+    return '/funding/' . sd_plain_slug($title) . '/';
+}
+
 function sd_links(array $titles, string $urlFn): array {
     return array_map(fn($t) => [
         'label' => $t, 'url' => $urlFn($t), 'description' => '', 'icon' => '',
@@ -132,7 +150,7 @@ $conditionGroups = [
     ['ABI, Stroke & Neuro Rehab', ['Acquired Brain Injury', 'Stroke Recovery', 'Traumatic Brain Injury', "Huntington's Disease", 'Neuro Physiotherapy']],
 ];
 $id = sd_get_or_create_tab('condition', 'Condition', 'Find support by diagnosis or need');
-sd_set_columns($id, sd_columns($conditionGroups, 'sd_combo_url'));
+sd_set_columns($id, sd_columns($conditionGroups, 'sd_condition_url'));
 echo "Seeded: Condition ($id)\n";
 
 // --- Funding ---
@@ -144,7 +162,7 @@ $fundingGroups = [
     ['Help With Funding', ['Plan Managers', 'Bookkeeping & Invoicing', 'Price Guide Explained', 'Funding Eligibility', 'Budget Categories']],
 ];
 $id = sd_get_or_create_tab('funding', 'Funding', 'NDIS plans, HCP, CHSP, DVA, and private');
-sd_set_columns($id, sd_columns($fundingGroups, 'sd_combo_url'));
+sd_set_columns($id, sd_columns($fundingGroups, 'sd_funding_url'));
 echo "Seeded: Funding ($id)\n";
 
 // --- Coordinator ---
