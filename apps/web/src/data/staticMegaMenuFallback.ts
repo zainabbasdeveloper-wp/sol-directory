@@ -47,18 +47,18 @@ function comboPageLink(title: string): { label: string; url: string } {
   return { label: title, url: `/services/${wpStyleSlugify(title)}/${suburb}` };
 }
 
-// The Condition tab has real pages: /directory/for/:slug (see
-// data/conditionContent.ts, which ProviderListingPage.tsx reads —
+// The Condition tab has real, permalink-style pages: /condition/:slug/
+// (see data/conditionContent.ts, which ProviderListingPage.tsx reads —
 // slugify() here must match ITS slugs exactly, which is why both use
 // the same lib/slugify.ts function, not wpStyleSlugify above).
 function conditionLink(title: string): { label: string; url: string } {
-  return { label: title, url: `/directory/for/${slugify(title)}` };
+  return { label: title, url: `/condition/${slugify(title)}/` };
 }
 
-// The Funding tab has real pages too: /funding/:slug (see
-// data/fundingContent.ts, which FundingTopicPage.tsx reads).
+// The Funding tab has real, permalink-style pages too: /funding/:slug/
+// (see data/fundingContent.ts, which FundingTopicPage.tsx reads).
 function fundingLink(title: string): { label: string; url: string } {
-  return { label: title, url: `/funding/${slugify(title)}` };
+  return { label: title, url: `/funding/${slugify(title)}/` };
 }
 
 const SERVICE_CATEGORIES: { title: string; items: string[] }[] = [

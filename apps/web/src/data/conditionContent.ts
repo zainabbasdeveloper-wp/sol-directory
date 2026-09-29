@@ -6,7 +6,7 @@ type SupportCategory = (typeof SUPPORT_CATEGORIES)[number];
 /**
  * Real, general-information content for the 40 conditions/needs shown in
  * the mega menu's "Condition" tab (see staticMegaMenuFallback.ts, which
- * links each one to /directory/for/:slug — ProviderListingPage.tsx reads
+ * links each one to /condition/:slug/ — ProviderListingPage.tsx reads
  * this file to render the page, since a condition with no real provider
  * tagged yet still needs somewhere honest to send a visitor).
  *
