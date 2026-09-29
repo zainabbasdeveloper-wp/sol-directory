@@ -14,6 +14,7 @@ import {
 import { unslugify, stateForSuburb, STATE_ABBR } from '../../data/slugHelpers';
 import { SERVICES } from '../../data/providers';
 import { slugify } from '../../data/slugHelpers';
+import { stateBySlug } from '../../lib/registerMeta';
 import Counter from '../../components/Counter';
 import { useMatchModal } from '../../context/MatchModalContext';
 import { getServiceAreaPage, type ServiceAreaPage } from '../../api/wordpressApi';
@@ -75,13 +76,23 @@ export default function ServiceLocationPage() {
   const { user } = useAuth();
   const canOpenProfiles = canViewProviderProfiles(user?.role);
   const { openMatchModal } = useMatchModal();
-  const { serviceSlug = 'nursing', suburb: suburbSlug = 'bankstown' } = useParams<{ serviceSlug: string; suburb: string }>();
+  const { serviceSlug = 'nursing', state: stateSlug, suburb: suburbSlug = 'bankstown' } = useParams<{ serviceSlug: string; state?: string; suburb: string }>();
 
   const serviceName = unslugify(serviceSlug);
   const serviceLower = serviceName.toLowerCase();
   const suburbName = unslugify(suburbSlug);
-  const stateName = stateForSuburb(suburbSlug);
-  const stateAbbr = STATE_ABBR[stateName] ?? stateName;
+  // The real, register-backed route carries its own :state segment
+  // (disambiguates same-named suburbs across states, same as
+  // /ndis-providers/:state/:suburb) — the older two-segment illustrative
+  // links (see AppRoutes.tsx) have no state, so they keep the previous
+  // hardcoded-lookup guess rather than 404ing.
+  const realState = stateSlug ? stateBySlug(stateSlug) : undefined;
+  const stateName = realState?.name ?? stateForSuburb(suburbSlug);
+  const stateAbbr = realState?.code ?? (STATE_ABBR[stateName] ?? stateName);
+  // Links to sibling pages (other states, related services) only carry a
+  // :state segment when this page itself is on the real route — the
+  // illustrative two-segment links stay two-segment, unchanged.
+  const locationPath = (svcSlug: string, suburb: string) => (stateSlug ? `/services/${svcSlug}/${stateSlug}/${suburb}` : `/services/${svcSlug}/${suburb}`);
 
   // Real WordPress content for this exact combination, if an editor
   // has written it. null means "nothing authored yet" — every usage
@@ -120,8 +131,8 @@ export default function ServiceLocationPage() {
     : REGULATORS.map((r) => ({ name: r.name, phone: r.phone, site: r.site, description: '' }));
   const responseTimeItems = (wp?.responseTimes ?? []).map((r) => ({ abbr: r.state, minutes: r.minutes }));
   const relatedLinks = wp?.relatedServices?.length
-    ? wp.relatedServices.map((r) => ({ name: r.title, to: `/services/${r.slug}/${suburbSlug}` }))
-    : OTHER_SERVICES.map((name) => ({ name, to: `/services/${slugify(name)}/${suburbSlug}` }));
+    ? wp.relatedServices.map((r) => ({ name: r.title, to: locationPath(r.slug, suburbSlug) }))
+    : OTHER_SERVICES.map((name) => ({ name, to: locationPath(slugify(name), suburbSlug) }));
   const localFacts: [string, string][] = wp?.local
     ? ([
         ['Population', wp.local.population],
@@ -421,7 +432,7 @@ export default function ServiceLocationPage() {
             <p className="svc-p svc-p-tight">Browse {serviceLower} by state — pick one to see providers in that state's capital.</p>
             <div className="svc-state-grid">
               {STATE_COVERAGE.map((s) => (
-                <Link key={s.abbr} to={`/services/${serviceSlug}/${s.citySlug}`} className="svc-state-card">
+                <Link key={s.abbr} to={`/services/${serviceSlug}/${s.abbr.toLowerCase()}/${s.citySlug}`} className="svc-state-card">
                   <span className="svc-state-abbr">{s.abbr}</span>
                   {providerCountLabel(stateGroupCount(stats, [s.abbr])) && (
                     <span className="svc-state-count">{providerCountLabel(stateGroupCount(stats, [s.abbr]))}</span>

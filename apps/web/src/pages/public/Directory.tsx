@@ -36,18 +36,23 @@ function initials(name: string): string {
 }
 
 /**
- * The main "Find a provider" directory. Two clearly separate sections on
- * one page, sharing the same search box:
+ * The main "Find a provider" directory — ONE unified search experience
+ * (one search box, one NDIS/Aged care toggle, one continuous results
+ * flow), backed by two data sources that stay functionally distinct even
+ * though the page no longer visually separates them into two titled
+ * sections:
  *  - SolDirectory providers: real accounts, can be matched/contacted.
+ *    Only rendered at all once at least one real provider exists — see
+ *    showProviderResults — so the page never shows a dead empty grid
+ *    where a real-provider section would otherwise sit.
  *  - The public register: organisations imported from the NDIS/My Aged
- *    Care registers. Browsable here too (not hidden away on
- *    /ndis-providers, /aged-care-providers only), but never merged into
- *    the provider grid or its count, never given a "Get matched" CTA, and
- *    never implied to be verified/accepting enquiries — see RegisterCard.
- * The providers section (search results, its empty state, its pagination)
- * is skipped entirely while there are no real providers at all — see
- * showProviderResults — so the page doesn't lead with a permanent empty
- * block above the register section.
+ *    Care registers, always shown (it's real content, browsable here as
+ *    well as on /ndis-providers, /aged-care-providers), but never merged
+ *    into the provider grid or its count, never given a "Get matched"
+ *    CTA, and never implied to be verified/accepting enquiries — see
+ *    RegisterCard.
+ * Each keeps its own pagination (different datasets, different APIs) —
+ * a true single merged/paginated list across both isn't built here.
  */
 export default function Directory() {
   const [params, setParams] = useSearchParams();
@@ -291,12 +296,14 @@ export default function Directory() {
   }
 
   const anyFilter = !!(service || place || nameQuery);
-  // While there are no real providers at all yet (not just none matching a
-  // filter), the whole SolDirectory-providers block below the search box
-  // would just be a permanent empty state above the register section — so
-  // it's skipped entirely rather than shown. The moment a real provider
-  // exists, or a filter is applied, this reverts to the normal search UI.
-  const showProviderResults = loading || error !== '' || anyFilter || total > 0;
+  // While there are no real providers AT ALL (not filtered to zero — zero,
+  // full stop), the SolDirectory-providers block is skipped entirely
+  // rather than rendering a permanently-empty grid above the register
+  // results — that empty gap is exactly what made the page look broken
+  // when a filter was applied and only the register section (further
+  // down) actually had results. The moment even one real provider exists,
+  // this reverts to the normal search UI, filtered or not.
+  const showProviderResults = loading || error !== '' || total > 0;
 
   return (
     <>
@@ -375,14 +382,21 @@ export default function Directory() {
               <button type="button" className="dir-clear" onClick={clearAll}>Clear all</button>
             </div>
           )}
-        </div>
 
-        <div className="dir-help">
-          <p>
-            <strong>Need assistance identifying provider options?</strong> Submit your location, timeframe and funding
-            information so relevant providers can assess your enquiry. There is no cost to submit a request.
+          <div className="reg-filters" role="group" aria-label="Choose a register" style={{ marginTop: 18 }}>
+            <button type="button" className="reg-chip" aria-pressed={registerType === 'ndis'} onClick={() => setRegisterType('ndis')}>
+              {KIND_BY_TYPE.ndis.label} register{registerGrandTotal && <small>{formatCount(registerGrandTotal.ndis)}</small>}
+            </button>
+            <button type="button" className="reg-chip" aria-pressed={registerType === 'aged_care'} onClick={() => setRegisterType('aged_care')}>
+              {KIND_BY_TYPE.aged_care.label} register{registerGrandTotal && <small>{formatCount(registerGrandTotal.aged_care)}</small>}
+            </button>
+          </div>
+          <p className="reg-note" style={{ marginTop: 10, marginBottom: 0 }}>
+            {registerGrandTotal
+              ? <>Searching {formatCount(registerGrandTotal.ndis + registerGrandTotal.aged_care)} organisations listed on the NDIS and My Aged Care registers, sourced directly from each register.</>
+              : 'Searching organisations listed on the NDIS and My Aged Care registers, sourced directly from each register.'}{' '}
+            A business can <Link to={registerType === 'ndis' ? '/ndis-providers' : '/aged-care-providers'}>set up its own SolDirectory listing</Link>.
           </p>
-          <button type="button" className="btn-gradient" onClick={() => openMatchModal()}>Submit an enquiry →</button>
         </div>
 
         {showProviderResults && (
@@ -450,24 +464,6 @@ export default function Directory() {
         )}
 
         <div className="dir-register-hint">
-          <h2 className="reg-h2" style={{ marginTop: 0 }}>Find providers for NDIS and aged care support</h2>
-          <p className="reg-note">
-            {registerGrandTotal
-              ? <>{formatCount(registerGrandTotal.ndis + registerGrandTotal.aged_care)} organisations listed on the NDIS and My Aged Care registers, sourced directly from each register.</>
-              : 'Organisations listed on the NDIS and My Aged Care registers, sourced directly from each register.'}{' '}
-            A business can{' '}
-            <Link to={registerType === 'ndis' ? '/ndis-providers' : '/aged-care-providers'}>set up its own SolDirectory listing</Link>.
-          </p>
-
-          <div className="reg-filters" role="group" aria-label="Choose a register">
-            <button type="button" className="reg-chip" aria-pressed={registerType === 'ndis'} onClick={() => setRegisterType('ndis')}>
-              {KIND_BY_TYPE.ndis.label} register{registerGrandTotal && <small>{formatCount(registerGrandTotal.ndis)}</small>}
-            </button>
-            <button type="button" className="reg-chip" aria-pressed={registerType === 'aged_care'} onClick={() => setRegisterType('aged_care')}>
-              {KIND_BY_TYPE.aged_care.label} register{registerGrandTotal && <small>{formatCount(registerGrandTotal.aged_care)}</small>}
-            </button>
-          </div>
-
           <div className="dir-results-head" aria-live="polite">
             {regLoading || regPageLoading
               ? 'Searching…'
@@ -493,7 +489,7 @@ export default function Directory() {
           )}
 
           <ul className={`dir-grid${regPageLoading ? ' dir-grid-loading' : ''}`} aria-busy={regPageLoading}>
-            {regResults.map((item) => <RegisterCard key={`${item.type}-${item.slug}`} item={item} />)}
+            {regResults.map((item) => <RegisterCard key={`${item.type}-${item.slug}`} item={item} matchedCategory={regCategory} />)}
           </ul>
 
           {!regLoading && !regError && regTotal > PAGE_SIZE && (
@@ -503,6 +499,14 @@ export default function Directory() {
           <p className="dir-register-hint-footer">
             Browse the full <Link to="/ndis-providers">NDIS provider register</Link> or <Link to="/aged-care-providers">My Aged Care register</Link> by state and suburb.
           </p>
+        </div>
+
+        <div className="dir-help">
+          <p>
+            <strong>Need assistance identifying provider options?</strong> Submit your location, timeframe and funding
+            information so relevant providers can assess your enquiry. There is no cost to submit a request.
+          </p>
+          <button type="button" className="btn-gradient" onClick={() => openMatchModal()}>Submit an enquiry →</button>
         </div>
       </section>
 

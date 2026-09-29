@@ -5,8 +5,8 @@ import RegisterListing from '../models/RegisterListing.js';
 import Provider from '../models/Provider.js';
 import Worker from '../models/Worker.js';
 import WorkerReview from '../models/WorkerReview.js';
-import { MIN_SUBURB_LISTINGS, STATE_CODES, type RegisterType } from '../services/registerNormalise.js';
-import { categoryListings, computeCategoryOverview, computeHub } from './register.controller.js';
+import { MIN_SUBURB_LISTINGS, REAL_SERVICES, STATE_CODES, type RegisterType } from '../services/registerNormalise.js';
+import { categoryListings, computeCategoryOverview, computeHub, computeServiceSuburbs } from './register.controller.js';
 import { workersForService, workersInArea } from './workersPublic.controller.js';
 import { MIN_INDEXABLE_PROVIDERS, VISIBLE_PROVIDER, areaRows, conditionRows, publicLogoUrl } from './providersPublic.controller.js';
 
@@ -607,6 +607,169 @@ async function servicePage(site: string, slug: string): Promise<Page> {
   };
 }
 
+// ---------------------------------------------------------------
+// Real service x suburb pages — /services/:serviceSlug/:state/:suburb
+// (ServiceLocationPage.tsx). Only exists for a (service, suburb) pair
+// with genuine register demand (computeServiceSuburbs, MIN_SUBURB_LISTINGS
+// already applied) — a combination with no real demand 404s rather than
+// serving a thin, content-free page. Real providers (Provider DB) and
+// real register listings (both registers) are shown first; the rest is
+// the same generic buyer-guidance content ServiceLocationPage.tsx shows
+// as its own fallback (servicePageFixtures.ts) when no WordPress post
+// has been authored for this exact combination — duplicated here in
+// plain HTML rather than imported, since apps/api and apps/web are
+// built and run separately.
+// ---------------------------------------------------------------
+const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const slugifyService = (s: string) => s.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+// Same one-line service descriptions already published on the homepage
+// (SupportFinder.tsx SUPPORTS array) — reused here rather than invented,
+// so the wording matches what the site already says elsewhere.
+const SVC_DESCRIPTION: Record<string, string> = {
+  'Support coordination': 'Helps participants understand their plan, connect with providers and put supports in place.',
+  'Personal care': 'Assistance with showering, dressing, medication and other daily personal activities.',
+  'Domestic assistance': 'Help with cleaning, laundry, meal preparation and other household tasks.',
+  'Therapy services': 'Occupational therapy, physiotherapy, speech pathology and other allied health supports.',
+  Transport: 'Assistance to travel to appointments, work, study and community activities.',
+  'Housing (SDA & SIL)': 'Specialist Disability Accommodation (SDA) and Supported Independent Living (SIL) providers.',
+  Nursing: 'In-home clinical nursing, wound care and complex health supports.',
+  'Plan management': 'Manages invoices, payments and budget tracking so you can use your funding with any provider.',
+};
+
+const SVC_COMPARE: [string, string, string][] = [
+  ['Registration and qualifications', 'Check that the provider, and the worker who will attend, hold the registration and qualifications the support requires.', 'Who will deliver my supports, and what registration and qualifications do they hold?'],
+  ['Worker screening and safeguards', 'Providers delivering NDIS supports are responsible for the screening of their workers and for how incidents and complaints are handled.', 'How do you screen your workers, and how do you handle incidents or complaints?'],
+  ['Availability and continuity', 'A directory listing does not prove current capacity. Ask about start dates, rostering and cover when a regular worker is unavailable.', 'When could you start, and what happens if my regular worker is away?'],
+  ['Pricing and funding', 'Rates and what is included can differ between providers. Ask for a written service agreement before supports begin.', 'What are your rates, what is included, and do you accept my funding type?'],
+];
+const SVC_CREDENTIALS: [string, string][] = [
+  ['NDIS registration', "Ask for their registration number and check it against the NDIS Commission's public register."],
+  ['Insurance', 'Ask to see current public liability and professional indemnity certificates.'],
+  ['Qualifications', 'Ask which specific staff member is assigned and what their relevant qualification is.'],
+  ['Experience', "Ask how long they've delivered this exact service."],
+  ['Compliance', 'Ask about their worker screening status and how they handle incidents or complaints.'],
+];
+const SVC_FAQ: [string, string][] = [
+  ['How does SolDirectory work?', 'SolDirectory is a directory and referral service. You can search for providers, or send one free request. Providers who cover your area and offer the support you need are notified and contact you directly.'],
+  ['Does it cost anything to use?', 'No. It is free for participants, families and coordinators. Providers pay a subscription, and payment does not change where a provider appears in the directory.'],
+  ['How do I know a provider is registered?', "Providers supply their own registration details. Before you engage a provider, confirm their registration with them directly or on the NDIS Commission's public provider register."],
+  ['Which funding types can I use?', 'Providers list the funding types they accept, such as NDIS, aged care, private and DVA. When you send a request you choose how the supports are funded so that we can match you with providers who accept it. Confirm details with the provider.'],
+  ['How quickly will a provider respond?', 'Providers are notified as soon as you send a request. Response times vary between providers, so we do not publish an estimate here. We report response times only when enough real enquiries have been answered to make the figure accurate.'],
+  ['Does SolDirectory provide the supports?', 'No. SolDirectory does not deliver supports, does not recommend or endorse providers, and does not take a commission on your services.'],
+];
+
+async function serviceLocationPage(site: string, serviceSlug: string, stateSlug: string, suburbSlug: string): Promise<Page> {
+  const service = REAL_SERVICES.find((s) => slugifyService(s) === serviceSlug);
+  if (!service) return notFound();
+  const code = (Object.entries(STATE_SLUGS).find(([, slug]) => slug === stateSlug) ?? [])[0];
+  if (!code || !SLUG_RE.test(suburbSlug)) return notFound();
+
+  // Real demand only: a combination the register doesn't actually
+  // support isn't given a page — same quality bar as the register's
+  // own suburb hub pages (MIN_SUBURB_LISTINGS).
+  const suburbs = await computeServiceSuburbs(service);
+  const row = suburbs.find((s) => s.state === code && s.slug === suburbSlug);
+  if (!row) return { ...notFound(), title: `${service} providers | SolDirectory` };
+
+  const suburbName = row.suburb;
+  const stateName = STATE_NAMES[code] ?? code;
+  const serviceLower = service.toLowerCase();
+  const path = `/services/${serviceSlug}/${stateSlug}/${suburbSlug}`;
+
+  const providerFilter = {
+    accountStatus: 'active', listingPaused: { $ne: true },
+    registrationGroups: new RegExp(`^${escapeRegex(service)}$`, 'i'),
+    serviceSuburbs: new RegExp(`^\\s*${escapeRegex(suburbName)}\\s*$`, 'i'),
+  };
+  const [providerTotal, providerDocs, ndisListings, agedListings] = await Promise.all([
+    Provider.countDocuments(providerFilter),
+    Provider.find(providerFilter).select('legalEntityName tradingName slug registrationGroups').sort({ tradingName: 1, legalEntityName: 1 }).limit(12).lean(),
+    RegisterListing.find({ type: 'ndis', supportCategories: service, areas: { $elemMatch: { state: code, suburbSlug } } }).select('slug name supportCategories areaCount').limit(12).lean(),
+    RegisterListing.find({ type: 'aged_care', supportCategories: service, areas: { $elemMatch: { state: code, suburbSlug } } }).select('slug name supportCategories areaCount').limit(12).lean(),
+  ]);
+
+  const registerTotal = row.count;
+  const crumbs = [
+    { name: 'Home', path: '/' },
+    { name: 'Services', path: '/services' },
+    { name: service, path: `/services/${serviceSlug}` },
+    { name: `${suburbName}, ${code}`, path },
+  ];
+
+  const providersHtml = providerTotal > 0
+    ? `<h2>SolDirectory providers</h2><p>${fmt(providerTotal)} SolDirectory ${providerTotal === 1 ? 'provider offers' : 'providers offer'} ${esc(serviceLower)} and services ${esc(suburbName)}.</p><ul>${providerDocs.map((p: any) => li(`/directory/${p.slug}`, p.tradingName || p.legalEntityName, (p.registrationGroups ?? []).slice(0, 3).join(', '))).join('')}</ul>`
+    : `<h2>SolDirectory providers</h2><p>No SolDirectory providers have registered ${esc(serviceLower)} for ${esc(suburbName)} yet. Send a free request and any provider who covers this area and support can respond.</p>`;
+
+  const regList = [...ndisListings.map((d: any) => ({ ...d, type: 'ndis' as const })), ...agedListings.map((d: any) => ({ ...d, type: 'aged_care' as const }))];
+  const registerHtml = registerTotal > 0
+    ? `<h2>Listed on the public register</h2>` +
+      `<p>${fmt(registerTotal)} organisation${registerTotal === 1 ? '' : 's'} on the NDIS and My Aged Care registers list ${esc(serviceLower)} among their supports for ${esc(suburbName)}, ${esc(code)}. A register listing shows what the register says, not who currently has capacity.</p>` +
+      `<ul>${regList.slice(0, 12).map((d) => li(`/${d.type === 'ndis' ? 'ndis-providers' : 'aged-care-providers'}/${d.slug}`, d.name, (d.supportCategories ?? []).slice(0, 3).join(', '))).join('')}</ul>` +
+      `<p><a href="/ndis-providers/${stateSlug}/${suburbSlug}?category=${encodeURIComponent(service)}">See all NDIS register listings in ${esc(suburbName)}</a> · <a href="/aged-care-providers/${stateSlug}/${suburbSlug}?category=${encodeURIComponent(service)}">aged care register listings</a></p>`
+    : '';
+
+  // Other real services with demand in this exact suburb, and other
+  // suburbs with demand for this service in the same state — both real,
+  // both drawn from the same computeServiceSuburbs data as this page's
+  // own existence, so every link here leads to another real page.
+  const otherServiceRows = await Promise.all(
+    REAL_SERVICES.filter((s) => s !== service).map(async (s) => ({ s, has: (await computeServiceSuburbs(s)).some((r) => r.state === code && r.slug === suburbSlug) }))
+  );
+  const relatedServicesHtml = otherServiceRows.some((r) => r.has)
+    ? `<h2>Other supports in ${esc(suburbName)}</h2><ul>${otherServiceRows.filter((r) => r.has).map((r) => li(`/services/${slugifyService(r.s)}/${stateSlug}/${suburbSlug}`, `${r.s} in ${suburbName}`)).join('')}</ul>`
+    : '';
+  const otherSuburbs = suburbs.filter((s) => s.state === code && s.slug !== suburbSlug).slice(0, 12);
+  const otherSuburbsHtml = otherSuburbs.length
+    ? `<h2>${esc(service)} in other ${esc(stateName)} suburbs</h2><ul>${otherSuburbs.map((s) => li(`/services/${serviceSlug}/${stateSlug}/${s.slug}`, `${service} in ${s.suburb}`, `(${fmt(s.count)})`)).join('')}</ul>`
+    : '';
+  const topNationally = suburbs.filter((s) => !(s.state === code && s.slug === suburbSlug)).slice(0, 10);
+  const nationalHtml = topNationally.length
+    ? `<h2>Where ${esc(serviceLower)} is most listed nationally</h2>` +
+      `<p>Across Australia, ${fmt(suburbs.reduce((sum, s) => sum + s.count, 0))} register listings offer ${esc(serviceLower)} across ${fmt(suburbs.length)} suburbs. These are the suburbs with the most listings:</p>` +
+      `<ul>${topNationally.map((s) => li(`/services/${serviceSlug}/${s.state.toLowerCase()}/${s.slug}`, `${service} in ${s.suburb}, ${s.state}`, `(${fmt(s.count)})`)).join('')}</ul>`
+    : '';
+
+  const body =
+    `<nav aria-label="Breadcrumb">${crumbs.map((c, i) => (i < crumbs.length - 1 ? `<a href="${esc(c.path)}">${esc(c.name)}</a>` : esc(c.name))).join(' / ')}</nav>` +
+    `<h1>Home ${esc(serviceLower)} providers in ${esc(suburbName)}, ${esc(stateName)}</h1>` +
+    `<p>This page lists ${esc(serviceLower)} providers and register listings covering ${esc(suburbName)}, ${esc(code)}` +
+    `${registerTotal > 0 ? ` — ${fmt(registerTotal)} organisation${registerTotal === 1 ? '' : 's'} on the public NDIS and My Aged Care registers list ${esc(serviceLower)} among their supports for this area` : ''}` +
+    `${providerTotal > 0 ? `, and ${fmt(providerTotal)} SolDirectory ${providerTotal === 1 ? 'provider currently offers' : 'providers currently offer'} it here` : ''}.` +
+    ` Providers set their own supports, service areas and availability, and confirm their capacity each week. Before you engage a provider, confirm their registration, insurance and worker screening directly with them.</p>` +
+    (SVC_DESCRIPTION[service] ? `<h2>About ${esc(serviceLower)}</h2><p>${esc(SVC_DESCRIPTION[service])} People in ${esc(suburbName)} and the surrounding ${esc(stateName)} area can search for a provider below, or send a free request and let providers who cover this area respond directly.</p>` : '') +
+    providersHtml + registerHtml +
+    `<h2>What to compare before choosing</h2><p>Use these ${esc(serviceLower)}-specific checks when you contact providers in ${esc(suburbName)}. Confirm each answer directly: a directory listing does not prove current capacity.</p>` +
+    SVC_COMPARE.map(([t, b, ask]) => `<h3>${esc(t)}</h3><p>${esc(b)}</p><p><strong>Ask:</strong> ${esc(ask)}</p>`).join('') +
+    `<h2>How providers are listed</h2>` +
+    `<p><strong>Alphabetical order.</strong> Providers are listed alphabetically. SolDirectory does not rank providers, assess the quality of any provider's supports, or recommend a provider.</p>` +
+    `<p><strong>Payment does not affect position.</strong> Providers pay a subscription to receive and respond to enquiries. Payment does not change whether or where a provider appears.</p>` +
+    `<p><strong>Availability.</strong> Providers confirm each week that they are taking referrals. A provider who has not confirmed recently is removed from results until they do.</p>` +
+    `<p><strong>Provider-supplied details.</strong> Registration, insurance and other details are supplied by providers. Always confirm them directly with a provider before you engage them.</p>` +
+    `<h2>How to check a provider's credentials</h2><p>Confirm these five things directly with any provider before booking — a directory listing alone doesn't prove current status.</p>` +
+    `<ol>${SVC_CREDENTIALS.map(([t, b]) => `<li><strong>${esc(t)}</strong> ${esc(b)}</li>`).join('')}</ol>` +
+    relatedServicesHtml + otherSuburbsHtml + nationalHtml +
+    `<h2>Frequently asked questions</h2>${SVC_FAQ.map(([q, a]) => `<h3>${esc(q)}</h3><p>${esc(a)}</p>`).join('')}` +
+    `<p><a href="/directory?service=${encodeURIComponent(service)}">See all ${esc(serviceLower)} providers</a></p>`;
+
+  return {
+    status: 200,
+    title: `${service} providers in ${suburbName}, ${code} | SolDirectory`,
+    description: trimTo(`${fmt(providerTotal)} SolDirectory ${providerTotal === 1 ? 'provider offers' : 'providers offer'} ${serviceLower} in ${suburbName}${registerTotal > 0 ? `, plus ${fmt(registerTotal)} organisations listed on the public register` : ''}. Compare providers and get matched for free.`, 158),
+    canonical: path,
+    noindex: false,
+    jsonLd: [
+      breadcrumbLd(site, crumbs),
+      { id: 'service-location', data: {
+        '@type': 'Service', name: `${service} in ${suburbName}, ${code}`, serviceType: service,
+        areaServed: { '@type': 'City', name: suburbName, containedInPlace: { '@type': 'State', name: stateName } },
+        provider: { '@type': 'Organization', name: 'SolDirectory', url: `${site}/` },
+      } },
+    ],
+    body,
+  };
+}
+
 /** GET /seo-shell/<original path>?<original query> — see the file comment. */
 export async function registerShell(req: Request, res: Response) {
   const url = new URL(req.originalUrl, 'http://x');
@@ -624,6 +787,8 @@ export async function registerShell(req: Request, res: Response) {
       if (e instanceof WordPressUnavailable) return res.status(502).send('Content service unavailable');
       throw e;
     }
+  } else if (root === 'services' && parts.length === 4) {
+    page = await serviceLocationPage(site, parts[1], parts[2], parts[3]);
   } else if (root === 'condition' && parts.length === 2) {
     // Permalink-style: /condition/:slug/ (its own top-level category
     // prefix, not nested under /directory — see AppRoutes.tsx).

@@ -249,6 +249,65 @@ export async function getCategoryOverview(req: Request, res: Response) {
 }
 
 // ---------------------------------------------------------------
+// GET /api/register/service-suburbs?category=
+// The full (uncapped) list of suburbs with genuine demand for one
+// support category, combined across both registers — the real-data
+// source for which /services/:service/:state/:suburb pages exist at
+// all (see ServiceLocationPage.tsx and sitemap.controller.ts). Unlike
+// computeCategoryOverview's topSuburbs (capped at 24, one register
+// type), this returns every qualifying suburb so the page set is
+// driven entirely by real listings, never a guessed or curated list.
+// ---------------------------------------------------------------
+async function computeCategorySuburbs(type: RegisterType, category: string) {
+  const suburbs = await RegisterListing.aggregate([
+    { $match: { type, supportCategories: category } },
+    { $unwind: '$areas' },
+    { $group: { _id: { state: '$areas.state', slug: '$areas.suburbSlug', suburb: '$areas.suburb' }, n: { $sum: 1 } } },
+    { $sort: { n: -1, '_id.suburb': 1 } },
+  ]);
+  return (suburbs as { _id: { state: string; slug: string; suburb: string }; n: number }[]).map((s) => ({
+    state: s._id.state, slug: s._id.slug, suburb: s._id.suburb, count: s.n,
+  }));
+}
+
+const serviceSuburbsCache = new Map<string, { at: number; value: { state: string; slug: string; suburb: string; count: number }[] }>();
+const SERVICE_SUBURBS_TTL_MS = 30 * 60 * 1000;
+
+/** Real-demand suburbs for one category, NDIS and My Aged Care counts combined per suburb, filtered to MIN_SUBURB_LISTINGS. Cached: aggregates over every listing's areas, for both registers. */
+export async function computeServiceSuburbs(category: string) {
+  const hit = serviceSuburbsCache.get(category);
+  if (hit && Date.now() - hit.at < SERVICE_SUBURBS_TTL_MS) return hit.value;
+
+  const [ndis, agedCare] = await Promise.all([
+    computeCategorySuburbs('ndis', category),
+    computeCategorySuburbs('aged_care', category),
+  ]);
+  const merged = new Map<string, { state: string; slug: string; suburb: string; count: number }>();
+  for (const s of [...ndis, ...agedCare]) {
+    const key = `${s.state}|${s.slug}`;
+    const existing = merged.get(key);
+    merged.set(key, existing ? { ...existing, count: existing.count + s.count } : s);
+  }
+  const value = [...merged.values()].filter((s) => s.count >= MIN_SUBURB_LISTINGS).sort((a, b) => b.count - a.count);
+  serviceSuburbsCache.set(category, { at: Date.now(), value });
+  return value;
+}
+
+export async function getServiceSuburbs(req: Request, res: Response) {
+  const category = str(req.query.category);
+  if (!(REGISTER_SUPPORT_CATEGORIES as readonly string[]).includes(category)) return res.status(400).json({ error: 'Unknown category.' });
+  const suburbs = await computeServiceSuburbs(category);
+  // Optional cap for callers that only need the top few (e.g. a homepage
+  // teaser) — omitting ?limit at all returns the full, uncapped list
+  // (already sorted by count), which is what the sitemap, route
+  // validation and any bulk export need.
+  const rawLimit = Number(req.query.limit);
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(5000, Math.floor(rawLimit)) : null;
+  res.set('Cache-Control', 'public, max-age=600');
+  res.json({ category, suburbs: limit ? suburbs.slice(0, limit) : suburbs });
+}
+
+// ---------------------------------------------------------------
 // GET /api/register/hub?type=
 // State counts, category counts and the suburbs that have enough real
 // listings to deserve their own page. Computed from the collection and

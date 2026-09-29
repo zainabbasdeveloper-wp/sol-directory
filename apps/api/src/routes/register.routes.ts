@@ -1,5 +1,5 @@
 import { Router, type NextFunction, type Request, type RequestHandler, type Response } from 'express';
-import { categoryCounts, getCategoryOverview, getRegisterHub, getRegisterListing, searchRegister, submitClaimRequest } from '../controllers/register.controller.js';
+import { categoryCounts, getCategoryOverview, getRegisterHub, getRegisterListing, getServiceSuburbs, searchRegister, submitClaimRequest } from '../controllers/register.controller.js';
 
 const router = Router();
 
@@ -14,6 +14,7 @@ router.get('/search', safe(searchRegister));
 router.get('/hub', safe(getRegisterHub));
 router.get('/category-counts', safe(categoryCounts));
 router.get('/category-overview', safe(getCategoryOverview));
+router.get('/service-suburbs', safe(getServiceSuburbs));
 router.get('/:type/:slug', safe(getRegisterListing));
 router.post('/:type/:slug/claim-request', safe(submitClaimRequest));
 
