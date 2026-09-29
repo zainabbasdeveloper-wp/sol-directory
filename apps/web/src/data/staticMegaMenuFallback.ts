@@ -1,4 +1,5 @@
 import type { MegaMenuTab } from '../api/wordpressApi';
+import { slugify } from '../lib/slugify';
 
 /**
  * Static fallback for when WordPress is unreachable — deliberately
@@ -36,13 +37,22 @@ function serviceLink(title: string): { label: string; url: string } {
   return { label: title, url: `/services/${wpStyleSlugify(title)}` };
 }
 
-// Same illustrative combo-page route the menu has always used for
-// these 4 tabs, precomputed per-link now that every link carries its
-// own real `url` — this replaces the separate static-only click
+// Same illustrative combo-page route the menu has always used for the
+// Funding, Coordinator and Language tabs — those don't have real pages
+// of their own yet, precomputed per-link now that every link carries
+// its own real `url`. This replaces the separate static-only click
 // handler that used to exist for these tabs.
 function comboPageLink(title: string): { label: string; url: string } {
   const suburb = title === 'Nursing' ? 'bankstown' : 'sydney';
   return { label: title, url: `/services/${wpStyleSlugify(title)}/${suburb}` };
+}
+
+// The Condition tab has real pages: /directory/for/:slug (see
+// data/conditionContent.ts, which ProviderListingPage.tsx reads —
+// slugify() here must match ITS slugs exactly, which is why both use
+// the same lib/slugify.ts function, not wpStyleSlugify above).
+function conditionLink(title: string): { label: string; url: string } {
+  return { label: title, url: `/directory/for/${slugify(title)}` };
 }
 
 const SERVICE_CATEGORIES: { title: string; items: string[] }[] = [
@@ -101,12 +111,12 @@ export const STATIC_MEGA_MENU_FALLBACK: MegaMenuTab[] = [
     label: 'Condition',
     description: 'Find support by diagnosis or need',
     columns: [
-      { title: 'Developmental', links: ['Autism', 'ADHD', 'Intellectual Disability', 'Global Developmental Delay', 'Down Syndrome', 'Fragile X Syndrome', 'Cerebral Palsy', 'Speech & Language Delay'].map(comboPageLink) },
-      { title: 'Mobility & Physical', links: ['Spinal Cord Injury', 'Amputation & Limb Loss', 'Muscular Dystrophy', 'Multiple Sclerosis', 'Arthritis', 'Spina Bifida', 'Chronic Pain'].map(comboPageLink) },
-      { title: 'Hearing, Vision & Sensory', links: ['Deafness & Hearing Loss', 'Blindness & Low Vision', 'Deafblindness', 'Auslan Support', 'Sensory Processing'].map(comboPageLink) },
-      { title: 'Psychosocial & Mental Health', links: ['Schizophrenia', 'Bipolar Disorder', 'PTSD', 'Anxiety Disorders', 'Depression', 'Eating Disorders', 'Borderline Personality Disorder', 'Dual Diagnosis'].map(comboPageLink) },
-      { title: 'Chronic & Complex Medical', links: ['Epilepsy', 'Diabetes', 'Cystic Fibrosis', 'Renal Failure', 'Cancer Care', 'Motor Neurone Disease', "Parkinson's Disease"].map(comboPageLink) },
-      { title: 'ABI, Stroke & Neuro Rehab', links: ['Acquired Brain Injury', 'Stroke Recovery', 'Traumatic Brain Injury', "Huntington's Disease", 'Neuro Physiotherapy'].map(comboPageLink) },
+      { title: 'Developmental', links: ['Autism', 'ADHD', 'Intellectual Disability', 'Global Developmental Delay', 'Down Syndrome', 'Fragile X Syndrome', 'Cerebral Palsy', 'Speech & Language Delay'].map(conditionLink) },
+      { title: 'Mobility & Physical', links: ['Spinal Cord Injury', 'Amputation & Limb Loss', 'Muscular Dystrophy', 'Multiple Sclerosis', 'Arthritis', 'Spina Bifida', 'Chronic Pain'].map(conditionLink) },
+      { title: 'Hearing, Vision & Sensory', links: ['Deafness & Hearing Loss', 'Blindness & Low Vision', 'Deafblindness', 'Auslan Support', 'Sensory Processing'].map(conditionLink) },
+      { title: 'Psychosocial & Mental Health', links: ['Schizophrenia', 'Bipolar Disorder', 'PTSD', 'Anxiety Disorders', 'Depression', 'Eating Disorders', 'Borderline Personality Disorder', 'Dual Diagnosis'].map(conditionLink) },
+      { title: 'Chronic & Complex Medical', links: ['Epilepsy', 'Diabetes', 'Cystic Fibrosis', 'Renal Failure', 'Cancer Care', 'Motor Neurone Disease', "Parkinson's Disease"].map(conditionLink) },
+      { title: 'ABI, Stroke & Neuro Rehab', links: ['Acquired Brain Injury', 'Stroke Recovery', 'Traumatic Brain Injury', "Huntington's Disease", 'Neuro Physiotherapy'].map(conditionLink) },
     ],
   },
   {
