@@ -6,9 +6,13 @@ import '../Directory.css';
 import './register.css';
 
 /** One listing in a results grid. Links to the listing's own page. */
-export default function RegisterCard({ item }: { item: RegisterListItem }) {
+export default function RegisterCard({ item, matchedCategory }: { item: RegisterListItem; matchedCategory?: string }) {
   const kind = KIND_BY_TYPE[item.type];
   const more = item.areaCount - item.areas.length;
+  // supportCategories comes back in whatever order the register listed it —
+  // when a category filter is active, that category is *why* this card
+  // matched, so it needs to be one of the (at most 4) tags actually shown,
+  // not buried in "+N more" where a correct filter reads as a broken one.
   return (
     <li className="dir-card reg-card">
       <div className="dir-card-top">
@@ -22,12 +26,20 @@ export default function RegisterCard({ item }: { item: RegisterListItem }) {
         </div>
       </div>
 
-      {item.supportCategories.length > 0 && (
-        <div className="dir-tags" aria-label="Supports listed">
-          {item.supportCategories.slice(0, 4).map((c) => <span key={c} className="dir-tag">{c}</span>)}
-          {item.supportCategories.length > 4 && <span className="dir-tag dir-tag-more">+{item.supportCategories.length - 4} more</span>}
-        </div>
-      )}
+      {item.supportCategories.length > 0 && (() => {
+        const hasMatch = !!matchedCategory && item.supportCategories.includes(matchedCategory);
+        const ordered = hasMatch
+          ? [matchedCategory, ...item.supportCategories.filter((c) => c !== matchedCategory)]
+          : item.supportCategories;
+        return (
+          <div className="dir-tags" aria-label="Supports listed">
+            {ordered.slice(0, 4).map((c) => (
+              <span key={c} className={`dir-tag${c === matchedCategory ? ' dir-tag-match' : ''}`}>{c}</span>
+            ))}
+            {ordered.length > 4 && <span className="dir-tag dir-tag-more">+{ordered.length - 4} more</span>}
+          </div>
+        );
+      })()}
 
       <p className="dir-areas">
         {item.areas.length > 0

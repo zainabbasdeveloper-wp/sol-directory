@@ -27,10 +27,13 @@ export default function Home() {
   const stats = useSiteStats();
 
   // Organisations imported from the public NDIS/My Aged Care registers —
-  // real, but not SolDirectory members and not counted in the figures
-  // above. Fetched and shown separately, with its own label, so it can
-  // never read as "providers accepting enquiries".
+  // real, but not SolDirectory members. Never counted into "providers
+  // accepting enquiries" above, and each shown under its own label below
+  // so it can never read as a claim that these orgs are accepting
+  // enquiries or verified — see RegisterCard for the same rule on cards.
   const [registerTotal, setRegisterTotal] = useState<number | null>(null);
+  const [ndisRegisterTotal, setNdisRegisterTotal] = useState<number | null>(null);
+  const [agedCareRegisterTotal, setAgedCareRegisterTotal] = useState<number | null>(null);
   // Per-category counts across both registers, combined — lets
   // SupportFinder show a real number on each support card even while
   // there are no real Providers yet (see registerCounts prop below).
@@ -41,6 +44,8 @@ export default function Home() {
       .then(([ndis, agedCare]) => {
         if (!alive) return;
         setRegisterTotal((ndis?.total ?? 0) + (agedCare?.total ?? 0));
+        setNdisRegisterTotal(ndis?.total ?? 0);
+        setAgedCareRegisterTotal(agedCare?.total ?? 0);
         const counts: Record<string, number> = {};
         for (const hub of [ndis, agedCare]) {
           for (const c of hub?.categories ?? []) counts[c.category] = (counts[c.category] ?? 0) + c.count;
@@ -66,6 +71,12 @@ export default function Home() {
     );
   }
   if (stats && stats.enquiriesLast30Days > 0) figures.push({ label: 'Support requests in the last 30 days', value: stats.enquiriesLast30Days });
+  // Register counts, appended after the real-provider figures above so this
+  // section never sits nearly empty while the platform is still building up
+  // its own providers — each keeps a label that names it as a register
+  // count, never as "accepting enquiries" (see the effect above).
+  if (ndisRegisterTotal && ndisRegisterTotal > 0) figures.push({ label: 'Organisations on the NDIS register', value: ndisRegisterTotal });
+  if (agedCareRegisterTotal && agedCareRegisterTotal > 0) figures.push({ label: 'Organisations on the My Aged Care register', value: agedCareRegisterTotal });
 
   // Organization structured data — every field is either fixed (the
   // site's own name/URL) or read straight from siteConfig (apps/web/.env),
@@ -194,8 +205,9 @@ export default function Home() {
       {figures.length > 0 && (
         <section className="stats-section home-stats" aria-label="Directory figures">
           <p className="stats-headline">
-            Directory figures are based on current platform records, including{' '}
-            <span className="stats-headline-accent">providers accepting enquiries and locations represented</span>.
+            A live snapshot of SolDirectory —{' '}
+            <span className="stats-headline-accent">providers accepting enquiries, plus the public NDIS and My Aged Care registers</span>{' '}
+            we also draw on.
           </p>
           <dl className="home-stats-row">
             {figures.map((f) => (

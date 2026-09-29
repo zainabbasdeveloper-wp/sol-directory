@@ -489,7 +489,7 @@ export default function Directory() {
           )}
 
           <ul className={`dir-grid${regPageLoading ? ' dir-grid-loading' : ''}`} aria-busy={regPageLoading}>
-            {regResults.map((item) => <RegisterCard key={`${item.type}-${item.slug}`} item={item} />)}
+            {regResults.map((item) => <RegisterCard key={`${item.type}-${item.slug}`} item={item} matchedCategory={regCategory} />)}
           </ul>
 
           {!regLoading && !regError && regTotal > PAGE_SIZE && (
