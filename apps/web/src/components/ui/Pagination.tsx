@@ -71,9 +71,9 @@ export default function Pagination({ page, totalPages, onChange, disabled }: Pag
   );
 }
 
-/** [1, '…', 4, 5, 6, '…', 42] — first, last, current ±1, gaps collapsed. */
+/** [1, 2, '…', 4, 5, 6, 7, 8, '…', 42] — first, last, current ±4, gaps collapsed. */
 function pageList(current: number, total: number): (number | '…')[] {
-  const spread = 1;
+  const spread = 4;
   const items = new Set<number>([1, total, current]);
   for (let d = 1; d <= spread; d++) {
     if (current - d >= 1) items.add(current - d);
