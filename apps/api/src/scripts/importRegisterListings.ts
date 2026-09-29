@@ -13,11 +13,12 @@
  * suburb it appears in.
  *
  * Only register FACTS are read: name, register type, state, suburbs, a
- * clean website, and allowlisted service names. Everything else in the
- * rows — the source site's titles, descriptions, "about" text, FAQ text,
- * badges, similar-provider blocks, raw page text, phone numbers — is
- * ignored on purpose. Re-running is safe: listings are upserted by
- * (type, slug), and a listing that's been claimed keeps its claim state.
+ * clean website, a phone number (if the source published one), and
+ * allowlisted service names. Everything else in the rows — the source
+ * site's titles, descriptions, "about" text, FAQ text, badges,
+ * similar-provider blocks, raw page text — is ignored on purpose.
+ * Re-running is safe: listings are upserted by (type, slug), and a
+ * listing that's been claimed keeps its claim state.
  *
  * --dry-run reads and normalises everything and prints a report without
  * touching the database, so the output can be checked first.
@@ -26,7 +27,7 @@ import 'dotenv/config';
 import fs from 'fs';
 import readline from 'readline';
 import {
-  REGISTER_TYPES, normaliseName, normaliseServices, normaliseWebsite, rowToArea, safeProviderSlug,
+  REGISTER_TYPES, normaliseName, normalisePhone, normaliseServices, normaliseWebsite, rowToArea, safeProviderSlug,
   type RegisterArea, type RegisterType, type SupportCategory,
 } from '../services/registerNormalise.js';
 
@@ -35,6 +36,7 @@ interface Acc {
   slug: string;
   name: string;
   website?: string;
+  phone?: string;
   areas: Map<string, RegisterArea>;
   labels: Set<string>;
   categories: Set<SupportCategory>;
@@ -82,6 +84,9 @@ async function readListings(file: string, limit?: number) {
     const website = normaliseWebsite(row.website);
     if (website && !acc.website) acc.website = website;
 
+    const phone = normalisePhone(row.phone_visible);
+    if (phone && !acc.phone) acc.phone = phone;
+
     const area = rowToArea(row as never);
     if (area) acc.areas.set(`${area.state}|${area.suburbSlug}`, area);
 
@@ -109,6 +114,7 @@ function toDoc(a: Acc) {
     areas,
     areaCount: areas.length,
     website: a.website,
+    phone: a.phone,
     services: [...a.labels],
     supportCategories: [...a.categories],
     sourceUpdatedAt: a.lastSeen,
@@ -128,11 +134,12 @@ async function main() {
 
   const byType: Record<string, number> = {};
   const catCount: Record<string, number> = {};
-  let withSite = 0, noServices = 0, noAreas = 0, multiState = 0;
+  let withSite = 0, withPhone = 0, noServices = 0, noAreas = 0, multiState = 0;
   for (const d of docs) {
     byType[d.type] = (byType[d.type] ?? 0) + 1;
     d.supportCategories.forEach((c) => (catCount[c] = (catCount[c] ?? 0) + 1));
     if (d.website) withSite++;
+    if (d.phone) withPhone++;
     if (!d.services.length) noServices++;
     if (!d.areaCount) noAreas++;
     if (d.states.length > 1) multiState++;
@@ -141,7 +148,7 @@ async function main() {
   console.log(`\n[register-import] ${stats.rows} rows read (${stats.badRows} unparseable, ${stats.skippedRows} skipped as incomplete).`);
   console.log(`[register-import] ${docs.length} unique providers:`, byType);
   console.log(`[register-import] service values: ${stats.keptValues} kept, ${stats.droppedValues} dropped as not-a-service (page copy, headings, conditions, languages).`);
-  console.log(`[register-import] ${withSite} with a website, ${noServices} with no recognised services, ${noAreas} with no area, ${multiState} in more than one state.`);
+  console.log(`[register-import] ${withSite} with a website, ${withPhone} with a phone number, ${noServices} with no recognised services, ${noAreas} with no area, ${multiState} in more than one state.`);
   console.log('[register-import] providers per category:', catCount);
   console.log('[register-import] sample:', JSON.stringify({ ...docs[0], areas: docs[0]?.areas.slice(0, 3) }, null, 2));
 
@@ -168,9 +175,14 @@ async function main() {
     const claimed = new Set(claimedDocs.map((r) => `${r.type}|${r.slug}`));
 
     const ops = batch.map((d) => {
-      const { website, sourceUpdatedAt, ...rest } = d;
+      const { website, phone, sourceUpdatedAt, ...rest } = d;
       const isClaimed = claimed.has(`${d.type}|${d.slug}`);
       if (isClaimed) protectedCount++;
+
+      const unset: Record<string, ''> = {};
+      if (!isClaimed && !website) unset.website = '';
+      if (!isClaimed && !phone) unset.phone = '';
+
       return {
         updateOne: {
           filter: { type: d.type, slug: d.slug },
@@ -179,8 +191,8 @@ async function main() {
             // Not claimed (or new): the full re-import, same as before.
             $set: isClaimed
               ? (sourceUpdatedAt ? { sourceUpdatedAt } : {})
-              : { ...rest, ...(website ? { website } : {}), ...(sourceUpdatedAt ? { sourceUpdatedAt } : {}) },
-            ...(!isClaimed && !website ? { $unset: { website: '' } } : {}),
+              : { ...rest, ...(website ? { website } : {}), ...(phone ? { phone } : {}), ...(sourceUpdatedAt ? { sourceUpdatedAt } : {}) },
+            ...(Object.keys(unset).length ? { $unset: unset } : {}),
             // Only on first insert: a re-import must never reset a listing that's been claimed.
             $setOnInsert: { claimStatus: 'unclaimed', importedAt: new Date() },
           },

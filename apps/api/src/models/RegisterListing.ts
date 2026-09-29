@@ -9,10 +9,12 @@ import mongoose, { Schema, type Document } from 'mongoose';
  *
  *  - it never counts toward "providers accepting enquiries" or appears in
  *    matching — nothing here says the business has capacity;
- *  - it has no User, no email and no contact details (the registers don't
- *    publish them, and we won't invent them);
+ *  - it has no User/login of its own. It may have a phone number and/or a
+ *    discovered email (see below) — real, published contact facts about
+ *    the business, not invented — but neither one makes it a Provider;
  *  - the only way it becomes a real Provider is the business asking to
- *    claim it (see ClaimRequest.ts) and us verifying that request.
+ *    claim it (see ClaimRequest.ts) and us verifying that request, or an
+ *    admin provisioning one directly.
  */
 export interface RegisterArea {
   suburb: string;
@@ -29,6 +31,18 @@ export interface RegisterListingDoc extends Document {
   areas: RegisterArea[];
   areaCount: number;
   website?: string;
+  /** The business's own published phone number, as scraped — a real fact, imported from the source's phone_visible field (registerNormalise.ts's normalisePhone). Admin-visible only; not shown on the public register pages. */
+  phone?: string;
+  /**
+   * A contact email found on the business's own website (see
+   * services/emailDiscovery.ts) — never guessed, never taken from anyone
+   * else's site. Much lower confidence than logoUrl: many businesses
+   * expose no plain email at all (contact-form-only, often deliberately,
+   * to avoid being scraped), so this is null far more often than not.
+   * Admin-visible only; not shown on the public register pages.
+   */
+  email?: string;
+  emailCheckedAt?: Date;
   /** Display labels for the services the register lists (allowlisted, see registerNormalise.ts). */
   services: string[];
   /** Canonical categories, used for filtering and counts. */
@@ -75,6 +89,9 @@ const registerListingSchema = new Schema<RegisterListingDoc>(
     areas: [areaSchema],
     areaCount: { type: Number, default: 0 },
     website: String,
+    phone: String,
+    email: String,
+    emailCheckedAt: Date,
     services: [String],
     supportCategories: [String],
     claimStatus: { type: String, enum: ['unclaimed', 'requested', 'claimed'], default: 'unclaimed' },

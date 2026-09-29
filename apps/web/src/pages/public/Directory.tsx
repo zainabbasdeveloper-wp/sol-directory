@@ -44,6 +44,10 @@ function initials(name: string): string {
  *    /ndis-providers, /aged-care-providers only), but never merged into
  *    the provider grid or its count, never given a "Get matched" CTA, and
  *    never implied to be verified/accepting enquiries — see RegisterCard.
+ * The providers section (search results, its empty state, its pagination)
+ * is skipped entirely while there are no real providers at all — see
+ * showProviderResults — so the page doesn't lead with a permanent empty
+ * block above the register section.
  */
 export default function Directory() {
   const [params, setParams] = useSearchParams();
@@ -287,6 +291,12 @@ export default function Directory() {
   }
 
   const anyFilter = !!(service || place || nameQuery);
+  // While there are no real providers at all yet (not just none matching a
+  // filter), the whole SolDirectory-providers block below the search box
+  // would just be a permanent empty state above the register section — so
+  // it's skipped entirely rather than shown. The moment a real provider
+  // exists, or a filter is applied, this reverts to the normal search UI.
+  const showProviderResults = loading || error !== '' || anyFilter || total > 0;
 
   return (
     <>
@@ -300,8 +310,7 @@ export default function Directory() {
           </span>
           <h1 className="section-heading section-heading-light">Find a provider</h1>
           <p className="directory-page-subtitle">
-            Search for the support you need and where you need it. Providers who have
-            confirmed their availability recently are shown.
+            Search for the support you need and where you need it.
           </p>
         </div>
       </div>
@@ -376,88 +385,89 @@ export default function Directory() {
           <button type="button" className="btn-gradient" onClick={() => openMatchModal()}>Submit an enquiry →</button>
         </div>
 
-        <div className="dir-results-head" aria-live="polite" ref={resultsTopRef}>
-          {loading || pageLoading
-            ? 'Searching…'
-            : error || total === 0
-              ? ''
-              : total <= PAGE_SIZE
-                ? `${total.toLocaleString('en-AU')} ${total === 1 ? 'provider' : 'providers'}${anyFilter ? ' match your search' : ' listed'}`
-                : `Showing ${((page - 1) * PAGE_SIZE + 1).toLocaleString('en-AU')}–${Math.min(page * PAGE_SIZE, total).toLocaleString('en-AU')} of ${total.toLocaleString('en-AU')} providers${anyFilter ? ' matching your search' : ''}`}
-        </div>
-
-        {error && (
-          <div className="dir-empty" role="alert">
-            <p>{error}</p>
-            <button type="button" className="btn-gradient" onClick={retry}>Try again</button>
-          </div>
-        )}
-
-        {!error && !loading && results.length === 0 && (
-          <div className="dir-empty">
-            <h2>No providers listed for this search yet</h2>
-            <p>
-              {anyFilter
-                ? 'Try removing a filter, or check the spelling. You can also send a request, and we will notify suitable providers in your area as they join.'
-                : 'No providers are listed yet.'}
-            </p>
-            <div className="dir-empty-actions">
-              {anyFilter && <button type="button" className="btn-tint" onClick={clearAll}>Clear search</button>}
-              <button type="button" className="btn-gradient" onClick={() => openMatchModal()}>Submit an enquiry →</button>
+        {showProviderResults && (
+          <>
+            <div className="dir-results-head" aria-live="polite" ref={resultsTopRef}>
+              {loading || pageLoading
+                ? 'Searching…'
+                : error || total === 0
+                  ? ''
+                  : total <= PAGE_SIZE
+                    ? `${total.toLocaleString('en-AU')} ${total === 1 ? 'provider' : 'providers'}${anyFilter ? ' match your search' : ' listed'}`
+                    : `Showing ${((page - 1) * PAGE_SIZE + 1).toLocaleString('en-AU')}–${Math.min(page * PAGE_SIZE, total).toLocaleString('en-AU')} of ${total.toLocaleString('en-AU')} providers${anyFilter ? ' matching your search' : ''}`}
             </div>
-          </div>
-        )}
 
-        <ul className={`dir-grid${pageLoading ? ' dir-grid-loading' : ''}`} aria-busy={pageLoading}>
-          {results.map((p) => {
-            const name = p.tradingName || p.legalEntityName;
-            const status = STATUS_STYLE[p.intakeStatus];
-            const moreSuburbs = p.serviceSuburbCount - p.serviceSuburbs.length;
-            return (
-              <li key={p.id} className="dir-card">
-                <div className="dir-card-top">
-                  {p.logoUrl
-                    ? <img className="dir-logo" src={p.logoUrl} alt="" loading="lazy" />
-                    : <span className="dir-logo dir-logo-fallback" aria-hidden="true">{initials(name)}</span>}
-                  <div className="dir-card-title">
-                    <h3>{p.slug ? <Link to={`/directory/${p.slug}`}>{name}</Link> : name}</h3>
-                    {status && <span className={`dir-status dir-status-${status.tone}`}>{status.label}</span>}
-                  </div>
+            {error && (
+              <div className="dir-empty" role="alert">
+                <p>{error}</p>
+                <button type="button" className="btn-gradient" onClick={retry}>Try again</button>
+              </div>
+            )}
+
+            {!error && !loading && results.length === 0 && (
+              <div className="dir-empty">
+                <h2>No providers listed for this search yet</h2>
+                <p>Try removing a filter, or check the spelling. You can also send a request, and we will notify suitable providers in your area as they join.</p>
+                <div className="dir-empty-actions">
+                  <button type="button" className="btn-tint" onClick={clearAll}>Clear search</button>
+                  <button type="button" className="btn-gradient" onClick={() => openMatchModal()}>Submit an enquiry →</button>
                 </div>
+              </div>
+            )}
 
-                {p.registrationGroups.length > 0 && (
-                  <div className="dir-tags" aria-label="Supports offered">
-                    {p.registrationGroups.slice(0, 4).map((g) => <span key={g} className="dir-tag">{g}</span>)}
-                    {p.registrationGroups.length > 4 && <span className="dir-tag dir-tag-more">+{p.registrationGroups.length - 4} more</span>}
-                  </div>
-                )}
+            <ul className={`dir-grid${pageLoading ? ' dir-grid-loading' : ''}`} aria-busy={pageLoading}>
+              {results.map((p) => {
+                const name = p.tradingName || p.legalEntityName;
+                const status = STATUS_STYLE[p.intakeStatus];
+                const moreSuburbs = p.serviceSuburbCount - p.serviceSuburbs.length;
+                return (
+                  <li key={p.id} className="dir-card">
+                    <div className="dir-card-top">
+                      {p.logoUrl
+                        ? <img className="dir-logo" src={p.logoUrl} alt="" loading="lazy" />
+                        : <span className="dir-logo dir-logo-fallback" aria-hidden="true">{initials(name)}</span>}
+                      <div className="dir-card-title">
+                        <h3>{p.slug ? <Link to={`/directory/${p.slug}`}>{name}</Link> : name}</h3>
+                        {status && <span className={`dir-status dir-status-${status.tone}`}>{status.label}</span>}
+                      </div>
+                    </div>
 
-                <p className="dir-areas">
-                  {p.serviceSuburbs.length > 0
-                    ? <>Supports people in <strong>{p.serviceSuburbs.join(', ')}</strong>{moreSuburbs > 0 ? ` and ${moreSuburbs} more area${moreSuburbs === 1 ? '' : 's'}` : ''}</>
-                    : 'Service areas not listed'}
-                </p>
+                    {p.registrationGroups.length > 0 && (
+                      <div className="dir-tags" aria-label="Supports offered">
+                        {p.registrationGroups.slice(0, 4).map((g) => <span key={g} className="dir-tag">{g}</span>)}
+                        {p.registrationGroups.length > 4 && <span className="dir-tag dir-tag-more">+{p.registrationGroups.length - 4} more</span>}
+                      </div>
+                    )}
 
-                {p.slug && <Link className="dir-card-cta" to={`/directory/${p.slug}`}>View profile →</Link>}
-                <button type="button" className="dir-card-cta" onClick={() => openMatchModal()}>
-                  Get matched with providers like this →
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+                    <p className="dir-areas">
+                      {p.serviceSuburbs.length > 0
+                        ? <>Supports people in <strong>{p.serviceSuburbs.join(', ')}</strong>{moreSuburbs > 0 ? ` and ${moreSuburbs} more area${moreSuburbs === 1 ? '' : 's'}` : ''}</>
+                        : 'Service areas not listed'}
+                    </p>
 
-        {!loading && !error && total > PAGE_SIZE && (
-          <Pagination page={page} totalPages={totalPages} onChange={goToPage} disabled={pageLoading} />
+                    {p.slug && <Link className="dir-card-cta" to={`/directory/${p.slug}`}>View profile →</Link>}
+                    <button type="button" className="dir-card-cta" onClick={() => openMatchModal()}>
+                      Get matched with providers like this →
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+
+            {!loading && !error && total > PAGE_SIZE && (
+              <Pagination page={page} totalPages={totalPages} onChange={goToPage} disabled={pageLoading} />
+            )}
+          </>
         )}
 
         <div className="dir-register-hint">
-          <h2 className="reg-h2" style={{ marginTop: 0 }}>More providers in our directory</h2>
+          <h2 className="reg-h2" style={{ marginTop: 0 }}>Browse NDIS &amp; Aged Care providers</h2>
           <p className="reg-note">
-            Browse provider profiles with supports and service areas listed for NDIS and My Aged Care.
-            {registerGrandTotal && (
-              <> Explore {formatCount(registerGrandTotal.ndis + registerGrandTotal.aged_care)} provider profiles in our directory.</>
-            )}
+            {registerGrandTotal
+              ? <>{formatCount(registerGrandTotal.ndis + registerGrandTotal.aged_care)} organisations listed on the NDIS and My Aged Care registers, sourced directly from each register.</>
+              : 'Organisations listed on the NDIS and My Aged Care registers, sourced directly from each register.'}{' '}
+            A business can{' '}
+            <Link to={registerType === 'ndis' ? '/ndis-providers' : '/aged-care-providers'}>set up its own SolDirectory listing</Link>.
           </p>
 
           <div className="reg-filters" role="group" aria-label="Choose a register">

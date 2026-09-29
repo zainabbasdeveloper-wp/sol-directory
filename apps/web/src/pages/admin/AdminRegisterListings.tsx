@@ -133,6 +133,8 @@ export default function AdminRegisterListings() {
                 )}
                 <dl className="claims-facts">
                   <div><dt>Imported</dt><dd>{fmtDate(it.importedAt)}</dd></div>
+                  {it.phone && <div><dt>Phone</dt><dd>{it.phone}</dd></div>}
+                  {it.email && <div><dt>Email</dt><dd>{it.email}</dd></div>}
                 </dl>
               </div>
               <div className="claims-actions">

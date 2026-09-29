@@ -9,6 +9,8 @@ export interface AdminRegisterItem {
   areaCount: number;
   supportCategories: string[];
   hasWebsite: boolean;
+  phone: string | null;
+  email: string | null;
   claimStatus: 'unclaimed' | 'requested' | 'claimed';
   providerId: string | null;
   importedAt: string;

@@ -31,10 +31,22 @@ export default function Home() {
   // above. Fetched and shown separately, with its own label, so it can
   // never read as "providers accepting enquiries".
   const [registerTotal, setRegisterTotal] = useState<number | null>(null);
+  // Per-category counts across both registers, combined — lets
+  // SupportFinder show a real number on each support card even while
+  // there are no real Providers yet (see registerCounts prop below).
+  const [registerCategoryCounts, setRegisterCategoryCounts] = useState<Record<string, number>>({});
   useEffect(() => {
     let alive = true;
     Promise.all([getRegisterHub('ndis').catch(() => null), getRegisterHub('aged_care').catch(() => null)])
-      .then(([ndis, agedCare]) => { if (alive) setRegisterTotal((ndis?.total ?? 0) + (agedCare?.total ?? 0)); });
+      .then(([ndis, agedCare]) => {
+        if (!alive) return;
+        setRegisterTotal((ndis?.total ?? 0) + (agedCare?.total ?? 0));
+        const counts: Record<string, number> = {};
+        for (const hub of [ndis, agedCare]) {
+          for (const c of hub?.categories ?? []) counts[c.category] = (counts[c.category] ?? 0) + c.count;
+        }
+        setRegisterCategoryCounts(counts);
+      });
     return () => { alive = false; };
   }, []);
 
@@ -210,7 +222,7 @@ export default function Home() {
         </section>
       )}
 
-      <SupportFinder stats={stats} />
+      <SupportFinder stats={stats} registerCounts={registerCategoryCounts} />
 
       <section className="checks-section">
         <div className="checks-photo-bg">
