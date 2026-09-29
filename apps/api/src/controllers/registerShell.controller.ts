@@ -388,7 +388,7 @@ async function workerListPage(site: string, page: number, filtered: boolean): Pr
 
 // ---------------------------------------------------------------
 // Real-provider location and "experience supporting" pages
-//   /directory/in/:suburb      /directory/for/:condition      /directory/for
+//   /directory/in/:suburb      /condition/:slug/      /condition
 // ---------------------------------------------------------------
 async function providerFilterPage(site: string, mode: 'area' | 'condition', slug: string, page: number): Promise<Page> {
   const rows = mode === 'area' ? await areaRows() : await conditionRows();
@@ -402,7 +402,11 @@ async function providerFilterPage(site: string, mode: 'area' | 'condition', slug
     Provider.countDocuments(filter),
   ]);
 
-  const base = `/directory/${mode === 'area' ? 'in' : 'for'}/${row.slug}`;
+  // Condition pages are permalink-style, their own top-level category
+  // prefix (matches AppRoutes.tsx / ProviderListingPage.tsx) — area
+  // pages stay nested under /directory as before.
+  const base = mode === 'area' ? `/directory/in/${row.slug}` : `/condition/${row.slug}`;
+  const parent = mode === 'area' ? { name: 'Provider directory', href: '/directory' } : { name: 'Condition', href: '/condition' };
   const totalPages = Math.max(1, Math.ceil(total / LEVEL_PAGE));
   const heading = mode === 'area' ? `Providers supporting people in ${row.name}` : `Providers with experience supporting ${row.name}`;
   const pager =
@@ -417,11 +421,11 @@ async function providerFilterPage(site: string, mode: 'area' | 'condition', slug
     noindex: total < MIN_INDEXABLE_PROVIDERS,
     jsonLd: [{ id: 'directory-breadcrumbs', data: { '@type': 'BreadcrumbList', itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Home', item: `${site}/` },
-      { '@type': 'ListItem', position: 2, name: 'Provider directory', item: `${site}/directory` },
+      { '@type': 'ListItem', position: 2, name: parent.name, item: `${site}${parent.href}` },
       { '@type': 'ListItem', position: 3, name: row.name, item: `${site}${base}` },
     ] } }],
     body:
-      `<nav aria-label="Breadcrumb"><a href="/">Home</a> / <a href="/directory">Provider directory</a> / ${esc(row.name)}</nav><h1>${esc(heading)}</h1>` +
+      `<nav aria-label="Breadcrumb"><a href="/">Home</a> / <a href="${parent.href}">${esc(parent.name)}</a> / ${esc(row.name)}</nav><h1>${esc(heading)}</h1>` +
       `<p>${fmt(total)} ${total === 1 ? 'provider' : 'providers'} on SolDirectory.</p>` +
       `<ul>${(docs as any[]).map((p) => li(`/directory/${p.slug}`, p.tradingName || p.legalEntityName, (p.registrationGroups ?? []).length ? `– ${(p.registrationGroups as string[]).slice(0, 3).join(', ')}` : '')).join('')}</ul><p>${pager}</p>`,
   };
@@ -433,10 +437,10 @@ async function conditionsHubPage(site: string): Promise<Page> {
     status: 200,
     title: 'Providers by experience supporting a condition or need | SolDirectory',
     description: 'Browse providers by the conditions and needs they say they have experience supporting. Providers write their own profiles.',
-    canonical: '/directory/for',
+    canonical: '/condition',
     noindex: rows.length === 0,
     jsonLd: [],
-    body: `<h1>Find providers by experience</h1><ul>${rows.map((r) => li(`/directory/for/${r.slug}`, r.name, `(${fmt(r.count)})`)).join('')}</ul>`,
+    body: `<h1>Find providers by experience</h1><ul>${rows.map((r) => li(`/condition/${r.slug}`, r.name, `(${fmt(r.count)})`)).join('')}</ul>`,
   };
 }
 
@@ -620,10 +624,14 @@ export async function registerShell(req: Request, res: Response) {
       if (e instanceof WordPressUnavailable) return res.status(502).send('Content service unavailable');
       throw e;
     }
-  } else if (root === 'directory' && parts.length === 3 && (parts[1] === 'in' || parts[1] === 'for')) {
-    page = await providerFilterPage(site, parts[1] === 'in' ? 'area' : 'condition', parts[2], pageNum);
-  } else if (root === 'directory' && parts.length === 2 && parts[1] === 'for') {
+  } else if (root === 'condition' && parts.length === 2) {
+    // Permalink-style: /condition/:slug/ (its own top-level category
+    // prefix, not nested under /directory — see AppRoutes.tsx).
+    page = await providerFilterPage(site, 'condition', parts[1], pageNum);
+  } else if (root === 'condition' && parts.length === 1) {
     page = await conditionsHubPage(site);
+  } else if (root === 'directory' && parts.length === 3 && parts[1] === 'in') {
+    page = await providerFilterPage(site, 'area', parts[2], pageNum);
   } else if (root === 'directory' && parts.length === 2) {
     page = await providerProfilePage(site, parts[1]);
   } else if (root === 'independent-workers' && parts.length === 2) {

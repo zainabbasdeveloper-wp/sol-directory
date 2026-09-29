@@ -42,11 +42,13 @@ export function ProviderCardItem({ p }: { p: PublicProviderCard }) {
 }
 
 /**
- * /directory/in/:suburb (mode "area") and /directory/for/:condition (mode
- * "condition"): real providers who list this suburb as an area they
- * support, or this condition as experience they have. The wording says
- * exactly that — providers write their own profiles. Pages with fewer than
- * a handful of providers stay reachable but are kept out of search results.
+ * /directory/in/:suburb (mode "area") and /condition/:slug/ (mode
+ * "condition", permalink-style — its own top-level category prefix, not
+ * nested under /directory): real providers who list this suburb as an
+ * area they support, or this condition as experience they have. The
+ * wording says exactly that — providers write their own profiles. Pages
+ * with fewer than a handful of providers stay reachable but are kept
+ * out of search results.
  */
 export default function ProviderListingPage({ mode }: { mode: Mode }) {
   const { suburb = '', condition = '' } = useParams();
@@ -97,7 +99,10 @@ export default function ProviderListingPage({ mode }: { mode: Mode }) {
     return () => { alive = false; };
   }, [row, mode, page]);
 
-  const base = `/directory/${mode === 'area' ? 'in' : 'for'}/${slug}`;
+  // Condition pages live under their own top-level "category" prefix
+  // (/condition/:slug/, permalink-style, per explicit request) rather
+  // than nested under /directory — area pages are unchanged.
+  const base = mode === 'area' ? `/directory/in/${slug}` : `/condition/${slug}/`;
   const heading = row
     ? (mode === 'area' ? `Providers supporting people in ${row.name}` : `Providers with experience supporting ${row.name}`)
     : 'Provider directory';
@@ -116,11 +121,12 @@ export default function ProviderListingPage({ mode }: { mode: Mode }) {
       canonicalUrl: `${window.location.origin}${page > 1 ? `${base}?page=${page}` : base}`,
       noindex: total < MIN_INDEXABLE,
     });
+    const parent = mode === 'area' ? { name: 'Provider directory', to: '/directory' } : { name: 'Condition', to: '/condition' };
     setJsonLd('directory-breadcrumbs', {
       '@type': 'BreadcrumbList',
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Home', item: `${window.location.origin}/` },
-        { '@type': 'ListItem', position: 2, name: 'Provider directory', item: `${window.location.origin}/directory` },
+        { '@type': 'ListItem', position: 2, name: parent.name, item: `${window.location.origin}${parent.to}` },
         { '@type': 'ListItem', position: 3, name: row.name, item: `${window.location.origin}${base}` },
       ],
     });
@@ -149,7 +155,13 @@ export default function ProviderListingPage({ mode }: { mode: Mode }) {
     <>
       <PublicHeader />
       <main className="reg-page">
-        <Breadcrumbs items={[{ label: 'Home', to: '/' }, { label: 'Provider directory', to: '/directory' }, { label: row?.name ?? '…' }]} />
+        <Breadcrumbs
+          items={[
+            { label: 'Home', to: '/' },
+            mode === 'area' ? { label: 'Provider directory', to: '/directory' } : { label: 'Condition', to: '/condition' },
+            { label: row?.name ?? '…' },
+          ]}
+        />
         <h1 className="pp-head-h1">{heading}</h1>
         <p className="reg-lede" ref={topRef}>
           {row && !loading
@@ -274,7 +286,7 @@ function ConditionContentSections({ meta }: { meta: NonNullable<ReturnType<typeo
           <h2 className="reg-h2">Other conditions in {meta.categoryGroup}</h2>
           <ul className="reg-linkgrid">
             {siblings.map((c) => (
-              <li key={c.slug}><Link to={`/directory/for/${c.slug}`}><span>{c.name}</span></Link></li>
+              <li key={c.slug}><Link to={`/condition/${c.slug}/`}><span>{c.name}</span></Link></li>
             ))}
           </ul>
         </section>
@@ -318,43 +330,58 @@ function ConditionContentSections({ meta }: { meta: NonNullable<ReturnType<typeo
   );
 }
 
-/** /directory/for — every condition/need that at least one provider says they have experience supporting. */
+/**
+ * /condition — every condition/need SolDirectory has a page for (see
+ * data/conditionContent.ts), grouped the same way the mega menu groups
+ * them. Real provider counts are overlaid where they exist, but — same
+ * principle as the detail pages — a condition with zero real providers
+ * so far still gets a real, reachable link, not just the ones already
+ * tagged by a provider.
+ */
 export function ConditionsHubPage() {
-  const [rows, setRows] = useState<CountRow[] | null>(null);
-  const [minIndexable, setMin] = useState(MIN_INDEXABLE);
+  const [rows, setRows] = useState<CountRow[]>([]);
 
   useEffect(() => {
-    listPublicConditions().then((r) => { setRows(r.items); setMin(r.minIndexable); }).catch(() => setRows([]));
+    listPublicConditions().then((r) => setRows(r.items)).catch(() => setRows([]));
     window.scrollTo(0, 0);
   }, []);
 
   useEffect(() => {
-    if (rows === null) return;
     applySeoTags({
       title: 'Providers by experience supporting a condition or need | SolDirectory',
       description: 'Browse providers by the conditions and needs they say they have experience supporting. Providers write their own profiles.',
-      canonicalUrl: `${window.location.origin}/directory/for`,
-      noindex: rows.length === 0,
+      canonicalUrl: `${window.location.origin}/condition`,
     });
-  }, [rows]);
+  }, []);
+
+  const countFor = (slug: string) => rows.find((r) => r.slug === slug)?.count ?? 0;
 
   return (
     <>
       <PublicHeader />
       <main className="reg-page">
-        <Breadcrumbs items={[{ label: 'Home', to: '/' }, { label: 'Provider directory', to: '/directory' }, { label: 'By experience' }]} />
-        <h1 className="pp-head-h1">Find providers by experience</h1>
+        <Breadcrumbs items={[{ label: 'Home', to: '/' }, { label: 'Condition' }]} />
+        <h1 className="pp-head-h1">Find providers by condition</h1>
         <p className="reg-lede">
           Providers choose the conditions and needs they have experience supporting. This isn’t a clinical recommendation — always confirm
           a provider’s experience and qualifications with them.
         </p>
-        {rows !== null && rows.length === 0 && <p className="dir-results-head">No providers have listed this yet.</p>}
-        <ul className="reg-linkgrid">
-          {(rows ?? []).map((r) => (
-            <li key={r.slug}><Link to={`/directory/for/${r.slug}`}>{r.name}<span>{fmt(r.count)}</span></Link></li>
-          ))}
-        </ul>
-        <p className="reg-note">Pages with fewer than {minIndexable} providers are shown to visitors but not offered to search engines.</p>
+        {CONDITION_CATEGORY_GROUPS.map((group) => (
+          <section key={group.title}>
+            <h2 className="reg-h2">{group.title}</h2>
+            <ul className="reg-linkgrid">
+              {group.items.map((c) => {
+                const count = countFor(c.slug);
+                return (
+                  <li key={c.slug}>
+                    <Link to={`/condition/${c.slug}/`}><span>{c.name}</span>{count > 0 && <span>{fmt(count)}</span>}</Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ))}
+        <p className="reg-note">Provider counts shown only once at least one real provider lists that experience.</p>
       </main>
       <PublicFooter />
     </>

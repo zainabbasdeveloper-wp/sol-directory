@@ -48,6 +48,7 @@ export const RESERVED_PATH_PREFIXES = [
   '/find-providers',
   '/saved-providers',
   '/funding',
+  '/condition',
 ];
 
 export function isReservedPath(pathname: string): boolean {

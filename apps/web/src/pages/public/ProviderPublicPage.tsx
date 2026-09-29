@@ -149,7 +149,7 @@ export default function ProviderPublicPage() {
               <>
                 <h2 className="reg-h2">Experience supporting</h2>
                 <ul className="pp-chips">{p.conditionExperience.map((c) => (
-                  <li key={c} className="pp-chip pp-chip-plain">{conditionSlugs.has(slugify(c)) ? <Link to={`/directory/for/${slugify(c)}`}>{c}</Link> : c}</li>
+                  <li key={c} className="pp-chip pp-chip-plain">{conditionSlugs.has(slugify(c)) ? <Link to={`/condition/${slugify(c)}/`}>{c}</Link> : c}</li>
                 ))}</ul>
               </>
             )}

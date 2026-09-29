@@ -59,7 +59,7 @@ export default function FundingTopicPage() {
     applySeoTags({
       title: `${meta.name} | Funding | SolDirectory`,
       description: meta.summary.slice(0, 155).replace(/\s+\S*$/, '') + '…',
-      canonicalUrl: `${window.location.origin}/funding/${meta.slug}`,
+      canonicalUrl: `${window.location.origin}/funding/${meta.slug}/`,
       // Only indexable once there's either real provider data behind it,
       // or — for the informational-only topics — always, since the
       // content itself is the real, useful thing on those pages.
@@ -70,7 +70,7 @@ export default function FundingTopicPage() {
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Home', item: `${window.location.origin}/` },
         { '@type': 'ListItem', position: 2, name: 'Funding', item: `${window.location.origin}/funding` },
-        { '@type': 'ListItem', position: 3, name: meta.name, item: `${window.location.origin}/funding/${meta.slug}` },
+        { '@type': 'ListItem', position: 3, name: meta.name, item: `${window.location.origin}/funding/${meta.slug}/` },
       ],
     });
     return () => setJsonLd('funding-breadcrumbs', null);
@@ -150,7 +150,7 @@ export default function FundingTopicPage() {
             <h2 className="reg-h2">Other topics in {meta.categoryGroup}</h2>
             <ul className="reg-linkgrid">
               {siblings.map((f) => (
-                <li key={f.slug}><Link to={`/funding/${f.slug}`}><span>{f.name}</span></Link></li>
+                <li key={f.slug}><Link to={`/funding/${f.slug}/`}><span>{f.name}</span></Link></li>
               ))}
             </ul>
           </section>
@@ -195,7 +195,7 @@ export function FundingHubPage() {
             <h2 className="reg-h2">{group.title}</h2>
             <ul className="reg-linkgrid">
               {group.items.map((f: FundingContent) => (
-                <li key={f.slug}><Link to={`/funding/${f.slug}`}><span>{f.name}</span></Link></li>
+                <li key={f.slug}><Link to={`/funding/${f.slug}/`}><span>{f.name}</span></Link></li>
               ))}
             </ul>
           </section>

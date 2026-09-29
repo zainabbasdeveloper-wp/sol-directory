@@ -101,8 +101,9 @@ async function buildPageUrls(): Promise<UrlEntry[]> {
   const [areas, conditions] = await Promise.all([areaRows(), conditionRows()]);
   for (const a of areas) if (a.count >= MIN_INDEXABLE_PROVIDERS) paths.push(`/directory/in/${a.slug}`);
   const goodConditions = conditions.filter((c) => c.count >= MIN_INDEXABLE_PROVIDERS);
-  for (const c of goodConditions) paths.push(`/directory/for/${c.slug}`);
-  if (goodConditions.length) paths.push('/directory/for');
+  // Permalink-style, its own top-level category prefix — not nested under /directory.
+  for (const c of goodConditions) paths.push(`/condition/${c.slug}`);
+  if (goodConditions.length) paths.push('/condition');
 
   // Independent workers who opted in to a public profile and were approved.
   const workers = await Worker.find({ publicProfile: true, published: true, accountStatus: 'active', publicSlug: { $exists: true, $ne: null } }).select('publicSlug').lean();

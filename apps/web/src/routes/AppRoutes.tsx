@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import { useLayoutEffect, type ReactElement } from 'react';
 import { resetSeoTags } from '../lib/seo';
 import AppShell from '../components/layout/AppShell';
@@ -52,6 +52,12 @@ import { CPT_ROUTES } from '../lib/cptRouteConfig';
 import WordPressCatchAllPage from '../pages/wordpress/WordPressCatchAllPage';
 import { RegisterHubRoute, RegisterSingleRoute, RegisterSuburbRoute } from '../pages/public/register/RegisterRoutes';
 import type { Role } from '@soldirectory/shared-types';
+
+/** Old /directory/for/:condition path -> new permalink-style /condition/:slug/. */
+function RedirectToCondition() {
+  const { condition = '' } = useParams<{ condition: string }>();
+  return <Navigate to={`/condition/${condition}/`} replace />;
+}
 
 function RequireAuth({ children }: { children: ReactElement }) {
   const { user, loading } = useAuth();
@@ -129,8 +135,11 @@ export default function AppRoutes() {
       <Route path="/independent-workers/find" element={<WorkerFinder />} />
       <Route path="/independent-workers/:slug" element={<WorkerPublicProfile />} />
       <Route path="/directory/in/:suburb" element={<ProviderListingPage mode="area" />} />
-      <Route path="/directory/for" element={<ConditionsHubPage />} />
-      <Route path="/directory/for/:condition" element={<ProviderListingPage mode="condition" />} />
+      {/* Permalink-style: its own top-level category prefix, not nested under /directory. Old path redirected below. */}
+      <Route path="/condition" element={<ConditionsHubPage />} />
+      <Route path="/condition/:condition" element={<ProviderListingPage mode="condition" />} />
+      <Route path="/directory/for" element={<Navigate to="/condition" replace />} />
+      <Route path="/directory/for/:condition" element={<RedirectToCondition />} />
       <Route path="/funding" element={<FundingHubPage />} />
       <Route path="/funding/:slug" element={<FundingTopicPage />} />
       <Route path="/directory/:slug" element={<ProviderPublicPage />} />
