@@ -55,6 +55,12 @@ function conditionLink(title: string): { label: string; url: string } {
   return { label: title, url: `/directory/for/${slugify(title)}` };
 }
 
+// The Funding tab has real pages too: /funding/:slug (see
+// data/fundingContent.ts, which FundingTopicPage.tsx reads).
+function fundingLink(title: string): { label: string; url: string } {
+  return { label: title, url: `/funding/${slugify(title)}` };
+}
+
 const SERVICE_CATEGORIES: { title: string; items: string[] }[] = [
   { title: 'Personal & Nursing Care', items: ['Personal care', 'Medication assistance', 'Overnight support', 'High-intensity personal care', 'Community nursing care'] },
   { title: 'Accommodation & Living Supports', items: ['Supported Independent Living (SIL)', 'Individualised Living Options (ILO)', 'Short Term Accommodation (STA) / respite', 'Medium Term Accommodation (MTA)', 'Group / shared living support'] },
@@ -124,11 +130,11 @@ export const STATIC_MEGA_MENU_FALLBACK: MegaMenuTab[] = [
     label: 'Funding',
     description: 'NDIS plans, HCP, CHSP, DVA, and private',
     columns: [
-      { title: 'NDIS Plans', links: ['Agency Managed', 'Plan Managed', 'Self Managed', 'Plan Reviews', 'Change of Circumstances', 'First Plan Support'].map(comboPageLink) },
-      { title: 'Aged Care', links: ['Home Care Packages', 'Commonwealth Home Support', 'Support at Home', 'Residential Fees'].map(comboPageLink) },
-      { title: 'Veterans', links: ['DVA Community Nursing', 'DVA Home Care', "Veterans' Home Care", 'Rehabilitation Appliances', 'Open Arms Referrals'].map(comboPageLink) },
-      { title: 'Other Funding', links: ['Private Fee for Service', 'iCare & Workers Compensation', 'Private Health Insurance', 'Medicare Care Plans', 'State Funded Programs'].map(comboPageLink) },
-      { title: 'Help With Funding', links: ['Plan Managers', 'Bookkeeping & Invoicing', 'Price Guide Explained', 'Funding Eligibility', 'Budget Categories'].map(comboPageLink) },
+      { title: 'NDIS Plans', links: ['Agency Managed', 'Plan Managed', 'Self Managed', 'Plan Reviews', 'Change of Circumstances', 'First Plan Support'].map(fundingLink) },
+      { title: 'Aged Care', links: ['Home Care Packages', 'Commonwealth Home Support', 'Support at Home', 'Residential Fees'].map(fundingLink) },
+      { title: 'Veterans', links: ['DVA Community Nursing', 'DVA Home Care', "Veterans' Home Care", 'Rehabilitation Appliances', 'Open Arms Referrals'].map(fundingLink) },
+      { title: 'Other Funding', links: ['Private Fee for Service', 'iCare & Workers Compensation', 'Private Health Insurance', 'Medicare Care Plans', 'State Funded Programs'].map(fundingLink) },
+      { title: 'Help With Funding', links: ['Plan Managers', 'Bookkeeping & Invoicing', 'Price Guide Explained', 'Funding Eligibility', 'Budget Categories'].map(fundingLink) },
     ],
   },
   {
