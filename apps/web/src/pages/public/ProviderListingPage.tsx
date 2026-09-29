@@ -7,6 +7,7 @@ import { Breadcrumbs, trimTo } from './register/RegisterParts';
 import { listProvidersBy, listPublicAreas, listPublicConditions, type CountRow, type PublicProviderCard } from '../../api/profilesApi';
 import { applySeoTags, setJsonLd } from '../../lib/seo';
 import { useMatchModal } from '../../context/MatchModalContext';
+import { conditionBySlug, CONDITION_CATEGORY_GROUPS } from '../../data/conditionContent';
 import './Home.css';
 import './Directory.css';
 import './register/register.css';
@@ -61,13 +62,27 @@ export default function ProviderListingPage({ mode }: { mode: Mode }) {
   const [error, setError] = useState(false);
   const topRef = useRef<HTMLDivElement>(null);
 
+  // Real educational content for this condition, if it's one of the 40
+  // the site has written up (data/conditionContent.ts) — independent of
+  // whether any real provider has tagged it yet, so the page (and the
+  // mega menu link to it) works from day one, not only once a provider
+  // exists. Area pages are unaffected: they still only exist once a
+  // real provider actually lists that suburb.
+  const conditionMeta = mode === 'condition' ? conditionBySlug(slug) : undefined;
+
   useEffect(() => {
     let alive = true;
     setRow(undefined);
     (mode === 'area' ? listPublicAreas() : listPublicConditions())
-      .then((r) => { if (alive) setRow(r.items.find((x) => x.slug === slug) ?? null); })
-      .catch(() => { if (alive) { setRow(null); setError(true); } });
+      .then((r) => {
+        if (!alive) return;
+        const apiRow = r.items.find((x) => x.slug === slug);
+        if (apiRow) { setRow(apiRow); return; }
+        setRow(conditionMeta ? { slug: conditionMeta.slug, name: conditionMeta.name, count: 0 } : null);
+      })
+      .catch(() => { if (alive) { setRow(conditionMeta ? { slug: conditionMeta.slug, name: conditionMeta.name, count: 0 } : null); setError(true); } });
     return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, slug]);
 
   useEffect(() => {
@@ -142,11 +157,32 @@ export default function ProviderListingPage({ mode }: { mode: Mode }) {
             : 'Loading…'}
         </p>
 
+        {mode === 'condition' && conditionMeta && CONDITION_CATEGORY_GROUPS.find((g) => g.title === conditionMeta.categoryGroup)?.note && (
+          <div className="reg-note" role="note">
+            {CONDITION_CATEGORY_GROUPS.find((g) => g.title === conditionMeta.categoryGroup)?.note}
+          </div>
+        )}
+
         {error && <div className="dir-empty" role="alert"><p>We couldn’t load providers just now. Please try again.</p></div>}
 
-        <ul className="dir-grid" aria-busy={loading}>
-          {items.map((p) => <ProviderCardItem key={p.id} p={p} />)}
-        </ul>
+        {!loading && !error && items.length === 0 ? (
+          <div className="dir-empty">
+            <h2>No providers currently list this</h2>
+            <p>
+              {mode === 'area'
+                ? 'No providers on SolDirectory currently list this suburb as an area they support.'
+                : `No providers on SolDirectory currently list experience supporting ${row?.name ?? 'this'}.`}{' '}
+              Submit a free enquiry and we’ll notify suitable providers as they join.
+            </p>
+            <div className="dir-empty-actions">
+              <button type="button" className="btn-gradient" onClick={() => openMatchModal()}>Submit an enquiry →</button>
+            </div>
+          </div>
+        ) : (
+          <ul className="dir-grid" aria-busy={loading}>
+            {items.map((p) => <ProviderCardItem key={p.id} p={p} />)}
+          </ul>
+        )}
 
         <Pagination page={page} totalPages={totalPages} disabled={loading} onChange={(n) => { setParams(n > 1 ? { page: String(n) } : {}); topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }} />
 
@@ -155,8 +191,129 @@ export default function ProviderListingPage({ mode }: { mode: Mode }) {
           will review your enquiry — it’s free.{' '}
           <button type="button" className="link-btn" onClick={() => openMatchModal()}>Submit an enquiry</button>
         </div>
+
+        {mode === 'condition' && conditionMeta && <ConditionContentSections meta={conditionMeta} />}
       </main>
       <PublicFooter />
+    </>
+  );
+}
+
+/**
+ * The extra ~700-900 words of real content on a condition page: an
+ * honest "about" summary (general information, not medical advice —
+ * see data/conditionContent.ts), links to relevant support categories,
+ * the same "how providers are listed" / "checking experience" method
+ * explanation used across the site (reused verbatim here, not
+ * per-condition — it's genuinely the same process for every condition),
+ * links to sibling conditions, and a short condition-specific FAQ.
+ */
+function ConditionContentSections({ meta }: { meta: NonNullable<ReturnType<typeof conditionBySlug>> }) {
+  const group = CONDITION_CATEGORY_GROUPS.find((g) => g.title === meta.categoryGroup);
+  const siblings = (group?.items ?? []).filter((c) => c.slug !== meta.slug);
+  const { openMatchModal } = useMatchModal();
+
+  return (
+    <>
+      <section id="about" style={{ marginTop: 40 }}>
+        <h2 className="reg-h2" style={{ marginTop: 0 }}>About {meta.name}</h2>
+        <p className="reg-lede">{meta.summary}</p>
+        <p className="reg-note" style={{ marginTop: 12 }}>
+          This is general information, not medical advice or a diagnosis. Every person’s needs are different — a provider’s general
+          experience with {meta.name.toLowerCase()} is a starting point for a conversation, not a guarantee of fit.
+        </p>
+      </section>
+
+      {meta.relatedCategories.length > 0 && (
+        <section id="support-types">
+          <h2 className="reg-h2">Support commonly linked to {meta.name}</h2>
+          <p className="reg-lede" style={{ marginBottom: 14 }}>
+            These are supports people with {meta.name.toLowerCase()} commonly look for — not a personal recommendation, just a starting
+            point for browsing.
+          </p>
+          <ul className="reg-services">
+            {meta.relatedCategories.map((c) => (
+              <li key={c}><Link to={`/directory?service=${encodeURIComponent(c)}`}>{c}</Link></li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <section id="method">
+        <h2 className="reg-h2">How providers are listed</h2>
+        <p className="reg-lede" style={{ marginBottom: 8 }}>
+          <strong>Provider-supplied.</strong> Whether a provider has experience supporting {meta.name.toLowerCase()} is written by the
+          provider themselves, the same way they write their supports and service areas. SolDirectory doesn’t independently verify
+          clinical experience or assess quality.
+        </p>
+        <p className="reg-lede" style={{ marginBottom: 8 }}>
+          <strong>Alphabetical, not ranked.</strong> Providers are shown alphabetically. Payment for a subscription doesn’t change
+          whether or where a provider appears.
+        </p>
+        <p className="reg-lede">
+          <strong>Availability.</strong> Providers confirm each week that they’re taking referrals. One that hasn’t confirmed recently
+          is removed from results until they do.
+        </p>
+      </section>
+
+      <section id="checking-experience">
+        <h2 className="reg-h2">Checking a provider’s experience with {meta.name}</h2>
+        <p className="reg-lede" style={{ marginBottom: 14 }}>
+          A listing here is a starting point, not a substitute for asking directly. Before engaging a provider, it’s worth confirming:
+        </p>
+        <ol className="reg-checklist">
+          <li>How many people with {meta.name.toLowerCase()} specifically they’ve supported, not disability support in general.</li>
+          <li>Which staff member would actually work with you or your family member, and their relevant training.</li>
+          <li>How they’d handle a change in needs over time — a one-off assessment or an ongoing, adjustable plan.</li>
+          <li>Their current registration, insurance and worker screening — ask to see it directly, don’t assume from the listing.</li>
+        </ol>
+      </section>
+
+      {siblings.length > 0 && (
+        <section id="related-conditions">
+          <h2 className="reg-h2">Other conditions in {meta.categoryGroup}</h2>
+          <ul className="reg-linkgrid">
+            {siblings.map((c) => (
+              <li key={c.slug}><Link to={`/directory/for/${c.slug}`}><span>{c.name}</span></Link></li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <section id="faq">
+        <h2 className="reg-h2">Frequently asked questions</h2>
+        <div style={{ display: 'grid', gap: 18 }}>
+          <div>
+            <p style={{ fontWeight: 700, marginBottom: 4 }}>Does SolDirectory verify a provider’s experience with {meta.name.toLowerCase()}?</p>
+            <p className="reg-lede" style={{ marginBottom: 0 }}>
+              No. Providers write their own profiles, including which conditions they have experience supporting. Confirm the details
+              that matter to you directly with the provider.
+            </p>
+          </div>
+          <div>
+            <p style={{ fontWeight: 700, marginBottom: 4 }}>No providers are listed here yet — what can I do?</p>
+            <p className="reg-lede" style={{ marginBottom: 0 }}>
+              Submit a free enquiry and we’ll notify suitable providers in your area as they join and confirm their capacity — there’s
+              no cost and no obligation.
+            </p>
+          </div>
+          <div>
+            <p style={{ fontWeight: 700, marginBottom: 4 }}>Is this page medical advice?</p>
+            <p className="reg-lede" style={{ marginBottom: 0 }}>
+              No. It’s general information to help with browsing providers. For anything about diagnosis, treatment or a specific
+              person’s needs, speak with a GP or the relevant specialist.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <div className="reg-cta" style={{ marginTop: 32 }}>
+        <div>
+          <strong>Looking for support with {meta.name.toLowerCase()}?</strong>
+          <span>Tell us what you need and we’ll connect you with providers who confirm they can help — free, no obligation.</span>
+        </div>
+        <button type="button" className="btn-gradient" onClick={() => openMatchModal()}>Submit an enquiry →</button>
+      </div>
     </>
   );
 }
