@@ -5,16 +5,15 @@ import { setJsonLd } from '../../lib/seo';
 import Counter from '../../components/Counter';
 import PhotoSlot from '../../components/PhotoSlot';
 import { useSiteStats } from '../../hooks/useSiteStats';
-import { getRegisterHub } from '../../api/registerApi';
+import { getRegisterHub, getServiceSuburbs } from '../../api/registerApi';
 import { siteConfig, phoneHref } from '../../config/siteConfig';
 import { providerCountLabel } from '../../lib/statsCounts';
 import SupportFinder from '../../components/home/SupportFinder';
 import { useMatchModal } from '../../context/MatchModalContext';
-import { LOCATION_GROUPS, SERVICES } from '../../data/providers';
+import { SERVICES } from '../../data/providers';
 import { slugify } from '../../data/slugHelpers';
 import './Home.css';
 
-const SEO_SERVICE_AREAS = LOCATION_GROUPS.flatMap((group) => group.places).slice(0, 4);
 const SEO_SERVICES = SERVICES.filter((service) => service !== 'All services');
 
 export default function Home() {
@@ -52,6 +51,18 @@ export default function Home() {
         }
         setRegisterCategoryCounts(counts);
       });
+    return () => { alive = false; };
+  }, []);
+
+  // Real suburbs per service for "Explore support by service and
+  // location" below — the top few (by register listing count) actually
+  // offering that service, not a fixed city list applied to every
+  // service regardless of whether it's really offered there.
+  const [serviceAreaLinks, setServiceAreaLinks] = useState<Record<string, { state: string; slug: string; suburb: string }[]>>({});
+  useEffect(() => {
+    let alive = true;
+    Promise.all(SEO_SERVICES.map((s) => getServiceSuburbs(s, 4).then((r) => [s, r.suburbs] as const).catch(() => [s, []] as const)))
+      .then((pairs) => { if (alive) setServiceAreaLinks(Object.fromEntries(pairs)); });
     return () => { alive = false; };
   }, []);
 
@@ -287,22 +298,29 @@ export default function Home() {
             Each page explains what to look for and helps you find providers who cover that support area.
           </p>
           <div className="coverage-grid">
-            {SEO_SERVICES.map((service) => (
-              <div key={service} className="coverage-group">
-                <h3 className="coverage-service-title">
-                  <Link to={`/services/${slugify(service)}/${slugify(SEO_SERVICE_AREAS[0])}`}>{service}</Link>
-                </h3>
-                <ul className="coverage-links">
-                  {SEO_SERVICE_AREAS.map((place) => (
-                    <li key={place}>
-                      <Link to={`/services/${slugify(service)}/${slugify(place)}`}>
-                        {service} in {place}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+            {SEO_SERVICES.map((service) => {
+              const areas = serviceAreaLinks[service] ?? [];
+              // Nothing to link to yet (still loading, or — rare — this
+              // service genuinely has no register demand anywhere): skip
+              // rather than link to a page that doesn't exist.
+              if (!areas.length) return null;
+              return (
+                <div key={service} className="coverage-group">
+                  <h3 className="coverage-service-title">
+                    <Link to={`/services/${slugify(service)}/${areas[0].state.toLowerCase()}/${areas[0].slug}`}>{service}</Link>
+                  </h3>
+                  <ul className="coverage-links">
+                    {areas.map((a) => (
+                      <li key={`${a.state}-${a.slug}`}>
+                        <Link to={`/services/${slugify(service)}/${a.state.toLowerCase()}/${a.slug}`}>
+                          {service} in {a.suburb}, {a.state}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
           </div>
           <Link to="/services" className="coverage-all-link">Cannot find your suburb? Search all services and areas →</Link>
         </div>

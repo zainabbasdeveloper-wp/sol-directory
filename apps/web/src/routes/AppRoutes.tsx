@@ -143,6 +143,15 @@ export default function AppRoutes() {
       <Route path="/funding" element={<FundingHubPage />} />
       <Route path="/funding/:slug" element={<FundingTopicPage />} />
       <Route path="/directory/:slug" element={<ProviderPublicPage />} />
+      {/* Real, register-backed pages: one per (service, suburb) with genuine
+          register demand (see computeServiceSuburbs / sitemap-services-N.xml).
+          :state disambiguates same-named suburbs across states, same as
+          /ndis-providers/:state/:suburb below. */}
+      <Route path="/services/:serviceSlug/:state/:suburb" element={<ServiceLocationPage />} />
+      {/* Older two-segment shape: still used by a few illustrative mega-menu
+          links (coordinator/language tabs) that don't have real content of
+          their own yet — kept working as-is, not part of the real page set
+          above and not indexed. */}
       <Route path="/services/:serviceSlug/:suburb" element={<ServiceLocationPage />} />
       {/* Public-register pages (data from the NDIS Commission / My Aged Care registers). */}
       <Route path="/ndis-providers" element={<RegisterHubRoute path="ndis-providers" />} />

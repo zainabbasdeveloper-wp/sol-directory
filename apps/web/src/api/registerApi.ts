@@ -59,6 +59,14 @@ export interface RegisterHub {
 }
 export const getRegisterHub = (type: RegisterType): Promise<RegisterHub> => request(`/hub?type=${type}`);
 
+export interface ServiceSuburbs {
+  category: string;
+  suburbs: { state: string; slug: string; suburb: string; count: number }[];
+}
+/** Every suburb with genuine register demand for a support category, combined across both registers — the real data behind /services/:service/:state/:suburb (see ServiceLocationPage.tsx). */
+export const getServiceSuburbs = (category: string, limit?: number): Promise<ServiceSuburbs> =>
+  request(`/service-suburbs?category=${encodeURIComponent(category)}${limit ? `&limit=${limit}` : ''}`);
+
 export interface CategoryOverview {
   total: number;
   states: Record<string, number>;

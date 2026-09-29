@@ -2,9 +2,9 @@ import type { Request, Response } from 'express';
 import Provider from '../models/Provider.js';
 import Worker from '../models/Worker.js';
 import RegisterListing from '../models/RegisterListing.js';
-import { computeHub } from './register.controller.js';
+import { computeHub, computeServiceSuburbs } from './register.controller.js';
 import { MIN_INDEXABLE_PROVIDERS, areaRows, conditionRows } from './providersPublic.controller.js';
-import { REGISTER_TYPES, STATE_CODES, type RegisterType } from '../services/registerNormalise.js';
+import { REAL_SERVICES, REGISTER_TYPES, STATE_CODES, type RegisterType } from '../services/registerNormalise.js';
 
 // Real sitemap — every URL here is either a genuinely static public
 // route, a real provider slug from the database, a public-register page
@@ -21,13 +21,16 @@ import { REGISTER_TYPES, STATE_CODES, type RegisterType } from '../services/regi
 const STATIC_PUBLIC_ROUTES = ['/', '/directory', '/services', '/locations', '/providers', '/independent-workers', '/independent-workers/find', '/ndis-providers', '/aged-care-providers'];
 const REGISTER_PATH: Record<RegisterType, string> = { ndis: '/ndis-providers', aged_care: '/aged-care-providers' };
 const REGISTER_CHUNK = 10_000;
+const SERVICE_CHUNK = 10_000;
 const CACHE_MS = 10 * 60 * 1000; // 10 minutes
 const REGISTER_CACHE_MS = 30 * 60 * 1000;
+const SERVICE_CACHE_MS = 30 * 60 * 1000;
 
 interface UrlEntry { path: string; lastmod?: Date }
 
 let pagesCache: { urls: UrlEntry[]; at: number } | null = null;
 let registerCache: { urls: UrlEntry[]; at: number } | null = null;
+let serviceAreaCache: { urls: UrlEntry[]; at: number } | null = null;
 
 const xmlEscape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 const siteUrlFor = (req: Request) => (process.env.SITE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
@@ -158,6 +161,34 @@ async function buildRegisterUrls(): Promise<UrlEntry[]> {
   return urls;
 }
 
+/**
+ * Real service x suburb pages (ServiceLocationPage.tsx, route
+ * /services/:serviceSlug/:state/:suburb) — one entry per REAL_SERVICES
+ * category crossed with every suburb that actually has register demand
+ * for it (computeServiceSuburbs, MIN_SUBURB_LISTINGS threshold already
+ * applied there). This is the real-data-driven page set; it's separate
+ * from fetchServiceAreaPaths above (which only covers WP-authored
+ * content) because most combinations here have no WordPress post at
+ * all — the page itself falls back to generic content per-field, same
+ * as the client route.
+ */
+function slugifyService(text: string): string {
+  return text.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}
+
+async function buildServiceAreaUrls(): Promise<UrlEntry[]> {
+  if (serviceAreaCache && Date.now() - serviceAreaCache.at < SERVICE_CACHE_MS) return serviceAreaCache.urls;
+
+  const urls: UrlEntry[] = [];
+  for (const service of REAL_SERVICES) {
+    const serviceSlug = slugifyService(service);
+    const suburbs = await computeServiceSuburbs(service);
+    for (const s of suburbs) urls.push({ path: `/services/${serviceSlug}/${s.state.toLowerCase()}/${s.slug}` });
+  }
+  serviceAreaCache = { urls, at: Date.now() };
+  return urls;
+}
+
 const urlsetXml = (site: string, urls: UrlEntry[]) =>
   `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
   urls.map((u) => `  <url><loc>${xmlEscape(site + u.path)}</loc>${u.lastmod ? `<lastmod>${u.lastmod.toISOString()}</lastmod>` : ''}</url>`).join('\n') +
@@ -172,9 +203,17 @@ function sendXml(res: Response, xml: string) {
 /** GET /sitemap.xml — the index. */
 export async function getSitemap(req: Request, res: Response) {
   const site = siteUrlFor(req);
-  const register = await buildRegisterUrls().catch(() => [] as UrlEntry[]);
+  const [register, serviceAreas] = await Promise.all([
+    buildRegisterUrls().catch(() => [] as UrlEntry[]),
+    buildServiceAreaUrls().catch(() => [] as UrlEntry[]),
+  ]);
   const chunks = Math.ceil(register.length / REGISTER_CHUNK);
-  const entries = ['sitemap-pages.xml', ...Array.from({ length: chunks }, (_, i) => `sitemap-register-${i + 1}.xml`)];
+  const serviceChunks = Math.ceil(serviceAreas.length / SERVICE_CHUNK);
+  const entries = [
+    'sitemap-pages.xml',
+    ...Array.from({ length: chunks }, (_, i) => `sitemap-register-${i + 1}.xml`),
+    ...Array.from({ length: serviceChunks }, (_, i) => `sitemap-services-${i + 1}.xml`),
+  ];
   sendXml(
     res,
     `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
@@ -189,6 +228,15 @@ export async function getSitemapPart(req: Request, res: Response) {
   const name = String(req.params.name ?? '');
 
   if (name === 'pages') return sendXml(res, urlsetXml(site, await buildPageUrls()));
+
+  const serviceMatch = /^services-(\d+)$/.exec(name);
+  if (serviceMatch) {
+    const n = Number(serviceMatch[1]);
+    const serviceAreas = await buildServiceAreaUrls();
+    const slice = serviceAreas.slice((n - 1) * SERVICE_CHUNK, n * SERVICE_CHUNK);
+    if (n < 1 || !slice.length) return res.status(404).send('Not found');
+    return sendXml(res, urlsetXml(site, slice));
+  }
 
   const match = /^register-(\d+)$/.exec(name);
   if (!match) return res.status(404).send('Not found');

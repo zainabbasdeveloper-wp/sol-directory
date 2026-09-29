@@ -13,12 +13,12 @@ export const RESERVED_PATH_PREFIXES = [
   '/directory',
   // /services and /locations are reserved as prefixes because both
   // already have real app routes at multiple shapes: the exact
-  // marketing pages (/services, /locations), the existing two-segment
-  // ServiceLocationPage route (/services/:serviceSlug/:suburb), AND
-  // the new single-segment CPT routes this round adds
-  // (/services/:slug, /locations/:slug). All of those are explicit
-  // routes in AppRoutes.tsx — the generic catch-all Page resolver
-  // below should never attempt to handle anything under these
+  // marketing pages (/services, /locations), the ServiceLocationPage
+  // routes (/services/:serviceSlug/:suburb and the real, register-backed
+  // /services/:serviceSlug/:state/:suburb), AND the single-segment CPT
+  // routes (/services/:slug, /locations/:slug). All of those are
+  // explicit routes in AppRoutes.tsx — the generic catch-all Page
+  // resolver below should never attempt to handle anything under these
   // prefixes at all, explicit route or not.
   '/services',
   '/locations',

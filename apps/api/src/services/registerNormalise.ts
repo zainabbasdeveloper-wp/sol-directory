@@ -227,6 +227,19 @@ export function safeProviderSlug(slug: string): string {
  */
 export const MIN_SUBURB_LISTINGS = 3;
 
+/**
+ * The site's real, promoted service list (apps/web/src/data/providers.ts
+ * SERVICES, minus "All services") — each name is also an exact
+ * REGISTER_SUPPORT_CATEGORIES value, which is what lets a service map
+ * straight onto real register data with no fuzzy matching. Used to build
+ * the real service x suburb pages (ServiceLocationPage) and their
+ * sitemap entries from genuine register demand, not a guessed list.
+ */
+export const REAL_SERVICES = [
+  'Support coordination', 'Personal care', 'Domestic assistance', 'Therapy services',
+  'Transport', 'Housing (SDA & SIL)', 'Nursing', 'Plan management',
+] as const;
+
 export const TYPE_LABEL: Record<RegisterType, { source: string; short: string }> = {
   ndis: { source: 'NDIS Commission register', short: 'NDIS' },
   aged_care: { source: 'My Aged Care provider register', short: 'Aged care' },
