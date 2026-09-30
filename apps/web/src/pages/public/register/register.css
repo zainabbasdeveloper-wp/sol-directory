@@ -22,8 +22,25 @@
 
 .reg-card-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: auto; }
 .reg-card-actions .dir-card-cta { margin-top: 0; }
-.reg-card-claim { font-size: 13px; font-weight: 600; color: color-mix(in srgb, var(--color-text, #10233F) 60%, transparent); text-decoration: none; white-space: nowrap; }
+.reg-card-claim { margin-top: 6px; font-size: 13px; font-weight: 600; color: color-mix(in srgb, var(--color-text, #10233F) 60%, transparent); text-decoration: none; white-space: nowrap; }
 .reg-card-claim:hover { color: var(--color-accent-700, #0F4FA8); text-decoration: underline; }
+
+/* Bigger, richer register cards — more breathing room and real detail
+   (ABN, verified-contact badge) than a bare name + tag list. */
+.reg-card-lg { padding: 24px; gap: 16px; border-radius: 18px; }
+.reg-card-lg .dir-card-title h3 { font-size: 19px; }
+.reg-card-lg .reg-badge { font-size: 12.5px; padding: 4px 11px; }
+.reg-card-lg .dir-areas { font-size: 14.5px; }
+.reg-card-lg .dir-tag { font-size: 13px; padding: 5px 11px; }
+
+.reg-card-facts { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 0; padding: 0; list-style: none; font-size: 13.5px; font-weight: 600; color: color-mix(in srgb, var(--color-text, #10233F) 65%, transparent); }
+.reg-card-fact-verified { color: #146A40; }
+
+.reg-card-match { min-height: 42px; padding: 0 20px; font-size: 14.5px; }
+@media (max-width: 420px) {
+  .reg-card-lg .reg-card-actions { flex-direction: column; align-items: stretch; }
+  .reg-card-match { width: 100%; text-align: center; }
+}
 
 /* State / suburb link grids */
 .reg-linkgrid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr)); gap: 10px; }
@@ -58,6 +75,20 @@
 .reg-glance dt { font-size: 12.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text, #10233F) 60%, transparent); }
 .reg-glance dd { margin: 6px 0 0; font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
 .reg-glance a { color: var(--color-accent-700, #0F4FA8); }
+
+.reg-contact-gate {
+  display: flex; flex-wrap: wrap; gap: 14px 24px; align-items: center; justify-content: space-between;
+  margin: 18px 0 0; padding: 20px 22px; border-radius: 14px;
+  background: color-mix(in srgb, var(--color-accent, #1769E0) 6%, #fff); border: 1px solid color-mix(in srgb, var(--color-accent, #1769E0) 18%, transparent);
+}
+.reg-contact-gate > div:first-child { flex: 1 1 320px; display: grid; gap: 4px; }
+.reg-contact-gate strong { font-size: 16px; }
+.reg-contact-gate span { font-size: 14.5px; line-height: 1.6; color: color-mix(in srgb, var(--color-text, #10233F) 75%, transparent); }
+.reg-glance-revealed { margin: 0; background: none; border: 0; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+.reg-glance-revealed > div { padding: 0 20px 0 0; border: 0; }
+@media (max-width: 640px) {
+  .reg-contact-gate .btn-gradient { width: 100%; }
+}
 
 .reg-services { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0; padding: 0; }
 .reg-services li { padding: 7px 14px; font-size: 14px; border-radius: 999px; background: var(--color-primary-tint, #F2F7FF); color: #0F4FA8; font-weight: 600; }

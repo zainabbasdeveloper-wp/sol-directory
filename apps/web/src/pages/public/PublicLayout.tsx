@@ -75,7 +75,7 @@ export function PublicHeader() {
           <Link to="/independent-workers" className="public-nav-link">
             Independent Workers
           </Link>
-          <button onClick={openMatchModal} className="public-cta-btn">
+          <button onClick={() => openMatchModal()} className="public-cta-btn">
             Get matched free
           </button>
           <ReadAloudButton selector="main" label="Listen" compact />

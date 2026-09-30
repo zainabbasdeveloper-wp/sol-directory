@@ -266,7 +266,7 @@ export default function ServiceLocationPage() {
                   </span>
                 ))}
               </div>
-              <button className="btn-gradient svc-hero-search-btn" onClick={openMatchModal}>
+              <button className="btn-gradient svc-hero-search-btn" onClick={() => openMatchModal()}>
                 Find providers in {suburbName} →
               </button>
               <p className="svc-hero-panel-note">One minute to send, and it costs nothing.</p>
@@ -298,7 +298,7 @@ export default function ServiceLocationPage() {
             ) : providers.length === 0 ? (
               <div className="svc-empty">
                 <p>No providers currently registered for {serviceLower} in {suburbName}.</p>
-                <button className="btn-gradient" onClick={openMatchModal}>Get matched anyway</button>
+                <button className="btn-gradient" onClick={() => openMatchModal()}>Get matched anyway</button>
               </div>
             ) : (
               <>
@@ -336,7 +336,7 @@ export default function ServiceLocationPage() {
                       </div>
 
                       <div className="svc-provider-cta">
-                        <button className="btn-gradient" onClick={openMatchModal}>Get matched</button>
+                        <button className="btn-gradient" onClick={() => openMatchModal()}>Get matched</button>
                         {p.slug && canOpenProfiles && <Link to={`/providers/${p.slug}`} className="svc-readmore">View full profile</Link>}
                       </div>
                     </article>

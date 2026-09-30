@@ -113,7 +113,7 @@ const NEXT_STEPS = [
 ];
 
 export default function MatchingWizard() {
-  const { isOpen, closeMatchModal } = useMatchModal();
+  const { isOpen, closeMatchModal, notifyMatchSuccess } = useMatchModal();
   const [form, setForm] = useState<MatchFormData>(EMPTY_FORM);
   const [stepIndex, setStepIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>('wizard');
@@ -329,6 +329,7 @@ export default function MatchingWizard() {
       }
       clearPersistedDraft();
       setPhase('success');
+      notifyMatchSuccess();
     } catch (err) {
       setSubmitError(err instanceof ApiError ? err.message : 'Something went wrong sending your request. Please try again.');
     } finally {

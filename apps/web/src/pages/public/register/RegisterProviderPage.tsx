@@ -5,6 +5,7 @@ import Avatar from '../../../components/ui/Avatar';
 import ProviderMap from '../../../components/ProviderMap';
 import { getRegisterListing, submitClaimRequest, type RegisterListing } from '../../../api/registerApi';
 import { ApiError } from '../../../api/client';
+import { useMatchModal } from '../../../context/MatchModalContext';
 import { absoluteUrl, areaLabel, registerPath, stateByCode, type RegisterKind } from '../../../lib/registerMeta';
 import { applySeoTags, setJsonLd } from '../../../lib/seo';
 import RegisterCard from './RegisterCard';
@@ -17,11 +18,20 @@ import './register.css';
 export default function RegisterProviderPage({ kind, slug }: { kind: RegisterKind; slug: string }) {
   const [listing, setListing] = useState<RegisterListing | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'missing' | 'error'>('loading');
+  // Phone/email are real (cross-verified against the business's own
+  // website — see RegisterListing.ts's contactVerified), but shown only
+  // after a real enquiry, not to anyone who lands on the page — same
+  // "Get matched" flow used everywhere else on the site, not a separate
+  // lead form. Resets if the listing changes (e.g. via "Other providers
+  // listed in ..." below).
+  const [revealed, setRevealed] = useState(false);
+  const { openMatchModal } = useMatchModal();
 
   useEffect(() => {
     let alive = true;
     setStatus('loading');
     setListing(null);
+    setRevealed(false);
     getRegisterListing(kind.type, slug)
       .then((l) => { if (alive) { setListing(l); setStatus('ready'); } })
       .catch((err) => { if (alive) setStatus(err instanceof ApiError && err.status === 404 ? 'missing' : 'error'); });
@@ -121,21 +131,35 @@ export default function RegisterProviderPage({ kind, slug }: { kind: RegisterKin
             <dt>Website</dt>
             <dd>{listing.website ? <a href={listing.website} target="_blank" rel="nofollow noopener noreferrer">{host}</a> : 'Not listed'}</dd>
           </div>
-          {listing.phone && (
-            <div><dt>Phone</dt><dd><a href={`tel:${listing.phone}`}>{listing.phone}</a></dd></div>
-          )}
-          {listing.email && (
-            <div><dt>Email</dt><dd><a href={`mailto:${listing.email}`}>{listing.email}</a></dd></div>
-          )}
           {listing.abn && (
             <div><dt>ABN</dt><dd>{listing.abn}</dd></div>
           )}
         </dl>
+
         {(listing.phone || listing.email) && (
-          <p className="reg-lede">
-            This contact information was cross-checked against {listing.name}'s own website and is shown as published — always confirm current
-            details directly with the business.
-          </p>
+          <div className="reg-contact-gate">
+            <div>
+              <strong>Contact details available</strong>
+              <span>
+                {listing.name} has a phone number{listing.phone && listing.email ? ' and email' : ''} cross-checked against their own website.
+                Send a free enquiry and we'll reveal it here — always confirm current details directly with the business.
+              </span>
+            </div>
+            {revealed ? (
+              <dl className="reg-glance reg-glance-revealed">
+                {listing.phone && <div><dt>Phone</dt><dd><a href={`tel:${listing.phone}`}>{listing.phone}</a></dd></div>}
+                {listing.email && <div><dt>Email</dt><dd><a href={`mailto:${listing.email}`}>{listing.email}</a></dd></div>}
+              </dl>
+            ) : (
+              <button
+                type="button"
+                className="btn-gradient btn-lg"
+                onClick={() => openMatchModal({ onSuccess: () => setRevealed(true) })}
+              >
+                Get matched to reveal →
+              </button>
+            )}
+          </div>
         )}
 
         <ProviderMap

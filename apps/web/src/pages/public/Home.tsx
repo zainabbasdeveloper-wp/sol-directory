@@ -124,7 +124,7 @@ export default function Home() {
             Search provider profiles by support and location, or submit a free request to identify providers serving your area.
           </p>
           <div className="hero-actions">
-            <button className="btn-gradient btn-lg" onClick={openMatchModal}>
+            <button className="btn-gradient btn-lg" onClick={() => openMatchModal()}>
               Get matched free <span aria-hidden="true">→</span>
             </button>
             <button className="btn-outline-light btn-lg" onClick={() => navigate('/providers')}>
