@@ -152,7 +152,7 @@ export default function ServiceLocationPage() {
         name,
         to: CORE_SERVICES.includes(name)
           ? locationPath(slugify(name), suburbSlug)
-          : `/directory?service=${encodeURIComponent(name)}`,
+          : `/find-a-provider?service=${encodeURIComponent(name)}`,
       })),
   }));
   const localFacts: [string, string][] = wp?.local
@@ -693,7 +693,7 @@ export default function ServiceLocationPage() {
               <li><span>2</span><div><h3>Suitable providers review it</h3><p>Providers decide whether the request matches their service area and current capacity.</p></div></li>
               <li><span>3</span><div><h3>Compare responses directly</h3><p>Ask questions, confirm credentials and choose whether any provider is right for you.</p></div></li>
             </ol>
-            <button type="button" className="btn-gradient" onClick={openMatchModal}>Start a free request →</button>
+            <button type="button" className="btn-gradient" onClick={() => openMatchModal()}>Start a free request →</button>
           </section>
 
           <section id="find-near-you" className="svc-finder">

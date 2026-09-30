@@ -31,24 +31,23 @@ export interface RegisterListingDoc extends Document {
   areas: RegisterArea[];
   areaCount: number;
   website?: string;
-  /** The business's own published phone number — a real fact, never invented. Shown on the public listing page only when contactVerified is true (see below); otherwise admin-visible only. */
+  /** The business's own published phone number — a real fact, never invented. Admin-visible only: the public API never returns it (register.controller.ts) — enquiries go through the matching flow instead. */
   phone?: string;
   /**
    * A contact email found on the business's own website (see
    * services/emailDiscovery.ts) or cross-checked against it during an
    * import (see scripts/mergeNdisLeadsContact.ts) — never guessed, never
-   * taken from anyone else's site. Shown on the public listing page only
-   * when contactVerified is true; otherwise admin-visible only.
+   * taken from anyone else's site. Admin-visible only, same as phone.
    */
   email?: string;
   emailCheckedAt?: Date;
   /**
    * True only when phone/email were corroborated against an independent
    * signal — currently: the email's domain matches this listing's own
-   * website domain. Gates public display of phone/email on the listing
-   * page; an unverified phone/email is still stored (useful for admin
-   * outreach, e.g. inviting a business to claim its listing) but never
-   * shown to visitors.
+   * website domain. Not currently used to gate anything public (phone/
+   * email aren't returned by the public API regardless), but kept as a
+   * confidence signal for admin use — e.g. worth calling to invite a
+   * claim vs. a number that might be stale.
    */
   contactVerified?: boolean;
   /** Australian Business Number, digits only — a real, publicly-issued identifier, not scraped prose. Used to cross-reference a listing against other official sources; shown publicly since an ABN carries no privacy concern of its own. */
