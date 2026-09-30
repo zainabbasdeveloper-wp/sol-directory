@@ -41,9 +41,9 @@
 .wp-cpt-toc-link:hover { color: var(--color-primary, #1769E0); }
 .wp-cpt-main .wp-template-page { max-width: none; margin: 0; }
 
-@media (max-width: 860px) {
+@media (max-width: 720px) {
   .wp-cpt-body { grid-template-columns: 1fr; }
-  .wp-cpt-toc { position: static; }
+  .wp-cpt-toc { position: static; max-height: 250px; overflow-y: auto; }
 }
 
 /* Hero — photo + navy overlay card; copy on the left, optional summary
