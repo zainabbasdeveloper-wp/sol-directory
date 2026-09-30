@@ -2,13 +2,18 @@ import { Link } from 'react-router-dom';
 import Avatar from '../../../components/ui/Avatar';
 import type { RegisterListItem } from '../../../api/registerApi';
 import { KIND_BY_TYPE, areaLabel, registerPath } from '../../../lib/registerMeta';
+import { useMatchModal } from '../../../context/MatchModalContext';
 import '../Directory.css';
 import './register.css';
 
 /** One listing in a results grid. Links to the listing's own page. */
 export default function RegisterCard({ item, matchedCategory }: { item: RegisterListItem; matchedCategory?: string }) {
   const kind = KIND_BY_TYPE[item.type];
+  const { openMatchModal } = useMatchModal();
   const more = item.areaCount - item.areas.length;
+  const stateLabel = item.states.length > 3
+    ? `${item.states.slice(0, 3).join(', ')} +${item.states.length - 3}`
+    : item.states.join(', ') || 'Not listed';
   // supportCategories comes back in whatever order the register listed it —
   // when a category filter is active, that category is *why* this card
   // matched, so it needs to be one of the (at most 4) tags actually shown,
@@ -17,7 +22,7 @@ export default function RegisterCard({ item, matchedCategory }: { item: Register
     <li className="dir-card reg-card">
       <div className="dir-card-top">
         {/* The registers publish no logos: a claimed listing shows its provider's own upload, everything else the initials, never a stock image. */}
-        <Avatar src={item.logoUrl} name={item.name} shape="square" />
+        <Avatar src={item.logoUrl} name={item.name} size="lg" shape="square" />
         <div className="dir-card-title">
           <h3>
             <Link to={registerPath(kind, item.slug)}>{item.name}</Link>
@@ -47,7 +52,19 @@ export default function RegisterCard({ item, matchedCategory }: { item: Register
           : 'Service areas not listed'}
       </p>
 
-      <Link className="dir-card-cta reg-card-link" to={registerPath(kind, item.slug)}>View listing →</Link>
+      <dl className="reg-card-facts">
+        <div><dt>Service areas</dt><dd>{item.areaCount.toLocaleString('en-AU')}</dd></div>
+        <div><dt>States</dt><dd>{stateLabel}</dd></div>
+        <div><dt>Supports listed</dt><dd>{item.supportCategories.length}</dd></div>
+        {item.abn && <div><dt>ABN</dt><dd>{item.abn}</dd></div>}
+      </dl>
+
+      <p className="reg-card-contact-note">Phone and email are not displayed. Send a free request so suitable providers can respond through SolDirectory.</p>
+
+      <div className="reg-card-actions">
+        <button type="button" className="btn-gradient reg-card-match" onClick={openMatchModal}>Get matched, free</button>
+        <Link className="dir-card-cta reg-card-link" to={registerPath(kind, item.slug)}>View register listing →</Link>
+      </div>
     </li>
   );
 }
