@@ -241,8 +241,13 @@ export default function ServiceLocationPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wpLoading, wp, serviceName, suburbName, stateAbbr, stateName, introParagraph]);
 
+  const heroProviderLabel = providersLoading
+    ? `Checking providers serving ${suburbName}`
+    : providersTotal > 0
+      ? `${providersTotal} providers cover ${suburbName}`
+      : `Providers serving ${suburbName}`;
   const HERO_CHECKS = [
-    `${providersLoading ? '…' : providersTotal} providers in ${suburbName}`,
+    heroProviderLabel,
     'Funded via NDIS and aged care',
     'Free, no obligation',
     'One request, providers respond',
@@ -291,7 +296,7 @@ export default function ServiceLocationPage() {
                 Real, verified {serviceLower} providers serving {suburbName} — matched to your actual request, not a generic list.
               </p>
               <div className="svc-hero-stats">
-                <span><strong>{providersLoading ? '…' : providersTotal} providers</strong> cover {suburbName}</span>
+                <span><strong>{heroProviderLabel}</strong></span>
               </div>
             </div>
 
