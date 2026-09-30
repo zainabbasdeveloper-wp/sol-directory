@@ -304,12 +304,12 @@ async function providerProfilePage(site: string, slug: string): Promise<Page> {
       { id: 'directory-provider', data: { '@type': 'Organization', name, ...(publicLogoUrl(p) ? { logo: publicLogoUrl(p)!.startsWith('/') ? `${site}${publicLogoUrl(p)}` : publicLogoUrl(p) } : {}), ...(suburbs.length ? { areaServed: suburbs.slice(0, 20).map((s) => ({ '@type': 'Place', name: s })) } : {}) } },
       { id: 'directory-breadcrumbs', data: { '@type': 'BreadcrumbList', itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Home', item: `${site}/` },
-        { '@type': 'ListItem', position: 2, name: 'Provider directory', item: `${site}/directory` },
+        { '@type': 'ListItem', position: 2, name: 'Provider directory', item: `${site}/find-a-provider` },
         { '@type': 'ListItem', position: 3, name, item: `${site}${path}` },
       ] } },
     ],
     body:
-      `<nav aria-label="Breadcrumb"><a href="/">Home</a> / <a href="/directory">Provider directory</a> / ${esc(name)}</nav><h1>${esc(name)}</h1>` +
+      `<nav aria-label="Breadcrumb"><a href="/">Home</a> / <a href="/find-a-provider">Provider directory</a> / ${esc(name)}</nav><h1>${esc(name)}</h1>` +
       section('Supports offered', groups) + section('Service areas', suburbs) + section('Funding accepted', p.acceptedFunding ?? []) +
       section('Experience supporting', p.conditionExperience ?? []) + section('Age groups', p.ageGroups ?? []) + section('Languages', p.languages ?? []),
   };
@@ -406,7 +406,7 @@ async function providerFilterPage(site: string, mode: 'area' | 'condition', slug
   // prefix (matches AppRoutes.tsx / ProviderListingPage.tsx) — area
   // pages stay nested under /directory as before.
   const base = mode === 'area' ? `/directory/in/${row.slug}` : `/condition/${row.slug}`;
-  const parent = mode === 'area' ? { name: 'Provider directory', href: '/directory' } : { name: 'Condition', href: '/condition' };
+  const parent = mode === 'area' ? { name: 'Provider directory', href: '/find-a-provider' } : { name: 'Condition', href: '/condition' };
   const totalPages = Math.max(1, Math.ceil(total / LEVEL_PAGE));
   const heading = mode === 'area' ? `Providers supporting people in ${row.name}` : `Providers with experience supporting ${row.name}`;
   const pager =
@@ -588,7 +588,7 @@ async function servicePage(site: string, slug: string): Promise<Page> {
     (related.length ? `<h2>Related services</h2><ul>${related.map((r: any) => li(`/services/${r.slug}`, plain(r.title))).join('')}</ul>` : '') +
     (faqs.length ? `<h2>Frequently asked questions</h2>${faqs.map((f: any) => `<h3>${esc(plain(f.question))}</h3><p>${esc(plain(f.answer))}</p>`).join('')}` : '') +
     (sources.length ? `<h2>Sources and further reading</h2><ul>${sources.map((x: any) => `<li><a href="${esc(String(x.url))}" rel="noopener nofollow">${esc(plain(x.title))}</a></li>`).join('')}</ul>` : '') +
-    `<p><a href="/directory">Browse the provider directory</a></p>`;
+    `<p><a href="/find-a-provider">Browse the provider directory</a></p>`;
 
   return {
     status: 200,
@@ -750,7 +750,7 @@ async function serviceLocationPage(site: string, serviceSlug: string, stateSlug:
     `<ol>${SVC_CREDENTIALS.map(([t, b]) => `<li><strong>${esc(t)}</strong> ${esc(b)}</li>`).join('')}</ol>` +
     relatedServicesHtml + otherSuburbsHtml + nationalHtml +
     `<h2>Frequently asked questions</h2>${SVC_FAQ.map(([q, a]) => `<h3>${esc(q)}</h3><p>${esc(a)}</p>`).join('')}` +
-    `<p><a href="/directory?service=${encodeURIComponent(service)}">See all ${esc(serviceLower)} providers</a></p>`;
+    `<p><a href="/find-a-provider?service=${encodeURIComponent(service)}">See all ${esc(serviceLower)} providers</a></p>`;
 
   return {
     status: 200,

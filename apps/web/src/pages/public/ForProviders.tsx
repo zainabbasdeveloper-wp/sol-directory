@@ -67,7 +67,7 @@ export default function ForProviders() {
               Log in
             </button>
             <a className="link-btn" href="#how-it-works">How it works →</a>
-            <button className="link-btn fp-coordinator-link" onClick={() => navigate('/directory')}>
+            <button className="link-btn fp-coordinator-link" onClick={() => navigate('/find-a-provider')}>
               For support coordinators →
             </button>
           </div>

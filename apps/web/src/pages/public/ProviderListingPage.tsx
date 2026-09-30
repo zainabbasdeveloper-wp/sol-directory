@@ -44,7 +44,7 @@ export function ProviderCardItem({ p }: { p: PublicProviderCard }) {
 /**
  * /directory/in/:suburb (mode "area") and /condition/:slug/ (mode
  * "condition", permalink-style — its own top-level category prefix, not
- * nested under /directory): real providers who list this suburb as an
+ * nested under /find-a-provider): real providers who list this suburb as an
  * area they support, or this condition as experience they have. The
  * wording says exactly that — providers write their own profiles. Pages
  * with fewer than a handful of providers stay reachable but are kept
@@ -121,7 +121,7 @@ export default function ProviderListingPage({ mode }: { mode: Mode }) {
       canonicalUrl: `${window.location.origin}${page > 1 ? `${base}?page=${page}` : base}`,
       noindex: total < MIN_INDEXABLE,
     });
-    const parent = mode === 'area' ? { name: 'Provider directory', to: '/directory' } : { name: 'Condition', to: '/condition' };
+    const parent = mode === 'area' ? { name: 'Provider directory', to: '/find-a-provider' } : { name: 'Condition', to: '/condition' };
     setJsonLd('directory-breadcrumbs', {
       '@type': 'BreadcrumbList',
       itemListElement: [
@@ -143,7 +143,7 @@ export default function ProviderListingPage({ mode }: { mode: Mode }) {
           <div className="dir-empty">
             <h1>{error ? 'We couldn’t load this page' : 'We couldn’t find that page'}</h1>
             <p>{error ? 'Please try again in a moment.' : 'No providers currently list this.'}</p>
-            <Link className="btn-gradient" to="/directory">Browse the provider directory</Link>
+            <Link className="btn-gradient" to="/find-a-provider">Browse the provider directory</Link>
           </div>
         </main>
         <PublicFooter />
@@ -158,7 +158,7 @@ export default function ProviderListingPage({ mode }: { mode: Mode }) {
         <Breadcrumbs
           items={[
             { label: 'Home', to: '/' },
-            mode === 'area' ? { label: 'Provider directory', to: '/directory' } : { label: 'Condition', to: '/condition' },
+            mode === 'area' ? { label: 'Provider directory', to: '/find-a-provider' } : { label: 'Condition', to: '/condition' },
             { label: row?.name ?? '…' },
           ]}
         />
@@ -245,7 +245,7 @@ function ConditionContentSections({ meta }: { meta: NonNullable<ReturnType<typeo
           </p>
           <ul className="reg-services">
             {meta.relatedCategories.map((c) => (
-              <li key={c}><Link to={`/directory?service=${encodeURIComponent(c)}`}>{c}</Link></li>
+              <li key={c}><Link to={`/find-a-provider?service=${encodeURIComponent(c)}`}>{c}</Link></li>
             ))}
           </ul>
         </section>

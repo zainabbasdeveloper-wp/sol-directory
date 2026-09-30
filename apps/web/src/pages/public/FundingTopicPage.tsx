@@ -140,7 +140,7 @@ export default function FundingTopicPage() {
         ) : (
           <div className="reg-note">
             SolDirectory doesn’t currently track which providers work with {meta.name.toLowerCase()} specifically — this page is
-            general information only. <Link to="/directory">Browse all providers</Link> and ask directly, or{' '}
+            general information only. <Link to="/find-a-provider">Browse all providers</Link> and ask directly, or{' '}
             <button type="button" className="link-btn" onClick={() => openMatchModal()}>submit a free enquiry</button> and mention it.
           </div>
         )}

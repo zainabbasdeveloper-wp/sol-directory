@@ -364,7 +364,7 @@ export default function ServiceLocationPage() {
               </div>
             </div>
 
-            <Link to={`/directory?service=${encodeURIComponent(serviceName)}`} className="svc-seeall-card">
+            <Link to={`/find-a-provider?service=${encodeURIComponent(serviceName)}`} className="svc-seeall-card">
               <span><MapPinIcon /> See all providers in {suburbName}, {stateAbbr}</span>
               <span>›</span>
             </Link>

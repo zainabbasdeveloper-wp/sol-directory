@@ -76,7 +76,7 @@ export default function ProviderPublicPage() {
       '@type': 'BreadcrumbList',
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Home', item: `${window.location.origin}/` },
-        { '@type': 'ListItem', position: 2, name: 'Provider directory', item: `${window.location.origin}/directory` },
+        { '@type': 'ListItem', position: 2, name: 'Provider directory', item: `${window.location.origin}/find-a-provider` },
         { '@type': 'ListItem', position: 3, name: p.name, item: `${window.location.origin}${path}` },
       ],
     });
@@ -94,7 +94,7 @@ export default function ProviderPublicPage() {
           <div className="dir-empty">
             <h1>{status === 'missing' ? 'We couldn’t find that provider' : 'We couldn’t load this profile'}</h1>
             <p>{status === 'missing' ? 'It may have been removed or paused.' : 'Please try again in a moment.'}</p>
-            <Link className="btn-gradient" to="/directory">Browse the provider directory</Link>
+            <Link className="btn-gradient" to="/find-a-provider">Browse the provider directory</Link>
           </div>
         </main>
         <PublicFooter />
@@ -109,7 +109,7 @@ export default function ProviderPublicPage() {
     <>
       <PublicHeader />
       <main className="reg-page">
-        <Breadcrumbs items={[{ label: 'Home', to: '/' }, { label: 'Provider directory', to: '/directory' }, { label: p.name }]} />
+        <Breadcrumbs items={[{ label: 'Home', to: '/' }, { label: 'Provider directory', to: '/find-a-provider' }, { label: p.name }]} />
 
         <div className="pp-head">
           <Avatar src={p.logoUrl} name={p.name} size="lg" shape="square" />
@@ -129,7 +129,7 @@ export default function ProviderPublicPage() {
               <>
                 <h2 className="reg-h2">Supports offered</h2>
                 <ul className="pp-chips">{p.registrationGroups.map((g) => (
-                  <li key={g} className="pp-chip"><Link to={`/directory?service=${encodeURIComponent(g)}`}>{g}</Link></li>
+                  <li key={g} className="pp-chip"><Link to={`/find-a-provider?service=${encodeURIComponent(g)}`}>{g}</Link></li>
                 ))}</ul>
               </>
             )}
@@ -166,7 +166,7 @@ export default function ProviderPublicPage() {
             <h2>Interested in this provider?</h2>
             <p>Tell us where you are, when you need support and how it’s funded. Relevant providers review your enquiry — it’s free.</p>
             <button type="button" className="btn-gradient" onClick={() => openMatchModal()}>Submit an enquiry →</button>
-            <Link className="pp-aside-alt" to="/directory">← Back to all providers</Link>
+            <Link className="pp-aside-alt" to="/find-a-provider">← Back to all providers</Link>
           </aside>
         </div>
       </main>

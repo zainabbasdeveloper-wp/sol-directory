@@ -18,7 +18,7 @@ import { REAL_SERVICES, REGISTER_TYPES, STATE_CODES, type RegisterType } from '.
 // pages alone are in the tens of thousands, so they're split up front
 // rather than left to break later.
 
-const STATIC_PUBLIC_ROUTES = ['/', '/directory', '/services', '/locations', '/providers', '/independent-workers', '/independent-workers/find', '/ndis-providers', '/aged-care-providers'];
+const STATIC_PUBLIC_ROUTES = ['/', '/find-a-provider', '/services', '/locations', '/providers', '/independent-workers', '/independent-workers/find', '/ndis-providers', '/aged-care-providers'];
 const REGISTER_PATH: Record<RegisterType, string> = { ndis: '/ndis-providers', aged_care: '/aged-care-providers' };
 const REGISTER_CHUNK = 10_000;
 const SERVICE_CHUNK = 10_000;

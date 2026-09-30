@@ -10,7 +10,11 @@
 // If you add a new top-level route to AppRoutes.tsx, add its prefix
 // here too.
 export const RESERVED_PATH_PREFIXES = [
+  // The search/list page itself lives at /find-a-provider now; /directory
+  // is kept reserved because /directory/:slug (profiles) and
+  // /directory/in/:suburb still live here, plus the redirect at the bare path.
   '/directory',
+  '/find-a-provider',
   // /services and /locations are reserved as prefixes because both
   // already have real app routes at multiple shapes: the exact
   // marketing pages (/services, /locations), the ServiceLocationPage

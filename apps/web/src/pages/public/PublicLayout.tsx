@@ -65,7 +65,7 @@ export function PublicHeader() {
           <Link to="/" className="public-brand-link">
             <img className="public-brand-logo" src="/images/sol-directory-logo-black-transparent-v2.png" alt="Sol Directory by Sol Business Consultant" />
           </Link>
-          <Link to="/directory" className="public-nav-link">
+          <Link to="/find-a-provider" className="public-nav-link">
             Find a provider
           </Link>
           <MegaMenu />
@@ -107,7 +107,7 @@ export function PublicFooter() {
         </div>
         <div className="public-footer-col">
           <span className="public-footer-heading">Discover</span>
-          <Link to="/directory">Provider finder</Link>
+          <Link to="/find-a-provider">Provider finder</Link>
           <Link to="/services">Browse services</Link>
           <Link to="/locations">Browse locations</Link>
           <Link to="/ndis-providers">NDIS provider register</Link>

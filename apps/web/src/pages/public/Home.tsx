@@ -148,7 +148,7 @@ export default function Home() {
           <span className="info-step">Step 2</span>
           <h3 className="info-title">Review relevant provider options</h3>
           <p className="info-body">Your request is compared with provider service areas, funding arrangements and recently confirmed availability.</p>
-          <Link to="/directory" className="link-btn">
+          <Link to="/find-a-provider" className="link-btn">
             Browse the directory →
           </Link>
         </div>
@@ -200,7 +200,7 @@ export default function Home() {
             </li>
           </ul>
           <div className="about-cta-row">
-            <button className="btn-gradient" onClick={() => navigate('/directory')}>
+            <button className="btn-gradient" onClick={() => navigate('/find-a-provider')}>
               Search provider listings
             </button>
             {siteConfig.contactPhone && (
