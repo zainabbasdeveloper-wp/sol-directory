@@ -31,18 +31,28 @@ export interface RegisterListingDoc extends Document {
   areas: RegisterArea[];
   areaCount: number;
   website?: string;
-  /** The business's own published phone number, as scraped — a real fact, imported from the source's phone_visible field (registerNormalise.ts's normalisePhone). Admin-visible only; not shown on the public register pages. */
+  /** The business's own published phone number — a real fact, never invented. Shown on the public listing page only when contactVerified is true (see below); otherwise admin-visible only. */
   phone?: string;
   /**
    * A contact email found on the business's own website (see
-   * services/emailDiscovery.ts) — never guessed, never taken from anyone
-   * else's site. Much lower confidence than logoUrl: many businesses
-   * expose no plain email at all (contact-form-only, often deliberately,
-   * to avoid being scraped), so this is null far more often than not.
-   * Admin-visible only; not shown on the public register pages.
+   * services/emailDiscovery.ts) or cross-checked against it during an
+   * import (see scripts/mergeNdisLeadsContact.ts) — never guessed, never
+   * taken from anyone else's site. Shown on the public listing page only
+   * when contactVerified is true; otherwise admin-visible only.
    */
   email?: string;
   emailCheckedAt?: Date;
+  /**
+   * True only when phone/email were corroborated against an independent
+   * signal — currently: the email's domain matches this listing's own
+   * website domain. Gates public display of phone/email on the listing
+   * page; an unverified phone/email is still stored (useful for admin
+   * outreach, e.g. inviting a business to claim its listing) but never
+   * shown to visitors.
+   */
+  contactVerified?: boolean;
+  /** Australian Business Number, digits only — a real, publicly-issued identifier, not scraped prose. Used to cross-reference a listing against other official sources; shown publicly since an ABN carries no privacy concern of its own. */
+  abn?: string;
   /** Display labels for the services the register lists (allowlisted, see registerNormalise.ts). */
   services: string[];
   /** Canonical categories, used for filtering and counts. */
@@ -92,6 +102,8 @@ const registerListingSchema = new Schema<RegisterListingDoc>(
     phone: String,
     email: String,
     emailCheckedAt: Date,
+    contactVerified: { type: Boolean, default: false },
+    abn: String,
     services: [String],
     supportCategories: [String],
     claimStatus: { type: String, enum: ['unclaimed', 'requested', 'claimed'], default: 'unclaimed' },

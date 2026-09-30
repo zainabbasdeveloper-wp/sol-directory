@@ -121,7 +121,22 @@ export default function RegisterProviderPage({ kind, slug }: { kind: RegisterKin
             <dt>Website</dt>
             <dd>{listing.website ? <a href={listing.website} target="_blank" rel="nofollow noopener noreferrer">{host}</a> : 'Not listed'}</dd>
           </div>
+          {listing.phone && (
+            <div><dt>Phone</dt><dd><a href={`tel:${listing.phone}`}>{listing.phone}</a></dd></div>
+          )}
+          {listing.email && (
+            <div><dt>Email</dt><dd><a href={`mailto:${listing.email}`}>{listing.email}</a></dd></div>
+          )}
+          {listing.abn && (
+            <div><dt>ABN</dt><dd>{listing.abn}</dd></div>
+          )}
         </dl>
+        {(listing.phone || listing.email) && (
+          <p className="reg-lede">
+            This contact information was cross-checked against {listing.name}'s own website and is shown as published — always confirm current
+            details directly with the business.
+          </p>
+        )}
 
         <ProviderMap
           providers={[{ id: listing.slug, name: listing.name, location: listing.location, suburb: first ? `${first.suburb}, ${first.state}` : null }]}
