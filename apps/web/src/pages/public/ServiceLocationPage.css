@@ -24,10 +24,11 @@
   align-items: stretch;
 }
 .svc-hero-photo { position: absolute; inset: 0; }
+.svc-hero-photo img { object-position: center 34%; }
 .svc-hero-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(100deg, rgba(11,45,92,0.94) 0%, rgba(11,45,92,0.78) 46%, rgba(11,45,92,0.28) 100%);
+  background: linear-gradient(100deg, rgba(11,45,92,0.94) 0%, rgba(11,45,92,0.74) 44%, rgba(11,45,92,0.08) 100%);
 }
 .svc-hero-grid {
   position: relative;
@@ -127,6 +128,11 @@
 .svc-select { font: inherit; font-size: 13.5px; padding: 9px 12px; border: 1px solid var(--color-border-strong); border-radius: 8px; background: #fff; color: var(--color-text); }
 
 .svc-provider-list { display: flex; flex-direction: column; gap: 18px; }
+.svc-main #register .provider-map { margin: 22px 0; }
+.svc-main #register .dir-grid,
+.svc-main #workers .dir-grid { margin-top: 22px; }
+.svc-main #workers { border-top: 1px solid var(--color-border); padding-top: clamp(32px, 4vw, 48px); }
+.svc-main #workers .reg-h2 { margin-top: 0; }
 .svc-provider-card { border: 1px solid var(--color-border); border-radius: 12px; overflow: hidden; background: #fff; }
 .svc-provider-badge { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 10px 20px; background: var(--color-primary-tint); border-bottom: 1px solid var(--color-border); font-size: 12.5px; }
 .svc-provider-badge-strong { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; color: var(--color-accent-700); }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import ProviderMap from '../../../components/ProviderMap';
 import { searchRegister, type RegisterSearchResult } from '../../../api/registerApi';
 import { KIND_BY_TYPE, REGISTER_KINDS, categoryForService, registerPath, stateByCode, type RegisterType } from '../../../lib/registerMeta';
 import RegisterCard from './RegisterCard';
@@ -39,6 +40,16 @@ export default function RegisterNearby({ serviceName, suburbSlug, suburbName, st
       <p className="svc-p">
         {formatCount(data.total)} {kind.label} {data.total === 1 ? 'listing includes' : 'listings include'} {category?.toLowerCase() ?? serviceName.toLowerCase()} among the supports recorded on the {kind.register} for {suburbName}. These are public-register listings, shown separately from SolDirectory member profiles. Confirm current services and availability directly with each organisation.
       </p>
+      <ProviderMap
+        providers={data.items.map((item) => ({
+          id: `${item.type}-${item.slug}`,
+          name: item.name,
+          location: item.location,
+          category: item.supportCategories[0] ?? null,
+          suburb: item.areas[0] ? `${item.areas[0].suburb}, ${item.areas[0].state}` : null,
+          href: registerPath(kind, item.slug),
+        }))}
+      />
       <ul className="dir-grid">{data.items.map((i) => <RegisterCard key={`${i.type}-${i.slug}`} item={i} />)}</ul>
       <p className="svc-p"><Link to={seeAll}>See all {formatCount(data.total)} {kind.label} providers listed in {suburbName} →</Link></p>
     </section>

@@ -21,6 +21,7 @@ import { getServiceAreaPage, type ServiceAreaPage } from '../../api/wordpressApi
 import { listPublicProviders, type PublicProviderRow } from '../../api/providerResources';
 import { applySeoTags, setJsonLd } from '../../lib/seo';
 import RegisterNearby from './register/RegisterNearby';
+import LocationWorkers from './register/LocationWorkers';
 import './ServiceLocationPage.css';
 
 // REAL DATA, TWO SOURCES, PER THE ARCHITECTURE DECIDED WITH THE USER:
@@ -180,11 +181,19 @@ export default function ServiceLocationPage() {
   // appear only when an editor has filled in their ACF group.
   const toc = wp?.toc?.length ? [
     ...wp.toc,
+    ...(!wp.toc.some((item) => item.href === '#register')
+      ? [{ label: 'Providers on the register', href: '#register' }]
+      : []),
+    ...(!wp.toc.some((item) => item.href === '#workers')
+      ? [{ label: 'Independent workers', href: '#workers' }]
+      : []),
     ...(wp.editorialContentHtml && !wp.toc.some((item) => item.href === '#editorial-content')
       ? [{ label: 'Local guide', href: '#editorial-content' }]
       : []),
   ] : [
     { label: 'Top providers', href: '#providers' },
+    { label: 'Providers on the register', href: '#register' },
+    { label: 'Independent workers', href: '#workers' },
     { label: `About ${serviceLower}`, href: '#about-service' },
     { label: 'Plan your support', href: '#plan-support' },
     ...(wp?.editorialContentHtml ? [{ label: 'Local guide', href: '#editorial-content' }] : []),
@@ -268,7 +277,7 @@ export default function ServiceLocationPage() {
       <section className="svc-hero-section">
         <div className="svc-hero-card">
           <div className="svc-hero-photo">
-            <PhotoSlot src="/images/service-hero.jpg" alt={`A support worker delivering ${serviceLower}`} variant="care" />
+            <PhotoSlot src="/images/front-view-smiley-girl-woman-indoors-hero.jpg" alt={`Support at home for people seeking ${serviceLower}`} variant="care" />
           </div>
           <div className="svc-hero-overlay" />
           <div className="svc-hero-grid">
@@ -370,6 +379,8 @@ export default function ServiceLocationPage() {
             ) : null}
 
             <RegisterNearby serviceName={serviceName} suburbSlug={suburbSlug} suburbName={suburbName} stateAbbr={stateAbbr} />
+
+            <LocationWorkers stateCode={stateAbbr} stateName={stateName} suburbName={suburbName} serviceName={serviceName} />
 
             <div id="match" className="svc-match-card">
               <div className="svc-match-header">Get matched directly</div>
