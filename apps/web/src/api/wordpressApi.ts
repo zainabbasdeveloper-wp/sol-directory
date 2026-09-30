@@ -11,6 +11,7 @@ const API_URL = ((import.meta as any).env?.VITE_API_URL ?? '/api').replace(/\/$/
 export interface ServiceAreaPage {
   id: number;
   title: string;
+  editorialContentHtml: string;
   serviceName: string;
   suburb: string;
   state: string;
@@ -64,6 +65,7 @@ function mapServiceAreaPage(raw: any): ServiceAreaPage {
   return {
     id: raw.id,
     title: raw.title?.rendered ?? '',
+    editorialContentHtml: raw.content?.rendered ?? '',
     serviceName: meta.service_name ?? '',
     suburb: meta.suburb ?? '',
     state: meta.state ?? '',

@@ -14,13 +14,14 @@ import {
 import { unslugify, stateForSuburb, STATE_ABBR } from '../../data/slugHelpers';
 import { SERVICES } from '../../data/providers';
 import { slugify } from '../../data/slugHelpers';
-import { stateBySlug } from '../../lib/registerMeta';
+import { stateBySlug, SUPPORT_CATEGORIES } from '../../lib/registerMeta';
 import Counter from '../../components/Counter';
 import { useMatchModal } from '../../context/MatchModalContext';
 import { getServiceAreaPage, type ServiceAreaPage } from '../../api/wordpressApi';
 import { listPublicProviders, type PublicProviderRow } from '../../api/providerResources';
 import { applySeoTags, setJsonLd } from '../../lib/seo';
 import RegisterNearby from './register/RegisterNearby';
+import LocationWorkers from './register/LocationWorkers';
 import './ServiceLocationPage.css';
 
 // REAL DATA, TWO SOURCES, PER THE ARCHITECTURE DECIDED WITH THE USER:
@@ -48,14 +49,26 @@ import './ServiceLocationPage.css';
 //    everywhere. Left as-is; migrating this to a CMS isn't fixing
 //    anything that's actually broken.
 
-const OTHER_SERVICES = [
-  'Aged Care Support',
-  'Allied Health Services',
-  'Assistive Technology',
-  'NDIS Plan Management',
-  'Disability Employment Services',
-  'Community Access Support',
-];
+const CORE_SERVICES = SERVICES.filter((service) => service !== 'All services');
+
+const SERVICE_GROUPS = [
+  {
+    title: 'Daily and community support',
+    services: ['Personal care', 'Domestic assistance', 'Transport', 'Community access', 'Respite care', 'Support workers'],
+  },
+  {
+    title: 'Planning and independence',
+    services: ['Support coordination', 'Plan management', 'Life skills', 'Employment & education support'],
+  },
+  {
+    title: 'Health, therapy and equipment',
+    services: ['Therapy services', 'Nursing', 'Behaviour support', 'Assistive technology & equipment', 'Home modifications'],
+  },
+  {
+    title: 'Housing and aged care',
+    services: ['Housing (SDA & SIL)', 'Dementia care', 'Palliative care', 'Residential aged care'],
+  },
+] as const;
 
 // Capitals only used for links; the provider COUNT shown on each card
 // comes from real data (stats.providersByState), never from this list.
@@ -130,9 +143,18 @@ export default function ServiceLocationPage() {
     ? wp.regulations.cards.map((c) => ({ name: c.title, phone: c.phone, site: c.website, description: c.description }))
     : REGULATORS.map((r) => ({ name: r.name, phone: r.phone, site: r.site, description: '' }));
   const responseTimeItems = (wp?.responseTimes ?? []).map((r) => ({ abbr: r.state, minutes: r.minutes }));
-  const relatedLinks = wp?.relatedServices?.length
-    ? wp.relatedServices.map((r) => ({ name: r.title, to: locationPath(r.slug, suburbSlug) }))
-    : OTHER_SERVICES.map((name) => ({ name, to: locationPath(slugify(name), suburbSlug) }));
+  const relatedLinks = (wp?.relatedServices ?? []).map((r) => ({ name: r.title, to: locationPath(r.slug, suburbSlug) }));
+  const serviceDirectoryGroups = SERVICE_GROUPS.map((group) => ({
+    ...group,
+    links: group.services
+      .filter((name) => name !== serviceName && SUPPORT_CATEGORIES.includes(name))
+      .map((name) => ({
+        name,
+        to: CORE_SERVICES.includes(name)
+          ? locationPath(slugify(name), suburbSlug)
+          : `/directory?service=${encodeURIComponent(name)}`,
+      })),
+  }));
   const localFacts: [string, string][] = wp?.local
     ? ([
         ['Population', wp.local.population],
@@ -157,9 +179,24 @@ export default function ServiceLocationPage() {
   // "What to expect" used to be listed unconditionally although no such
   // sections existed (dead anchors). They're now real sections that
   // appear only when an editor has filled in their ACF group.
-  const toc = wp?.toc?.length ? wp.toc : [
+  const toc = wp?.toc?.length ? [
+    ...wp.toc,
+    ...(!wp.toc.some((item) => item.href === '#register')
+      ? [{ label: 'Providers on the register', href: '#register' }]
+      : []),
+    ...(!wp.toc.some((item) => item.href === '#workers')
+      ? [{ label: 'Independent workers', href: '#workers' }]
+      : []),
+    ...(wp.editorialContentHtml && !wp.toc.some((item) => item.href === '#editorial-content')
+      ? [{ label: 'Local guide', href: '#editorial-content' }]
+      : []),
+  ] : [
     { label: 'Top providers', href: '#providers' },
+    { label: 'Providers on the register', href: '#register' },
+    { label: 'Independent workers', href: '#workers' },
     { label: `About ${serviceLower}`, href: '#about-service' },
+    { label: 'Plan your support', href: '#plan-support' },
+    ...(wp?.editorialContentHtml ? [{ label: 'Local guide', href: '#editorial-content' }] : []),
     { label: 'What to compare', href: '#compare' },
     ...(demandItems.length > 0 ? [{ label: "Who's asking", href: '#asking' }] : []),
     { label: 'How providers are listed', href: '#method' },
@@ -173,6 +210,7 @@ export default function ServiceLocationPage() {
     ...(serviceCountsItems.length > 0 ? [{ label: 'Services in this suburb', href: '#services' }] : []),
     ...(requestedItems.length > 0 ? [{ label: 'Most requested support', href: '#requested' }] : []),
     { label: 'Regulations & compliance', href: '#rules' },
+    { label: 'How matching works', href: '#how-matching-works' },
     { label: 'Find providers near you', href: '#find-near-you' },
     { label: 'FAQ', href: '#faq' },
   ];
@@ -203,8 +241,13 @@ export default function ServiceLocationPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wpLoading, wp, serviceName, suburbName, stateAbbr, stateName, introParagraph]);
 
+  const heroProviderLabel = providersLoading
+    ? `Checking providers serving ${suburbName}`
+    : providersTotal > 0
+      ? `${providersTotal} providers cover ${suburbName}`
+      : `Providers serving ${suburbName}`;
   const HERO_CHECKS = [
-    `${providersLoading ? '…' : providersTotal} providers in ${suburbName}`,
+    heroProviderLabel,
     'Funded via NDIS and aged care',
     'Free, no obligation',
     'One request, providers respond',
@@ -239,7 +282,7 @@ export default function ServiceLocationPage() {
       <section className="svc-hero-section">
         <div className="svc-hero-card">
           <div className="svc-hero-photo">
-            <PhotoSlot src="/images/service-hero.jpg" alt={`A support worker delivering ${serviceLower}`} variant="care" />
+            <PhotoSlot src="/images/front-view-smiley-girl-woman-indoors-hero.jpg" alt={`Support at home for people seeking ${serviceLower}`} variant="care" />
           </div>
           <div className="svc-hero-overlay" />
           <div className="svc-hero-grid">
@@ -253,7 +296,7 @@ export default function ServiceLocationPage() {
                 Real, verified {serviceLower} providers serving {suburbName} — matched to your actual request, not a generic list.
               </p>
               <div className="svc-hero-stats">
-                <span><strong>{providersLoading ? '…' : providersTotal} providers</strong> cover {suburbName}</span>
+                <span><strong>{heroProviderLabel}</strong></span>
               </div>
             </div>
 
@@ -343,7 +386,11 @@ export default function ServiceLocationPage() {
                   ))}
                 </div>
               </>
-            )}
+            ) : null}
+
+            <RegisterNearby serviceName={serviceName} suburbSlug={suburbSlug} suburbName={suburbName} stateAbbr={stateAbbr} />
+
+            <LocationWorkers stateCode={stateAbbr} stateName={stateName} suburbName={suburbName} serviceName={serviceName} />
 
             <div id="match" className="svc-match-card">
               <div className="svc-match-header">Get matched directly</div>
@@ -370,12 +417,41 @@ export default function ServiceLocationPage() {
             </Link>
           </section>
 
-          <RegisterNearby serviceName={serviceName} suburbSlug={suburbSlug} suburbName={suburbName} stateAbbr={stateAbbr} />
-
           <section id="about-service">
             <h2 className="svc-h2-sm">About home {serviceLower} in {suburbName}</h2>
             <p className="svc-p">{introParagraph}</p>
           </section>
+
+          <section id="plan-support">
+            <span className="svc-section-kicker">Before you contact providers</span>
+            <h2 className="svc-h2-sm">Plan the support around your day-to-day needs</h2>
+            <p className="svc-p svc-p-tight">
+              A useful request explains more than the service name. Share the tasks you need help with, when support is needed, your funding arrangement and anything that affects how support should be delivered. Providers can then give you a clearer answer about fit and availability.
+            </p>
+            <div className="svc-guidance-grid">
+              <article className="svc-guidance-card">
+                <span className="svc-guidance-number">01</span>
+                <h3>Describe the support</h3>
+                <p>List the practical tasks, preferred days and times, frequency, and the outcome you want the support to help you achieve.</p>
+              </article>
+              <article className="svc-guidance-card">
+                <span className="svc-guidance-number">02</span>
+                <h3>Confirm the provider fits</h3>
+                <p>Ask about current capacity in {suburbName}, relevant worker experience, funding types, continuity and how changes are handled.</p>
+              </article>
+              <article className="svc-guidance-card">
+                <span className="svc-guidance-number">03</span>
+                <h3>Put the details in writing</h3>
+                <p>Request a written quote or service agreement covering rates, schedules, cancellations, responsibilities and complaint pathways.</p>
+              </article>
+            </div>
+          </section>
+
+          {wp?.editorialContentHtml && (
+            <section id="editorial-content" className="svc-editorial-content">
+              <div className="svc-rich" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(wp.editorialContentHtml) }} />
+            </section>
+          )}
 
           <section id="compare">
             <h2 className="svc-h2-sm">What to compare before choosing</h2>
@@ -613,6 +689,18 @@ export default function ServiceLocationPage() {
             </div>
           </section>
 
+          <section id="how-matching-works" className="svc-match-explainer">
+            <span className="svc-section-kicker">A simpler way to enquire</span>
+            <h2 className="svc-h2-sm">How free provider matching works</h2>
+            <p className="svc-p svc-p-tight">Send one request for {serviceLower} in {suburbName}. SolDirectory shares it with relevant providers so you can compare responses without repeating the same details.</p>
+            <ol className="svc-match-steps">
+              <li><span>1</span><div><h3>Tell us what you need</h3><p>Add your location, support needs, timing and funding type.</p></div></li>
+              <li><span>2</span><div><h3>Suitable providers review it</h3><p>Providers decide whether the request matches their service area and current capacity.</p></div></li>
+              <li><span>3</span><div><h3>Compare responses directly</h3><p>Ask questions, confirm credentials and choose whether any provider is right for you.</p></div></li>
+            </ol>
+            <button type="button" className="btn-gradient" onClick={openMatchModal}>Start a free request →</button>
+          </section>
+
           <section id="find-near-you" className="svc-finder">
             <h2 className="svc-h2-sm">{wp?.finder?.heading || `Find ${serviceLower} providers near you`}</h2>
             {wp?.finder?.description && <p className="svc-p svc-p-tight">{wp.finder.description}</p>}
@@ -667,14 +755,15 @@ export default function ServiceLocationPage() {
 
       <section className="svc-cta-band">
         <div className="svc-cta-band-inner">
-          <h2>{wp?.cta?.heading || 'Need support at home?'}</h2>
-          <p>{wp?.cta?.description || 'Not sure what service you need? We can help you find the right support.'}</p>
+          <span className="svc-cta-eyebrow">Free provider matching</span>
+          <h2>{wp?.cta?.heading || `Looking for ${serviceLower} in ${suburbName}?`}</h2>
+          <p>{wp?.cta?.description || `Tell us what support you need once. Providers serving ${suburbName} can review your request and respond directly.`}</p>
           <div className="svc-cta-band-actions">
-            <button type="button" className="btn-gradient btn-lg" onClick={() => act(wp?.cta?.primaryAction || wp?.cta?.primaryUrl || '#providers')}>
-              {wp?.cta?.primaryLabel || 'Find providers'}
+            <button type="button" className="btn-gradient btn-lg" onClick={() => act(wp?.cta?.primaryAction || wp?.cta?.primaryUrl || 'get_matched')}>
+              {wp?.cta?.primaryLabel || 'Get matched, free'}
             </button>
-            <button type="button" className="svc-cta-band-secondary" onClick={() => act(wp?.cta?.secondaryAction || wp?.cta?.secondaryUrl || 'get_matched')}>
-              {wp?.cta?.secondaryLabel || 'Get matched'}
+            <button type="button" className="svc-cta-band-secondary" onClick={() => act(wp?.cta?.secondaryAction || wp?.cta?.secondaryUrl || '#providers')}>
+              {wp?.cta?.secondaryLabel || 'Browse providers'}
             </button>
           </div>
         </div>
@@ -682,10 +771,29 @@ export default function ServiceLocationPage() {
 
       <section className="svc-related-section">
         <div className="svc-related-inner">
-          <h2 className="svc-h2-sm">Other services</h2>
-          <div className="svc-related-grid">
-            {relatedLinks.map((r) => (
-              <Link key={r.to} to={r.to} className="svc-related-link">{r.name}</Link>
+          <span className="svc-section-kicker">Explore support</span>
+          <h2 className="svc-h2-sm">Other services available through SolDirectory</h2>
+          <p className="svc-p svc-related-intro">Browse another service for {suburbName}, or explore specialist support categories in the provider directory.</p>
+          {relatedLinks.length > 0 && (
+            <div className="svc-related-featured">
+              <h3>Related to {serviceName}</h3>
+              <div className="svc-related-grid">
+                {relatedLinks.map((r) => (
+                  <Link key={r.to} to={r.to} className="svc-related-link">{r.name}<span>→</span></Link>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="svc-service-groups">
+            {serviceDirectoryGroups.map((group) => (
+              <div key={group.title} className="svc-service-group">
+                <h3>{group.title}</h3>
+                <div className="svc-service-links">
+                  {group.links.map((service) => (
+                    <Link key={service.name} to={service.to}>{service.name}<span>→</span></Link>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </div>

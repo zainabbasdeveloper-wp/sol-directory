@@ -3,6 +3,7 @@ import Avatar from '../../../components/ui/Avatar';
 import type { RegisterListItem } from '../../../api/registerApi';
 import { useMatchModal } from '../../../context/MatchModalContext';
 import { KIND_BY_TYPE, areaLabel, registerPath } from '../../../lib/registerMeta';
+import { useMatchModal } from '../../../context/MatchModalContext';
 import '../Directory.css';
 import './register.css';
 
