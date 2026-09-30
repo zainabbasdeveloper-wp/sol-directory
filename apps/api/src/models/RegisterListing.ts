@@ -92,7 +92,7 @@ const registerListingSchema = new Schema<RegisterListingDoc>(
   {
     type: { type: String, enum: ['ndis', 'aged_care'], required: true },
     slug: { type: String, required: true },
-    name: { type: String, required: true },
+    name: { type: String, required: true, maxlength: 160 },
     nameLower: { type: String, required: true },
     states: [String],
     areas: [areaSchema],

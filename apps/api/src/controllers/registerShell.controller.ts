@@ -5,7 +5,7 @@ import RegisterListing from '../models/RegisterListing.js';
 import Provider from '../models/Provider.js';
 import Worker from '../models/Worker.js';
 import WorkerReview from '../models/WorkerReview.js';
-import { MIN_SUBURB_LISTINGS, REAL_SERVICES, STATE_CODES, type RegisterType } from '../services/registerNormalise.js';
+import { MIN_SUBURB_LISTINGS, REAL_SERVICES, STATE_CODES, safeRegisterName, type RegisterType } from '../services/registerNormalise.js';
 import { categoryListings, computeCategoryOverview, computeHub, computeServiceSuburbs } from './register.controller.js';
 import { workersForService, workersInArea } from './workersPublic.controller.js';
 import { MIN_INDEXABLE_PROVIDERS, VISIBLE_PROVIDER, areaRows, conditionRows, publicLogoUrl } from './providersPublic.controller.js';
@@ -45,6 +45,8 @@ const KINDS = {
     listedAs: 'listed as an approved aged care provider',
   },
 };
+
+const registerName = (listing: { name?: unknown; slug: string }) => safeRegisterName(listing.name, listing.slug);
 type KindPath = keyof typeof KINDS;
 
 const STATE_NAMES: Record<string, string> = {
@@ -199,7 +201,7 @@ async function listPage(site: string, kindPath: KindPath, stateSlug: string, sub
       `<nav aria-label="Breadcrumb">${crumbs.map((c, i) => (i < crumbs.length - 1 ? `<a href="${esc(c.path)}">${esc(c.name)}</a>` : esc(c.name))).join(' / ')}</nav>` +
       `<h1>${esc(kind.label)} providers in ${esc(areaName)}</h1>` +
       `<p>${fmt(total)} ${esc(kind.label)} ${total === 1 ? 'provider is' : 'providers are'} listed on the ${esc(kind.register)} for ${esc(areaName)}.</p>` +
-      `<ul>${docs.map((d) => li(`/${kindPath}/${d.slug}`, d.name, d.supportCategories.length ? `– ${d.supportCategories.slice(0, 3).join(', ')}` : '')).join('')}</ul>` +
+      `<ul>${docs.map((d) => li(`/${kindPath}/${d.slug}`, registerName(d), d.supportCategories.length ? `– ${d.supportCategories.slice(0, 3).join(', ')}` : '')).join('')}</ul>` +
       `<p>${pager}</p>${workersHtml}${extra}`,
   };
 }
@@ -219,9 +221,9 @@ async function providerPage(site: string, kindPath: KindPath, slug: string): Pro
 
   return {
     status: 200,
-    title: `${trimTo(doc.name, 44)} | ${kind.label} provider in ${where}`,
+    title: `${trimTo(registerName(doc), 44)} | ${kind.label} provider in ${where}`,
     description: trimTo(
-      `${doc.name} is ${kind.listedAs}${shown.length ? ` for ${shown.join(' and ')}${more > 0 ? ` and ${more} more area${more === 1 ? '' : 's'}` : ''}` : ''}. See the supports listed, where it operates and how to check its current status.`,
+      `${registerName(doc)} is ${kind.listedAs}${shown.length ? ` for ${shown.join(' and ')}${more > 0 ? ` and ${more} more area${more === 1 ? '' : 's'}` : ''}` : ''}. See the supports listed, where it operates and how to check its current status.`,
       158
     ),
     canonical: p,
@@ -231,17 +233,17 @@ async function providerPage(site: string, kindPath: KindPath, slug: string): Pro
         id: 'register-provider',
         data: {
           '@type': 'Organization',
-          name: doc.name,
+          name: registerName(doc),
           ...(doc.website ? { url: doc.website } : {}),
           areaServed: doc.states.map((s) => ({ '@type': 'AdministrativeArea', name: STATE_NAMES[s] ?? s })),
         },
       },
-      breadcrumbLd(site, [{ name: 'Home', path: '/' }, { name: `${kind.label} providers`, path: `/${kindPath}` }, { name: doc.name, path: p }]),
+      breadcrumbLd(site, [{ name: 'Home', path: '/' }, { name: `${kind.label} providers`, path: `/${kindPath}` }, { name: registerName(doc), path: p }]),
     ],
     body:
-      `<nav aria-label="Breadcrumb"><a href="/">Home</a> / <a href="/${kindPath}">${esc(kind.label)} providers</a> / ${esc(doc.name)}</nav>` +
-      `<h1>${esc(doc.name)}</h1>` +
-      `<p>${esc(doc.name)} is ${esc(kind.listedAs)} in ${esc(doc.states.map((s) => STATE_NAMES[s] ?? s).join(', '))}. This listing comes from the ${esc(kind.register)} — check the official register for its current status.</p>` +
+      `<nav aria-label="Breadcrumb"><a href="/">Home</a> / <a href="/${kindPath}">${esc(kind.label)} providers</a> / ${esc(registerName(doc))}</nav>` +
+      `<h1>${esc(registerName(doc))}</h1>` +
+      `<p>${esc(registerName(doc))} is ${esc(kind.listedAs)} in ${esc(doc.states.map((s) => STATE_NAMES[s] ?? s).join(', '))}. This listing comes from the ${esc(kind.register)} — check the official register for its current status.</p>` +
       (doc.services.length ? `<h2>Supports listed</h2><ul>${doc.services.map((s) => `<li>${esc(s)}</li>`).join('')}</ul>` : '') +
       (doc.areas.length ? `<h2>Areas listed</h2><ul>${doc.areas.slice(0, 60).map((a) => li(`/${kindPath}/${a.state.toLowerCase()}/${a.suburbSlug}`, `${a.suburb}, ${a.state}`)).join('')}</ul>` : ''),
   };
@@ -705,7 +707,7 @@ async function serviceLocationPage(site: string, serviceSlug: string, stateSlug:
   const registerHtml = registerTotal > 0
     ? `<h2>Listed on the public register</h2>` +
       `<p>${fmt(registerTotal)} organisation${registerTotal === 1 ? '' : 's'} on the NDIS and My Aged Care registers list ${esc(serviceLower)} among their supports for ${esc(suburbName)}, ${esc(code)}. A register listing shows what the register says, not who currently has capacity.</p>` +
-      `<ul>${regList.slice(0, 12).map((d) => li(`/${d.type === 'ndis' ? 'ndis-providers' : 'aged-care-providers'}/${d.slug}`, d.name, (d.supportCategories ?? []).slice(0, 3).join(', '))).join('')}</ul>` +
+      `<ul>${regList.slice(0, 12).map((d) => li(`/${d.type === 'ndis' ? 'ndis-providers' : 'aged-care-providers'}/${d.slug}`, registerName(d), (d.supportCategories ?? []).slice(0, 3).join(', '))).join('')}</ul>` +
       `<p><a href="/ndis-providers/${stateSlug}/${suburbSlug}?category=${encodeURIComponent(service)}">See all NDIS register listings in ${esc(suburbName)}</a> · <a href="/aged-care-providers/${stateSlug}/${suburbSlug}?category=${encodeURIComponent(service)}">aged care register listings</a></p>`
     : '';
 

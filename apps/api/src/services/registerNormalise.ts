@@ -197,6 +197,26 @@ export function normaliseName(raw: unknown): string {
   return typeof raw === 'string' ? raw.replace(/\s+/g, ' ').trim() : '';
 }
 
+const REGISTER_NAME_MAX_LENGTH = 160;
+const REGISTER_NAME_ACRONYMS = new Map([
+  ['ndis', 'NDIS'], ['sda', 'SDA'], ['sil', 'SIL'], ['pty', 'Pty'], ['ltd', 'Ltd'],
+]);
+
+/**
+ * Register exports occasionally put a whole profile description in `name`.
+ * A provider name longer than 160 characters is not credible display data, so
+ * fall back to the stable provider slug instead of publishing prose as a name.
+ */
+export function safeRegisterName(raw: unknown, slug: string): string {
+  const name = normaliseName(raw);
+  if (name && name.length <= REGISTER_NAME_MAX_LENGTH) return name;
+  return slug
+    .split('-')
+    .filter(Boolean)
+    .map((word) => REGISTER_NAME_ACRONYMS.get(word.toLowerCase()) ?? `${word.charAt(0).toUpperCase()}${word.slice(1)}`)
+    .join(' ');
+}
+
 export interface RegisterArea { suburb: string; suburbSlug: string; state: StateCode }
 
 /**
