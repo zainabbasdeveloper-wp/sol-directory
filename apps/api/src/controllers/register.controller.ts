@@ -34,7 +34,7 @@ function parseState(v: unknown): StateCode | null {
 }
 
 function toListItem(
-  d: Pick<RegisterListingDoc, 'type' | 'slug' | 'name' | 'states' | 'areaCount' | 'areas' | 'supportCategories' | 'website' | 'abn'>,
+  d: Pick<RegisterListingDoc, 'type' | 'slug' | 'name' | 'states' | 'areaCount' | 'areas' | 'supportCategories' | 'website' | 'abn' | 'claimStatus'>,
   logoUrl: string | null = null,
   location: { lat: number; lng: number } | null = null
 ) {
@@ -47,6 +47,7 @@ function toListItem(
     states: d.states,
     areaCount: d.areaCount,
     areas: d.areas.slice(0, AREAS_IN_LIST),
+    claimStatus: d.claimStatus,
     supportCategories: d.supportCategories,
     hasWebsite: !!d.website,
     ...(d.abn ? { abn: d.abn } : {}),
@@ -232,7 +233,7 @@ export async function computeCategoryOverview(type: RegisterType, category: stri
 /** First listings (A-Z) for one support category, in the list-card shape; used by the crawler HTML of service pages. */
 export async function categoryListings(type: RegisterType, category: string, limit = 12) {
   const docs = await RegisterListing.find({ type, supportCategories: category })
-    .select('type slug name states areaCount areas supportCategories website providerId claimStatus logoUrl phone email contactVerified abn')
+    .select('type slug name states areaCount areas supportCategories website providerId claimStatus logoUrl abn')
     .sort({ nameLower: 1, _id: 1 })
     .limit(limit)
     .lean();

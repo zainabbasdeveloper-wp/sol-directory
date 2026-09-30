@@ -168,7 +168,7 @@ export default function SupportFinder({ stats, registerCounts }: Props) {
     return () => { alive = false; };
   }, []);
 
-  const go = (service: string) => navigate(`/directory?service=${encodeURIComponent(service)}`);
+  const go = (service: string) => navigate(`/find-a-provider?service=${encodeURIComponent(service)}`);
 
   const searchable = useMemo(() => {
     const known = new Set(SUPPORTS.map((s) => s.name.toLowerCase()));
@@ -188,7 +188,7 @@ export default function SupportFinder({ stats, registerCounts }: Props) {
   }, [searchable, query]);
 
   function submit() {
-    if (!query.trim()) { navigate('/directory'); return; }
+    if (!query.trim()) { navigate('/find-a-provider'); return; }
     if (items[0]) { go(items[0].key); return; }
     setNotFound(true);
   }
@@ -206,7 +206,7 @@ export default function SupportFinder({ stats, registerCounts }: Props) {
             </span>
             <h2 className="section-heading">Find the supports in your plan</h2>
           </div>
-          <Link to="/directory" className="btn-white">
+          <Link to="/find-a-provider" className="btn-white">
             Browse all providers
           </Link>
         </div>
@@ -240,7 +240,7 @@ export default function SupportFinder({ stats, registerCounts }: Props) {
         </form>
         {notFound && (
           <p className="sf-hint" role="status">
-            We could not find a support called “{query.trim()}”. <Link to="/directory">Browse all providers</Link> or{' '}
+            We could not find a support called “{query.trim()}”. <Link to="/find-a-provider">Browse all providers</Link> or{' '}
             <button type="button" className="link-btn" onClick={() => openMatchModal()}>submit a provider enquiry</button>.
           </p>
         )}

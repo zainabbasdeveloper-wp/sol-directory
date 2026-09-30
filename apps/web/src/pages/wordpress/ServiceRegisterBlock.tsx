@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import Avatar from '../../components/ui/Avatar';
 import ProviderMap from '../../components/ProviderMap';
+import RegisterCard from '../public/register/RegisterCard';
 import { getCategoryOverview, searchRegister, type CategoryOverview, type RegisterListItem } from '../../api/registerApi';
-import { AGED_CARE_CATEGORIES, KIND_BY_TYPE, STATES, areaLabel, categoryForService, registerPath, type RegisterType } from '../../lib/registerMeta';
+import { AGED_CARE_CATEGORIES, KIND_BY_TYPE, STATES, categoryForService, registerPath, type RegisterType } from '../../lib/registerMeta';
 
 const fmt = (n: number) => n.toLocaleString('en-AU');
 
@@ -62,27 +62,8 @@ function ProviderList({ type, category, states, total }: { type: RegisterType; c
           }))}
         />
       )}
-      <ul className="wp-cpt-cards" aria-busy={loading}>
-        {items.map((p) => (
-          <li key={p.slug} className="wp-cpt-card">
-            <div className="wp-cpt-card-head">
-              <Avatar src={p.logoUrl} name={p.name} shape="square" />
-              <div>
-                <h4 className="wp-cpt-card-title"><Link to={registerPath(kind, p.slug)}>{p.name}</Link></h4>
-                <p className="wp-cpt-card-meta">
-                  {p.areas.length > 0 ? `${p.areas.slice(0, 3).map(areaLabel).join(' · ')}${p.areaCount > 3 ? ` · +${fmt(p.areaCount - 3)} more` : ''}` : p.states.join(', ')}
-                </p>
-              </div>
-            </div>
-            {p.supportCategories.length > 0 && (
-              <div className="wp-cpt-tags" aria-label="Support categories listed">
-                {p.supportCategories.slice(0, 4).map((c) => <span key={c} className="wp-cpt-tag">{c}</span>)}
-                {p.supportCategories.length > 4 && <span className="wp-cpt-tag">+{p.supportCategories.length - 4}</span>}
-              </div>
-            )}
-            <Link className="wp-cpt-card-link" to={registerPath(kind, p.slug)}>View listing →</Link>
-          </li>
-        ))}
+      <ul className="dir-grid" aria-busy={loading}>
+        {items.map((p) => <RegisterCard key={p.slug} item={p} matchedCategory={category} />)}
       </ul>
       {!loading && !failed && items.length === 0 && <p className="wp-cpt-table-note">No listings{stateName ? ` in ${stateName}` : ''} yet.</p>}
       <div className="wp-cpt-plist-foot">

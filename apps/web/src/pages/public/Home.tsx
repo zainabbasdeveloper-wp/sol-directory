@@ -124,7 +124,7 @@ export default function Home() {
             Search provider profiles by support and location, or submit a free request to identify providers serving your area.
           </p>
           <div className="hero-actions">
-            <button className="btn-gradient btn-lg" onClick={openMatchModal}>
+            <button className="btn-gradient btn-lg" onClick={() => openMatchModal()}>
               Get matched free <span aria-hidden="true">→</span>
             </button>
             <button className="btn-outline-light btn-lg" onClick={() => navigate('/providers')}>
@@ -148,7 +148,7 @@ export default function Home() {
           <span className="info-step">Step 2</span>
           <h3 className="info-title">Review relevant provider options</h3>
           <p className="info-body">Your request is compared with provider service areas, funding arrangements and recently confirmed availability.</p>
-          <Link to="/directory" className="link-btn">
+          <Link to="/find-a-provider" className="link-btn">
             Browse the directory →
           </Link>
         </div>
@@ -200,7 +200,7 @@ export default function Home() {
             </li>
           </ul>
           <div className="about-cta-row">
-            <button className="btn-gradient" onClick={() => navigate('/directory')}>
+            <button className="btn-gradient" onClick={() => navigate('/find-a-provider')}>
               Search provider listings
             </button>
             {siteConfig.contactPhone && (
@@ -240,7 +240,7 @@ export default function Home() {
             SolDirectory's directory also draws on <Counter value={registerTotal} /> organisations listed on the public{' '}
             <Link to="/ndis-providers">NDIS</Link> and <Link to="/aged-care-providers">My Aged Care</Link> registers. These are real
             businesses, shown here for reference — browse them on the register pages, or a business can{' '}
-            <Link to="/ndis-providers">set up its own SolDirectory listing</Link>.
+            <Link to="/providers">set up its own SolDirectory listing</Link>.
           </p>
         </section>
       )}

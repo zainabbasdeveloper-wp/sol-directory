@@ -31,6 +31,7 @@ export interface RegisterListItem {
   location: { lat: number; lng: number } | null;
   /** Australian Business Number — a public identifier, shown whenever known. */
   abn?: string;
+  claimStatus: 'unclaimed' | 'requested' | 'claimed';
 }
 
 export interface RegisterSearchResult {
@@ -99,7 +100,7 @@ export interface RegisterListing {
   logoUrl: string | null;
   location: { lat: number; lng: number } | null;
   related: RegisterListItem[];
-  /** Cross-verified only — see RegisterListing.ts's contactVerified doc comment. */
+  /** Australian Business Number — a public identifier, shown whenever known. */
   abn: string | null;
 }
 export const getRegisterListing = (type: RegisterType, slug: string): Promise<RegisterListing> =>

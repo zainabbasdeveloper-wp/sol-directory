@@ -62,7 +62,7 @@ export default function RegisterCard({ item, matchedCategory }: { item: Register
       <p className="reg-card-contact-note">Phone and email are not displayed. Send a free request so suitable providers can respond through SolDirectory.</p>
 
       <div className="reg-card-actions">
-        <button type="button" className="btn-gradient reg-card-match" onClick={openMatchModal}>Get matched, free</button>
+        <button type="button" className="btn-gradient reg-card-match" onClick={() => openMatchModal()}>Get matched, free</button>
         <Link className="dir-card-cta reg-card-link" to={registerPath(kind, item.slug)}>View register listing →</Link>
       </div>
     </li>

@@ -86,6 +86,7 @@
 .reg-cta > div { flex: 1 1 340px; display: grid; gap: 4px; }
 .reg-cta strong { font-size: 18px; }
 .reg-cta span { font-size: 15px; line-height: 1.6; color: color-mix(in srgb, var(--color-text, #10233F) 75%, transparent); }
+.reg-cta-muted { background: #F7F9FC; border-color: var(--color-border-strong, #DDE4EF); }
 
 /* Claim box */
 .reg-claim { margin-top: clamp(32px, 4vw, 52px); padding: 22px 26px; border: 1px dashed var(--color-border-strong, #DDE4EF); border-radius: 14px; background: #fff; }
@@ -103,5 +104,5 @@
 @media (max-width: 640px) {
   .reg-glance > div { border-left: 0; border-top: 1px solid var(--color-border, #E8EEF7); }
   .reg-glance > div:first-child { border-top: 0; }
-  .reg-cta .btn-gradient { width: 100%; }
+  .reg-cta .btn-gradient, .reg-cta .btn-outline { width: 100%; text-align: center; }
 }

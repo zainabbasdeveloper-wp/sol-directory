@@ -45,7 +45,7 @@ export default function Locations() {
               )}
               <div className="location-places">
                 {g.places.map((place) => (
-                  <button key={place} className="location-link" onClick={() => navigate(`/directory?suburb=${encodeURIComponent(place)}`)}>
+                  <button key={place} className="location-link" onClick={() => navigate(`/find-a-provider?suburb=${encodeURIComponent(place)}`)}>
                     {place}
                   </button>
                 ))}

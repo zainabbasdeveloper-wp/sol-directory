@@ -49,7 +49,7 @@ export default function Services() {
               key={s.name}
               type="button"
               className="service-card"
-              onClick={() => navigate(`/directory?service=${encodeURIComponent(s.name)}`)}
+              onClick={() => navigate(`/find-a-provider?service=${encodeURIComponent(s.name)}`)}
             >
               <h3 className="service-title">{s.name}</h3>
               <p className="service-body">{s.body}</p>

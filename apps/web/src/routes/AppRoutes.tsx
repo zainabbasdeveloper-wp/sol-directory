@@ -59,6 +59,12 @@ function RedirectToCondition() {
   return <Navigate to={`/condition/${condition}/`} replace />;
 }
 
+/** /directory -> /find-a-provider, preserving ?service=/?suburb= — a plain <Navigate to="/find-a-provider" /> drops the query string, which would silently break every old ?service= deep link (Services.tsx, ProviderPublicPage.tsx chips, ...). */
+function RedirectToFindAProvider() {
+  const location = useLocation();
+  return <Navigate to={`/find-a-provider${location.search}`} replace />;
+}
+
 function RequireAuth({ children }: { children: ReactElement }) {
   const { user, loading } = useAuth();
   // Prevents a flash of protected content before we know whether a
@@ -127,7 +133,12 @@ export default function AppRoutes() {
     <Routes>
       {/* Public marketing pages */}
       <Route path="/" element={<Home />} />
-      <Route path="/directory" element={<Directory />} />
+      <Route path="/find-a-provider" element={<Directory />} />
+      {/* Permalink moved from /directory (kept as a redirect: it was the
+          nav's "Find a provider" link and may be bookmarked or indexed).
+          /directory/:slug (profiles) and /directory/in/:suburb stay put —
+          only the search/list page itself moved. */}
+      <Route path="/directory" element={<RedirectToFindAProvider />} />
       <Route path="/services" element={<Services />} />
       <Route path="/locations" element={<Locations />} />
       <Route path="/providers" element={<ForProviders />} />

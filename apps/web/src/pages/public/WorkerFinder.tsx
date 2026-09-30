@@ -152,7 +152,7 @@ export default function WorkerFinder() {
             </p>
             <div className="dir-empty-actions">
               <Link className="btn-gradient" to="/signup?role=worker">Create a worker profile</Link>
-              <Link className="btn-tint" to="/directory">Browse providers instead</Link>
+              <Link className="btn-tint" to="/find-a-provider">Browse providers instead</Link>
             </div>
           </div>
         )}

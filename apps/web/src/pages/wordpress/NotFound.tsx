@@ -15,7 +15,7 @@ export default function NotFound() {
 
         <div className="not-found-page__actions">
           <Link to="/" className="not-found-page__primary">Go home</Link>
-          <Link to="/directory" className="not-found-page__secondary">Find a provider</Link>
+          <Link to="/find-a-provider" className="not-found-page__secondary">Find a provider</Link>
         </div>
 
         <div className="not-found-page__meta">

@@ -18,7 +18,7 @@ type SupportCategory = (typeof SUPPORT_CATEGORIES)[number];
  *
  * `relatedCategories` are real, canonical register/service categories
  * (registerMeta.ts's SUPPORT_CATEGORIES) commonly relevant to the
- * condition — used to link to real, working /directory search filters,
+ * condition — used to link to real, working /find-a-provider search filters,
  * never invented category names.
  */
 

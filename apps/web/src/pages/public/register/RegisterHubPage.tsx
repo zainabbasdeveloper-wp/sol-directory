@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { PublicHeader, PublicFooter } from '../PublicLayout';
 import Pagination from '../../../components/ui/Pagination';
 import { getRegisterHub, searchRegister, type RegisterHub, type RegisterSearchResult } from '../../../api/registerApi';
 import { STATES, absoluteUrl, registerPath, stateByCode, type RegisterKind } from '../../../lib/registerMeta';
 import { applySeoTags, setJsonLd } from '../../../lib/seo';
 import RegisterCard from './RegisterCard';
-import { Breadcrumbs, GetMatchedCta, VerifyNote, formatCount, trimTo } from './RegisterParts';
+import { Breadcrumbs, GetMatchedCta, ListBusinessCta, VerifyNote, formatCount, trimTo } from './RegisterParts';
 import '../Home.css';
 import '../Directory.css';
 import './register.css';
@@ -16,13 +16,25 @@ const TOP_SUBURBS = 24;
 
 /** /ndis-providers and /aged-care-providers — the entry point: states, busiest suburbs, name search. */
 export default function RegisterHubPage({ kind }: { kind: RegisterKind }) {
+  const [params, setParams] = useSearchParams();
+  const initialQuery = params.get('q') ?? '';
   const [hub, setHub] = useState<RegisterHub | null>(null);
   const [failed, setFailed] = useState(false);
-  const [text, setText] = useState('');
-  const [query, setQuery] = useState('');
-  const [page, setPage] = useState(1);
+  const [text, setText] = useState(initialQuery);
+  const [query, setQuery] = useState(initialQuery);
+  const [page, setPage] = useState(Math.max(1, Number(params.get('page')) || 1));
   const [results, setResults] = useState<RegisterSearchResult | null>(null);
   const [searching, setSearching] = useState(false);
+
+  // Shareable/bookmarkable: a search or a specific page is a real URL, not
+  // just local state that resets on reload or when a link is shared.
+  useEffect(() => {
+    const next = new URLSearchParams();
+    if (query) next.set('q', query);
+    if (page > 1) next.set('page', String(page));
+    setParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, page]);
 
   useEffect(() => {
     let alive = true;
@@ -32,16 +44,26 @@ export default function RegisterHubPage({ kind }: { kind: RegisterKind }) {
     return () => { alive = false; };
   }, [kind.type]);
 
+  // Skips the page reset until text actually diverges from the committed
+  // query — landing on a shared ?q=...&page=3 link should open on page 3,
+  // not snap back to page 1 before anything's typed. (A ref-based
+  // "skip the first run" guard doesn't survive React StrictMode's
+  // double-invoked mount effect in dev, which defeated an earlier version
+  // of this; comparing against real state does.)
   useEffect(() => {
+    if (text.trim() === query) return;
     const t = setTimeout(() => { setQuery(text.trim()); setPage(1); }, 300);
     return () => clearTimeout(t);
-  }, [text]);
+  }, [text, query]);
 
+  // Always shows a real, paginated list — with a name query when one's
+  // typed, otherwise the full register (alphabetical, same as /directory).
+  // This used to only fetch once 2+ characters were typed, so landing on
+  // the page showed nothing but state/suburb links until you searched.
   useEffect(() => {
-    if (query.length < 2) { setResults(null); return; }
     let alive = true;
     setSearching(true);
-    searchRegister({ type: kind.type, q: query, page, limit: PAGE_SIZE })
+    searchRegister({ type: kind.type, q: query || undefined, page, limit: PAGE_SIZE })
       .then((r) => { if (alive) setResults(r); })
       .catch(() => { if (alive) setResults({ items: [], page: 1, limit: PAGE_SIZE, total: 0 }); })
       .finally(() => { if (alive) setSearching(false); });
@@ -102,15 +124,27 @@ export default function RegisterHubPage({ kind }: { kind: RegisterKind }) {
           />
         </div>
 
-        {query.length >= 2 && (
-          <section aria-live="polite">
-            <p className="dir-results-head">
-              {searching ? 'Searching…' : results ? `${formatCount(results.total)} ${results.total === 1 ? 'provider' : 'providers'} match “${query}”` : ''}
-            </p>
-            {results && results.items.length > 0 && <ul className="dir-grid">{results.items.map((i) => <RegisterCard key={`${i.type}-${i.slug}`} item={i} />)}</ul>}
-            {results && results.total > PAGE_SIZE && <Pagination page={page} totalPages={totalPages} onChange={setPage} disabled={searching} />}
-          </section>
-        )}
+        <section aria-live="polite">
+          <p className="dir-results-head">
+            {searching
+              ? 'Searching…'
+              : results
+                ? query
+                  ? `${formatCount(results.total)} ${results.total === 1 ? 'provider' : 'providers'} match "${query}"`
+                  : results.total > PAGE_SIZE
+                    ? `Showing ${formatCount((page - 1) * PAGE_SIZE + 1)}–${formatCount(Math.min(page * PAGE_SIZE, results.total))} of ${formatCount(results.total)} ${kind.label} providers`
+                    : `${formatCount(results.total)} ${results.total === 1 ? 'provider' : 'providers'} listed`
+                : ''}
+          </p>
+          {results && results.items.length === 0 && !searching && (
+            <div className="dir-empty">
+              <h2>No providers match "{query}"</h2>
+              <p>Try a different name, or browse by state and suburb below.</p>
+            </div>
+          )}
+          {results && results.items.length > 0 && <ul className="dir-grid">{results.items.map((i) => <RegisterCard key={`${i.type}-${i.slug}`} item={i} />)}</ul>}
+          {results && results.total > PAGE_SIZE && <Pagination page={page} totalPages={totalPages} onChange={setPage} disabled={searching} />}
+        </section>
 
         {failed && (
           <div className="dir-empty" role="alert">
@@ -166,6 +200,10 @@ export default function RegisterHubPage({ kind }: { kind: RegisterKind }) {
             <GetMatchedCta
               title="Want providers who can start soon?"
               body="Tell us what you need and where. We match you with providers who have recently confirmed they have capacity — it’s free and there’s no obligation."
+            />
+            <ListBusinessCta
+              title="Is your business on this register?"
+              body={`Claim your listing to keep it up to date and receive enquiries, or set up a full SolDirectory profile with your current availability, ${kind.label} supports and service areas.`}
             />
           </>
         )}

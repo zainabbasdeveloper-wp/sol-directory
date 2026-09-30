@@ -48,6 +48,19 @@ export function GetMatchedCta({ title, body }: { title: string; body: string }) 
   );
 }
 
+/** The provider-facing counterpart to GetMatchedCta — for a business reading a register page, not a participant. */
+export function ListBusinessCta({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="reg-cta reg-cta-muted">
+      <div>
+        <strong>{title}</strong>
+        <span>{body}</span>
+      </div>
+      <Link to="/providers" className="btn-outline btn-lg">List your business →</Link>
+    </div>
+  );
+}
+
 export const formatCount = (n: number) => n.toLocaleString('en-AU');
 export const trimTo = (s: string, n: number) => (s.length <= n ? s : `${s.slice(0, n - 1).replace(/\s+\S*$/, '')}…`);
 export const titleCase = (slug: string) => slug.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
