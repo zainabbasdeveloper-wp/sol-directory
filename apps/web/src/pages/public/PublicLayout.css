@@ -1,7 +1,11 @@
 .public-header {
   position: sticky;
   top: 0;
-  z-index: 0;
+  /* Above in-flow page content (hero/info-card sections peak at z-index 5)
+     so the mega menu isn't painted behind the page it drops down over, but
+     below every popup/overlay layer (get-matched modal is 100, toasts 50,
+     the floating accessibility button 2000) so nothing sticks above them. */
+  z-index: 30;
   width: 100%;
   background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(12px);
