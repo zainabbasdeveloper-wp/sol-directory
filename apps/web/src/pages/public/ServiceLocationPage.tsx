@@ -301,12 +301,7 @@ export default function ServiceLocationPage() {
 
             {providersLoading ? (
               <p className="svc-p">Loading providers…</p>
-            ) : providers.length === 0 ? (
-              <div className="svc-empty">
-                <p>No providers currently registered for {serviceLower} in {suburbName}.</p>
-                <button className="btn-gradient" onClick={openMatchModal}>Get matched anyway</button>
-              </div>
-            ) : (
+            ) : providers.length > 0 ? (
               <>
                 <p className="svc-showing">
                   Showing {providers.length} of {providersTotal} real registered providers
@@ -349,7 +344,9 @@ export default function ServiceLocationPage() {
                   ))}
                 </div>
               </>
-            )}
+            ) : null}
+
+            <RegisterNearby serviceName={serviceName} suburbSlug={suburbSlug} suburbName={suburbName} stateAbbr={stateAbbr} />
 
             <div id="match" className="svc-match-card">
               <div className="svc-match-header">Get matched directly</div>
@@ -375,8 +372,6 @@ export default function ServiceLocationPage() {
               <span>›</span>
             </Link>
           </section>
-
-          <RegisterNearby serviceName={serviceName} suburbSlug={suburbSlug} suburbName={suburbName} stateAbbr={stateAbbr} />
 
           <section id="about-service">
             <h2 className="svc-h2-sm">About home {serviceLower} in {suburbName}</h2>
