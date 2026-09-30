@@ -157,9 +157,15 @@ export default function ServiceLocationPage() {
   // "What to expect" used to be listed unconditionally although no such
   // sections existed (dead anchors). They're now real sections that
   // appear only when an editor has filled in their ACF group.
-  const toc = wp?.toc?.length ? wp.toc : [
+  const toc = wp?.toc?.length ? [
+    ...wp.toc,
+    ...(wp.editorialContentHtml && !wp.toc.some((item) => item.href === '#editorial-content')
+      ? [{ label: 'Local guide', href: '#editorial-content' }]
+      : []),
+  ] : [
     { label: 'Top providers', href: '#providers' },
     { label: `About ${serviceLower}`, href: '#about-service' },
+    ...(wp?.editorialContentHtml ? [{ label: 'Local guide', href: '#editorial-content' }] : []),
     { label: 'What to compare', href: '#compare' },
     ...(demandItems.length > 0 ? [{ label: "Who's asking", href: '#asking' }] : []),
     { label: 'How providers are listed', href: '#method' },
@@ -376,6 +382,12 @@ export default function ServiceLocationPage() {
             <h2 className="svc-h2-sm">About home {serviceLower} in {suburbName}</h2>
             <p className="svc-p">{introParagraph}</p>
           </section>
+
+          {wp?.editorialContentHtml && (
+            <section id="editorial-content" className="svc-editorial-content">
+              <div className="svc-rich" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(wp.editorialContentHtml) }} />
+            </section>
+          )}
 
           <section id="compare">
             <h2 className="svc-h2-sm">What to compare before choosing</h2>
