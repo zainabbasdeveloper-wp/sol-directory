@@ -58,6 +58,9 @@
 .reg-chip:focus-visible { outline: 3px solid #8CB8FF; outline-offset: 2px; }
 .reg-chip small { margin-left: 6px; font-weight: 500; opacity: 0.75; }
 .reg-search { display: flex; gap: 10px; flex-wrap: wrap; margin: 6px 0 4px; }
+.reg-search-live { display: block; max-width: 760px; margin-top: 18px; }
+.reg-search-live .cbx-input { padding-right: 44px; }
+.reg-search-live .cbx-option-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .reg-search input { flex: 1 1 260px; min-height: 48px; padding: 0 14px; font: inherit; font-size: 16px; border: 1.5px solid var(--color-border-strong, #DDE4EF); border-radius: 10px; background: #fff; }
 .reg-search input:focus { outline: none; border-color: #1769E0; box-shadow: 0 0 0 3px rgba(23,105,224,0.16); }
 
