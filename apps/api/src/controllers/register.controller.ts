@@ -14,7 +14,8 @@ import {
 /**
  * Public read API for register listings. Everything here is safe to serve
  * to anyone: names, states, suburbs, services and a business's own public
- * website. There is no contact data to leak because none is stored.
+ * website. Phone and email are deliberately not returned; enquiries go
+ * through the matching flow so consent and lead capture stay in one place.
  */
 
 const MAX_LIMIT = 30;
@@ -33,7 +34,7 @@ function parseState(v: unknown): StateCode | null {
 }
 
 function toListItem(
-  d: Pick<RegisterListingDoc, 'type' | 'slug' | 'name' | 'states' | 'areaCount' | 'areas' | 'supportCategories' | 'website' | 'phone' | 'email' | 'contactVerified' | 'abn' | 'claimStatus'>,
+  d: Pick<RegisterListingDoc, 'type' | 'slug' | 'name' | 'states' | 'areaCount' | 'areas' | 'supportCategories' | 'website' | 'abn' | 'claimStatus'>,
   logoUrl: string | null = null,
   location: { lat: number; lng: number } | null = null
 ) {
@@ -49,10 +50,6 @@ function toListItem(
     claimStatus: d.claimStatus,
     supportCategories: d.supportCategories,
     hasWebsite: !!d.website,
-    // Only a cross-verified phone/email is ever shown publicly — see
-    // RegisterListing.ts's contactVerified doc comment.
-    ...(d.contactVerified && d.phone ? { phone: d.phone } : {}),
-    ...(d.contactVerified && d.email ? { email: d.email } : {}),
     ...(d.abn ? { abn: d.abn } : {}),
   };
 }
@@ -153,7 +150,7 @@ export async function searchRegister(req: Request, res: Response) {
   const wantFacets = req.query.facets === '1';
   const [docs, total, facets] = await Promise.all([
     RegisterListing.find(filter)
-      .select('type slug name states areaCount areas supportCategories website providerId claimStatus logoUrl phone email contactVerified abn')
+      .select('type slug name states areaCount areas supportCategories website providerId claimStatus logoUrl abn')
       .sort({ nameLower: 1, _id: 1 })
       .skip((page - 1) * limit)
       .limit(limit)
@@ -236,7 +233,7 @@ export async function computeCategoryOverview(type: RegisterType, category: stri
 /** First listings (A-Z) for one support category, in the list-card shape; used by the crawler HTML of service pages. */
 export async function categoryListings(type: RegisterType, category: string, limit = 12) {
   const docs = await RegisterListing.find({ type, supportCategories: category })
-    .select('type slug name states areaCount areas supportCategories website providerId claimStatus logoUrl phone email contactVerified abn')
+    .select('type slug name states areaCount areas supportCategories website providerId claimStatus logoUrl abn')
     .sort({ nameLower: 1, _id: 1 })
     .limit(limit)
     .lean();
@@ -381,7 +378,7 @@ export async function getRegisterListing(req: Request, res: Response) {
   const first = doc.areas[0];
   const related = first
     ? await RegisterListing.find({ type, areas: { $elemMatch: { state: first.state, suburbSlug: first.suburbSlug } }, _id: { $ne: doc._id } })
-        .select('type slug name states areaCount areas supportCategories website logoUrl phone email contactVerified abn')
+        .select('type slug name states areaCount areas supportCategories website logoUrl abn')
         .sort({ nameLower: 1 })
         .limit(6)
         .lean()
@@ -409,10 +406,6 @@ export async function getRegisterListing(req: Request, res: Response) {
     supportCategories: doc.supportCategories,
     claimStatus: doc.claimStatus,
     logoUrl,
-    // Only a cross-verified phone/email is ever shown publicly — see
-    // RegisterListing.ts's contactVerified doc comment.
-    phone: doc.contactVerified && doc.phone ? doc.phone : null,
-    email: doc.contactVerified && doc.email ? doc.email : null,
     abn: doc.abn ?? null,
     location: (await primaryLocations([doc as never])).get(String(doc._id)) ?? null,
     related: await listItemsWithLogos(related as never[], first ? { state: first.state, suburbSlug: first.suburbSlug } : undefined),

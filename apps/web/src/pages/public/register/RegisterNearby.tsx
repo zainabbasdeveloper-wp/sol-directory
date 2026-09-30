@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import ProviderMap from '../../../components/ProviderMap';
 import { searchRegister, type RegisterSearchResult } from '../../../api/registerApi';
 import { KIND_BY_TYPE, REGISTER_KINDS, categoryForService, registerPath, stateByCode, type RegisterType } from '../../../lib/registerMeta';
 import RegisterCard from './RegisterCard';
@@ -8,11 +9,9 @@ import { formatCount } from './RegisterParts';
 interface Props { serviceName: string; suburbSlug: string; suburbName: string; stateAbbr: string }
 
 /**
- * "Also listed on the public register" block for a service x suburb page.
- * Adds real, area-specific data to a page that otherwise only shows
- * providers who have joined SolDirectory — and says plainly that these are
- * register listings, not providers who've confirmed availability. Renders
- * nothing when there's nothing real to show.
+ * Public-register listings for a service x suburb page. These are separate
+ * from active SolDirectory member profiles and must retain their source label.
+ * Renders nothing when there is no matching register data.
  */
 export default function RegisterNearby({ serviceName, suburbSlug, suburbName, stateAbbr }: Props) {
   const state = stateByCode(stateAbbr);
@@ -37,12 +36,20 @@ export default function RegisterNearby({ serviceName, suburbSlug, suburbName, st
 
   return (
     <section id="register" aria-labelledby="register-heading">
-      <h2 className="svc-h2" id="register-heading">Also listed on the public register in {suburbName}</h2>
+      <h2 className="svc-h2" id="register-heading">{kind.label} register listings for {serviceName.toLowerCase()} in {suburbName}</h2>
       <p className="svc-p">
-        {formatCount(data.total)} {kind.label} {data.total === 1 ? 'provider is' : 'providers are'} listed on the {kind.register} for {suburbName}
-        {category ? <>, with {category.toLowerCase()} among the supports listed</> : null}. These listings show what the register says — not who has
-        capacity — so check availability directly, or use “Get matched” above to reach providers who’ve confirmed they can start.
+        {formatCount(data.total)} {kind.label} {data.total === 1 ? 'listing includes' : 'listings include'} {category?.toLowerCase() ?? serviceName.toLowerCase()} among the supports recorded on the {kind.register} for {suburbName}. These are public-register listings, shown separately from SolDirectory member profiles. Confirm current services and availability directly with each organisation.
       </p>
+      <ProviderMap
+        providers={data.items.map((item) => ({
+          id: `${item.type}-${item.slug}`,
+          name: item.name,
+          location: item.location,
+          category: item.supportCategories[0] ?? null,
+          suburb: item.areas[0] ? `${item.areas[0].suburb}, ${item.areas[0].state}` : null,
+          href: registerPath(kind, item.slug),
+        }))}
+      />
       <ul className="dir-grid">{data.items.map((i) => <RegisterCard key={`${i.type}-${i.slug}`} item={i} />)}</ul>
       <p className="svc-p"><Link to={seeAll}>See all {formatCount(data.total)} {kind.label} providers listed in {suburbName} →</Link></p>
     </section>

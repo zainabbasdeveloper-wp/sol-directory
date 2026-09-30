@@ -11,7 +11,7 @@ import './register.css';
  * page, this state). Opt-in and admin-approved only; says so plainly when there
  * are none rather than showing anyone made up.
  */
-export default function LocationWorkers({ stateCode, stateName, suburbName }: { stateCode: string; stateName: string; suburbName?: string }) {
+export default function LocationWorkers({ stateCode, stateName, suburbName, serviceName }: { stateCode: string; stateName: string; suburbName?: string; serviceName?: string }) {
   const [data, setData] = useState<PublicWorkerList | null>(null);
   const [failed, setFailed] = useState(false);
   const where = suburbName ? `${suburbName}, ${stateCode}` : stateName;
@@ -20,26 +20,27 @@ export default function LocationWorkers({ stateCode, stateName, suburbName }: { 
     let alive = true;
     setData(null);
     setFailed(false);
-    listPublicWorkers({ state: stateCode, suburb: suburbName, limit: 6 })
+    listPublicWorkers({ state: stateCode, suburb: suburbName, service: serviceName, limit: 6 })
       .then((r) => { if (alive) setData(r); })
       .catch(() => { if (alive) setFailed(true); });
     return () => { alive = false; };
-  }, [stateCode, suburbName]);
+  }, [stateCode, suburbName, serviceName]);
 
   if (failed || !data) return null;
-  const find = `/independent-workers/find?${new URLSearchParams({ ...(suburbName ? { suburb: suburbName } : {}) }).toString()}`;
+  const find = `/independent-workers/find?${new URLSearchParams({ ...(suburbName ? { suburb: suburbName } : {}), ...(serviceName ? { service: serviceName } : {}) }).toString()}`;
+  const support = serviceName ? ` offering ${serviceName.toLowerCase()}` : '';
 
   return (
-    <section aria-labelledby="loc-workers">
-      <h2 className="reg-h2" id="loc-workers">Independent support workers in {where}</h2>
+    <section id="workers" aria-labelledby="loc-workers">
+      <h2 className="reg-h2" id="loc-workers">Independent support workers{support} in {where}</h2>
       {data.total === 0 ? (
         <p>
-          No independent workers have published a public profile for {where} yet. Workers appear here once they have chosen to make their profile public and it has been approved.{' '}
+          No independent workers{support} have published a public profile for {where} yet. Workers appear here once they have chosen to make their profile public and it has been approved.{' '}
           <Link to="/signup?role=worker">Create a worker profile</Link>
         </p>
       ) : (
         <>
-          <p>{data.total.toLocaleString('en-AU')} independent {data.total === 1 ? 'worker has' : 'workers have'} published a public profile for {where}. Contact details are not shown; organisations request contact through SolDirectory.</p>
+          <p>{data.total.toLocaleString('en-AU')} independent {data.total === 1 ? 'worker has' : 'workers have'} published a public profile{support} in {where}. Contact details are not shown; organisations request contact through SolDirectory.</p>
           <ul className="dir-grid">
             {data.items.map((w) => {
               const name = `${w.firstName} ${w.lastInitial ? `${w.lastInitial}.` : ''}`.trim();
