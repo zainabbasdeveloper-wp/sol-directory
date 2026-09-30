@@ -240,7 +240,7 @@ export default function Home() {
             SolDirectory's directory also draws on <Counter value={registerTotal} /> organisations listed on the public{' '}
             <Link to="/ndis-providers">NDIS</Link> and <Link to="/aged-care-providers">My Aged Care</Link> registers. These are real
             businesses, shown here for reference — browse them on the register pages, or a business can{' '}
-            <Link to="/ndis-providers">set up its own SolDirectory listing</Link>.
+            <Link to="/providers">set up its own SolDirectory listing</Link>.
           </p>
         </section>
       )}

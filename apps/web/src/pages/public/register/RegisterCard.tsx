@@ -47,7 +47,12 @@ export default function RegisterCard({ item, matchedCategory }: { item: Register
           : 'Service areas not listed'}
       </p>
 
-      <Link className="dir-card-cta reg-card-link" to={registerPath(kind, item.slug)}>View listing →</Link>
+      <div className="reg-card-actions">
+        <Link className="dir-card-cta reg-card-link" to={registerPath(kind, item.slug)}>View listing →</Link>
+        {item.claimStatus === 'unclaimed' && (
+          <Link className="reg-card-claim" to={`${registerPath(kind, item.slug)}#claim-heading`}>Is this your business? →</Link>
+        )}
+      </div>
     </li>
   );
 }

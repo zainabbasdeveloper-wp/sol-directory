@@ -34,6 +34,7 @@ export interface RegisterListItem {
   email?: string;
   /** Australian Business Number — a public identifier, shown whenever known. */
   abn?: string;
+  claimStatus: 'unclaimed' | 'requested' | 'claimed';
 }
 
 export interface RegisterSearchResult {

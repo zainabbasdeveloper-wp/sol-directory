@@ -33,7 +33,7 @@ function parseState(v: unknown): StateCode | null {
 }
 
 function toListItem(
-  d: Pick<RegisterListingDoc, 'type' | 'slug' | 'name' | 'states' | 'areaCount' | 'areas' | 'supportCategories' | 'website' | 'phone' | 'email' | 'contactVerified' | 'abn'>,
+  d: Pick<RegisterListingDoc, 'type' | 'slug' | 'name' | 'states' | 'areaCount' | 'areas' | 'supportCategories' | 'website' | 'phone' | 'email' | 'contactVerified' | 'abn' | 'claimStatus'>,
   logoUrl: string | null = null,
   location: { lat: number; lng: number } | null = null
 ) {
@@ -46,6 +46,7 @@ function toListItem(
     states: d.states,
     areaCount: d.areaCount,
     areas: d.areas.slice(0, AREAS_IN_LIST),
+    claimStatus: d.claimStatus,
     supportCategories: d.supportCategories,
     hasWebsite: !!d.website,
     // Only a cross-verified phone/email is ever shown publicly — see

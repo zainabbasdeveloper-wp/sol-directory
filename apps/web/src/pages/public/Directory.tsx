@@ -395,7 +395,7 @@ export default function Directory() {
             {registerGrandTotal
               ? <>Searching {formatCount(registerGrandTotal.ndis + registerGrandTotal.aged_care)} organisations listed on the NDIS and My Aged Care registers, sourced directly from each register.</>
               : 'Searching organisations listed on the NDIS and My Aged Care registers, sourced directly from each register.'}{' '}
-            A business can <Link to={registerType === 'ndis' ? '/ndis-providers' : '/aged-care-providers'}>set up its own SolDirectory listing</Link>.
+            A business can <Link to="/providers">set up its own SolDirectory listing</Link>.
           </p>
         </div>
 
