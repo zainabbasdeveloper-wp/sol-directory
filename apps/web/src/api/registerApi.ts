@@ -29,6 +29,11 @@ export interface RegisterListItem {
   logoUrl?: string | null;
   /** The suburb centroid of the listing's first service area — a register listing has no street address, so this is never more precise than "somewhere in this suburb". Null until that suburb has been geocoded. */
   location: { lat: number; lng: number } | null;
+  /** Present only when the API has cross-verified this phone/email against an independent signal (see RegisterListing.ts's contactVerified). */
+  phone?: string;
+  email?: string;
+  /** Australian Business Number — a public identifier, shown whenever known. */
+  abn?: string;
 }
 
 export interface RegisterSearchResult {
@@ -97,6 +102,10 @@ export interface RegisterListing {
   logoUrl: string | null;
   location: { lat: number; lng: number } | null;
   related: RegisterListItem[];
+  /** Cross-verified only — see RegisterListing.ts's contactVerified doc comment. */
+  phone: string | null;
+  email: string | null;
+  abn: string | null;
 }
 export const getRegisterListing = (type: RegisterType, slug: string): Promise<RegisterListing> =>
   request(`/${type}/${encodeURIComponent(slug)}`);
