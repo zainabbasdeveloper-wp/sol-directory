@@ -22,7 +22,8 @@ function withTimeout(ms: number): { signal: AbortSignal; cancel: () => void } {
   return { signal: controller.signal, cancel: () => clearTimeout(timer) };
 }
 
-async function fetchText(url: string, timeoutMs = FETCH_TIMEOUT_MS): Promise<string | null> {
+/** Exported so a combined fetch (see scripts/fetchRegisterContactInfo.ts) can reuse the same already-downloaded homepage HTML instead of fetching it again. */
+export async function fetchText(url: string, timeoutMs = FETCH_TIMEOUT_MS): Promise<string | null> {
   const { signal, cancel } = withTimeout(timeoutMs);
   try {
     const res = await fetch(url, { signal, redirect: 'follow', headers: { 'User-Agent': USER_AGENT, Accept: 'text/html' } });
@@ -49,7 +50,7 @@ async function fetchText(url: string, timeoutMs = FETCH_TIMEOUT_MS): Promise<str
 }
 
 /** HEAD (falling back to a short-range GET) to confirm a candidate URL really serves an image, without downloading it in full. */
-async function isRealImage(url: string): Promise<boolean> {
+export async function isRealImage(url: string): Promise<boolean> {
   const { signal, cancel } = withTimeout(5000);
   try {
     let res = await fetch(url, { signal, method: 'HEAD', redirect: 'follow', headers: { 'User-Agent': USER_AGENT } });
@@ -75,8 +76,8 @@ function absolutize(href: string, base: string): string | null {
   }
 }
 
-/** Pulls candidate icon/preview-image URLs out of a page's <head>, best first. */
-function extractCandidates(html: string, pageUrl: string): string[] {
+/** Pulls candidate icon/preview-image URLs out of a page's <head>, best first. Exported for the combined fetch script. */
+export function extractLogoCandidates(html: string, pageUrl: string): string[] {
   const head = html.split(/<\/head>/i)[0] ?? html.slice(0, 20000);
   const candidates: { href: string; score: number }[] = [];
 
@@ -129,7 +130,7 @@ export async function discoverLogo(website: string): Promise<string | null> {
   }
 
   const html = await fetchText(homepage);
-  const candidates = html ? extractCandidates(html, homepage) : [absolutize('/favicon.ico', homepage)].filter((x): x is string => !!x);
+  const candidates = html ? extractLogoCandidates(html, homepage) : [absolutize('/favicon.ico', homepage)].filter((x): x is string => !!x);
 
   for (const url of candidates) {
     if (await isRealImage(url)) return url;

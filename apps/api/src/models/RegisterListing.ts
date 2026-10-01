@@ -33,6 +33,8 @@ export interface RegisterListingDoc extends Document {
   website?: string;
   /** The business's own published phone number — a real fact, never invented. Admin-visible only: the public API never returns it (register.controller.ts) — enquiries go through the matching flow instead. */
   phone?: string;
+  /** Set when phoneDiscovery.ts has looked for one on the business's own website (whether or not it found one) — only relevant for listings the original register import had no phone for; skip re-checking too often. */
+  phoneCheckedAt?: Date;
   /**
    * A contact email found on the business's own website (see
    * services/emailDiscovery.ts) or cross-checked against it during an
@@ -99,6 +101,7 @@ const registerListingSchema = new Schema<RegisterListingDoc>(
     areaCount: { type: Number, default: 0 },
     website: String,
     phone: String,
+    phoneCheckedAt: Date,
     email: String,
     emailCheckedAt: Date,
     contactVerified: { type: Boolean, default: false },

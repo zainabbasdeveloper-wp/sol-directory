@@ -20,9 +20,8 @@
  *     service, or analytics snippet instead of the business's own.
  */
 
-const FETCH_TIMEOUT_MS = 8000;
-const MAX_HTML_BYTES = 2_000_000;
-const USER_AGENT = 'Mozilla/5.0 (compatible; SolDirectoryBot/1.0; +https://directory.solbusinessconsultant.com.au)';
+// Shares the one fetchText/timeout implementation with logoDiscovery.ts rather than keeping a second copy in step.
+import { fetchText } from './logoDiscovery.js';
 
 // Domains that show up in mailto/text scans but are never the business's
 // own contact address — form/analytics/CMS vendors, placeholders.
@@ -32,38 +31,8 @@ const DOMAIN_DENYLIST = [
   'hotjar.com', 'doubleclick.net', 'facebook.com', 'wordpress.com', 'sentry-next.io', 'mailchimp.com',
 ];
 
-const CONTACT_PATHS = ['/contact', '/contact-us', '/contact-us/', '/contactus', '/about/contact', '/about-us/contact'];
-
-function withTimeout(ms: number): { signal: AbortSignal; cancel: () => void } {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), ms);
-  return { signal: controller.signal, cancel: () => clearTimeout(timer) };
-}
-
-async function fetchText(url: string): Promise<string | null> {
-  const { signal, cancel } = withTimeout(FETCH_TIMEOUT_MS);
-  try {
-    const res = await fetch(url, { signal, redirect: 'follow', headers: { 'User-Agent': USER_AGENT, Accept: 'text/html' } });
-    if (!res.ok) return null;
-    const contentType = res.headers.get('content-type') ?? '';
-    if (!contentType.includes('text/html')) return null;
-    const reader = res.body?.getReader();
-    if (!reader) return res.text();
-    let received = 0;
-    const chunks: Uint8Array[] = [];
-    while (received < MAX_HTML_BYTES) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (value) { chunks.push(value); received += value.length; }
-    }
-    reader.cancel().catch(() => {});
-    return Buffer.concat(chunks.map((c) => Buffer.from(c))).toString('utf-8');
-  } catch {
-    return null;
-  } finally {
-    cancel();
-  }
-}
+/** Exported so the combined fetch script (scripts/fetchRegisterContactInfo.ts) can reuse the same contact-page candidates for phone discovery too. */
+export const CONTACT_PATHS = ['/contact', '/contact-us', '/contact-us/', '/contactus', '/about/contact', '/about-us/contact'];
 
 function isEmailShaped(s: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(s);
@@ -125,7 +94,8 @@ function fromSameDomainText(html: string, siteDomain: string): string | null {
   return null;
 }
 
-function extractFromHtml(html: string, siteDomain: string): string | null {
+/** Exported so the combined fetch script can run this against HTML it already downloaded itself. */
+export function extractEmailFromHtml(html: string, siteDomain: string): string | null {
   return fromMailto(html) ?? fromCloudflareProtection(html) ?? fromSameDomainText(html, siteDomain);
 }
 
@@ -148,7 +118,7 @@ export async function discoverEmail(website: string): Promise<string | null> {
 
   const homeHtml = await fetchText(homepage);
   if (homeHtml) {
-    const found = extractFromHtml(homeHtml, siteDomain);
+    const found = extractEmailFromHtml(homeHtml, siteDomain);
     if (found) return found;
   }
 
@@ -156,7 +126,7 @@ export async function discoverEmail(website: string): Promise<string | null> {
     const contactUrl = new URL(path, homepage).toString();
     const html = await fetchText(contactUrl);
     if (!html) continue;
-    const found = extractFromHtml(html, siteDomain);
+    const found = extractEmailFromHtml(html, siteDomain);
     if (found) return found;
     break; // only the first contact path that actually responds is worth trying
   }

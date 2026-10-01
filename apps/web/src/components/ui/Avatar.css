@@ -4,4 +4,23 @@
 .avatar-lg { width: 96px; height: 96px; font-size: 32px; }
 .avatar-round { border-radius: 50%; }
 .avatar-square { border-radius: 14px; object-fit: contain; } /* logos keep their whole shape; photos (round) are cropped */
-.avatar-fallback { display: inline-grid; place-items: center; font-weight: 700; color: #0F4FA8; background: var(--color-primary-tint, #F2F7FF); border: 0; }
+.avatar-fallback {
+  display: inline-grid;
+  place-items: center;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #ffffff;
+  border: 0;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14), 0 6px 16px rgba(11, 45, 92, 0.16);
+}
+
+/* A fixed palette of on-brand gradients, picked deterministically per name
+   (see Avatar.tsx) — gives every initials fallback a premium, deliberate
+   look instead of one flat tint, without ever claiming to be a real photo
+   or logo. */
+.avatar-grad-0 { background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-500) 100%); }
+.avatar-grad-1 { background: linear-gradient(135deg, var(--color-navy, #0B2D5C) 0%, var(--color-accent-700, #0F4FA8) 100%); }
+.avatar-grad-2 { background: linear-gradient(150deg, var(--color-accent-600, #0B63D6) 0%, var(--color-accent-900, #0B2D5C) 100%); }
+.avatar-grad-3 { background: linear-gradient(135deg, var(--color-accent-700, #0F4FA8) 0%, var(--color-accent) 100%); }
+.avatar-grad-4 { background: linear-gradient(160deg, var(--color-navy, #0B2D5C) 0%, var(--color-accent-500) 100%); }
+.avatar-grad-5 { background: linear-gradient(135deg, var(--color-accent-500) 0%, var(--color-accent-900, #0B2D5C) 100%); }
