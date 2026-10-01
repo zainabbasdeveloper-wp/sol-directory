@@ -111,6 +111,15 @@ async function main() {
     .limit(limit ?? total)
     .lean();
 
+  // A listing can land in `docs` needing only ONE of the three (e.g. a
+  // separate earlier run already checked its logo/email) — report that
+  // breakdown up front so "0 found" for a field doesn't read as broken
+  // when it's really just "nothing in this batch still needs it".
+  const needLogoCount = docs.filter((d) => !d.logoCheckedAt || (staleCutoff ? d.logoCheckedAt < staleCutoff : false)).length;
+  const needEmailCount = docs.filter((d) => !d.emailCheckedAt || (staleCutoff ? d.emailCheckedAt < staleCutoff : false)).length;
+  const needPhoneCount = docs.filter((d) => !d.phone && (!d.phoneCheckedAt || (staleCutoff ? d.phoneCheckedAt < staleCutoff : false))).length;
+  console.log(`[fetch-contact-info] Of these: ${needLogoCount} still need a logo lookup, ${needEmailCount} still need an email lookup, ${needPhoneCount} still need a phone lookup.`);
+
   let checked = 0;
   let logosFound = 0;
   let emailsFound = 0;
