@@ -171,6 +171,8 @@ export default function FundingTopicPage() {
 
 /** /funding — every funding topic, grouped the same way the mega menu groups them. */
 export function FundingHubPage() {
+  const { openMatchModal } = useMatchModal();
+
   useEffect(() => {
     window.scrollTo(0, 0);
     applySeoTags({
@@ -183,15 +185,32 @@ export function FundingHubPage() {
   return (
     <>
       <PublicHeader />
-      <main className="reg-page">
+      <div className="directory-page-header directory-page-header--funding">
+        <div className="directory-page-header-inner">
+          <span className="eyebrow eyebrow-light"><span className="eyebrow-rule" />Understand your options</span>
+          <h1 className="section-heading section-heading-light">NDIS, aged care and other funding explained</h1>
+          <p className="directory-page-subtitle">Use these general guides to understand common terms and prepare questions for the relevant official body or provider.</p>
+        </div>
+      </div>
+      <main className="reg-page category-hub-page">
         <Breadcrumbs items={[{ label: 'Home', to: '/' }, { label: 'Funding' }]} />
-        <h1 className="pp-head-h1">Funding, explained</h1>
-        <p className="reg-lede">
-          General information on how different funding types work — NDIS plan management, aged care programs, DVA support, and
-          private options. Not financial advice; always confirm current detail with the relevant official body.
-        </p>
+        <section className="directory-intro">
+          <span className="directory-section-label">A practical starting point</span>
+          <h2>Understand the terms before comparing providers</h2>
+          <p>Funding affects which providers you can use, how invoices are paid and what records may be required. These pages provide general information, not financial advice. Program rules change, so confirm current details with the NDIS, My Aged Care, DVA, Services Australia or another relevant official body.</p>
+        </section>
+
+        <section className="directory-guidance" aria-labelledby="funding-checks-heading">
+          <div className="directory-section-heading"><span className="directory-section-label">Prepare before contacting providers</span><h2 id="funding-checks-heading">Keep three details close at hand</h2></div>
+          <ol className="directory-guidance-grid">
+            <li><span>01</span><h3>Your funding arrangement</h3><p>Know the program, plan-management type or private payment arrangement that applies to the support.</p></li>
+            <li><span>02</span><h3>The approved support</h3><p>Check the relevant budget, service category, dates and any requirements before agreeing to services.</p></li>
+            <li><span>03</span><h3>Provider payment terms</h3><p>Confirm rates, travel, cancellations, invoicing and whether the provider can work with your funding arrangement.</p></li>
+          </ol>
+        </section>
+
         {FUNDING_CATEGORY_GROUPS.map((group) => (
-          <section key={group.title}>
+          <section className="category-hub-group" key={group.title}>
             <h2 className="reg-h2">{group.title}</h2>
             <ul className="reg-linkgrid">
               {group.items.map((f: FundingContent) => (
@@ -200,7 +219,11 @@ export function FundingHubPage() {
             </ul>
           </section>
         ))}
-        <p className="reg-note" style={{ marginTop: 24 }}>{FUNDING_CONTENT.length} funding topics covered.</p>
+        <p className="reg-note"><strong>{FUNDING_CONTENT.length} topics covered.</strong> Only funding types that map to information providers actually supply can filter provider profiles. Other pages are clearly marked as general information.</p>
+        <section className="directory-content-cta">
+          <div><span className="directory-section-label">Ready to discuss support?</span><h2>Include the funding details in one request</h2><p>Tell providers how the support is funded, where it is needed and when you would like it to begin.</p></div>
+          <button type="button" className="btn-gradient" onClick={() => openMatchModal()}>Get matched, free</button>
+        </section>
       </main>
       <PublicFooter />
     </>

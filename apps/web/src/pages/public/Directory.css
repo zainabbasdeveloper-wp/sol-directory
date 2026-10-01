@@ -24,6 +24,8 @@
 .directory-page-header--services { --directory-header-image: url('/images/six-checks-on-every-provider.jpg'); }
 .directory-page-header--locations { --directory-header-image: url('/images/front-view-smiley-girl-woman-indoors-hero.jpg'); }
 .directory-page-header--workers { --directory-header-image: url('/images/why-sol-directory.jpg'); }
+.directory-page-header--conditions { --directory-header-image: url('/images/reviews.jpg'); }
+.directory-page-header--funding { --directory-header-image: url('/images/providers.jpg'); }
 .directory-page-header--workers::before { background-position: center 35%; }
 .directory-page-header-inner {
   max-width: var(--layout-content-max-width);
@@ -36,6 +38,47 @@
   line-height: 1.7;
   max-width: 50ch;
   color: rgba(255, 255, 255, 0.8);
+}
+
+/* Shared content system for the Services and Locations navigation hubs. */
+.directory-content-page { display: grid; gap: clamp(56px, 7vw, 88px); }
+.directory-intro { max-width: 760px; }
+.directory-section-label { display: block; margin-bottom: 10px; color: #0F4FA8; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+.directory-intro h2,
+.directory-section-heading h2,
+.directory-content-cta h2 { margin: 0; color: #0B2343; font-size: clamp(27px, 3vw, 38px); line-height: 1.18; }
+.directory-intro p { margin: 18px 0 0; color: #40546D; font-size: 17px; line-height: 1.75; }
+.directory-section-heading { max-width: 680px; margin-bottom: 26px; }
+.directory-guidance { padding: clamp(30px, 4vw, 48px); background: #F3F7FB; border: 1px solid #DFE8F2; border-radius: 12px; }
+.directory-guidance-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; margin: 0; padding: 0; overflow: hidden; list-style: none; background: #DCE5EF; border: 1px solid #DCE5EF; border-radius: 10px; }
+.directory-guidance-grid li { padding: 24px; background: #FFFFFF; }
+.directory-guidance-grid li > span { color: #1769E0; font-size: 12px; font-weight: 700; }
+.directory-guidance-grid h3 { margin: 18px 0 8px; color: #102B4D; font-size: 18px; }
+.directory-guidance-grid p { margin: 0; color: #52657D; font-size: 15px; line-height: 1.65; }
+.directory-source-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.directory-source-grid article { padding: 28px; border: 1px solid #DFE7F0; border-radius: 10px; background: #FFFFFF; box-shadow: 0 8px 24px rgba(11,45,92,0.05); }
+.directory-source-kicker { color: #0F4FA8; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+.directory-source-grid h3 { margin: 12px 0 10px; color: #102B4D; font-size: 21px; }
+.directory-source-grid p { margin: 0 0 18px; color: #52657D; font-size: 15px; line-height: 1.65; }
+.directory-source-grid a { color: #0F4FA8; font-weight: 700; }
+.directory-source-links { display: flex; flex-wrap: wrap; gap: 10px 18px; }
+.directory-content-cta { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: clamp(28px, 4vw, 44px); color: #FFFFFF; background: #0B2D5C; border-radius: 12px; }
+.directory-content-cta h2 { color: #FFFFFF; }
+.directory-content-cta .directory-section-label { color: #AFCFFF; }
+.directory-content-cta p { max-width: 62ch; margin: 12px 0 0; color: rgba(255,255,255,0.82); font-size: 15px; line-height: 1.65; }
+.directory-content-cta .btn-gradient { flex: none; }
+.location-hub-card { padding: 22px; background: #FFFFFF; border: 1px solid #DFE7F0; border-radius: 10px; box-shadow: 0 6px 18px rgba(11,45,92,0.04); }
+.directory-list-section .reg-h2 { margin-top: 0; }
+.category-hub-page { display: grid; gap: clamp(48px, 6vw, 72px); }
+.category-hub-page > .reg-crumbs { margin-bottom: -22px; }
+.category-hub-group .reg-h2 { margin-top: 0; }
+.category-hub-group .reg-lede { margin-bottom: 18px; }
+
+@media (max-width: 760px) {
+  .directory-guidance-grid,
+  .directory-source-grid { grid-template-columns: 1fr; }
+  .directory-content-cta { align-items: stretch; flex-direction: column; }
+  .directory-content-cta .btn-gradient { width: 100%; }
 }
 
 /* ---------------- Directory search + results ---------------- */
