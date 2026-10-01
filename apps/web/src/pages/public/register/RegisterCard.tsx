@@ -39,7 +39,7 @@ export default function RegisterCard({ item, matchedCategory }: { item: Register
           <h3>
             <Link to={registerPath(kind, item.slug)}>{item.name}</Link>
           </h3>
-          <span className="reg-badge">Listed on the {kind.label} register</span>
+          <span className="reg-badge reg-card-source"><span aria-hidden="true">✓</span> Listed on the {kind.label} register</span>
         </div>
       </div>
 

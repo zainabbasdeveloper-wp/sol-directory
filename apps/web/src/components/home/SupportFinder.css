@@ -1,36 +1,36 @@
 /* Home "find a support" section. Shares .services-section / .services-inner /
    .section-header-row / .btn-* from Home.css. */
 
-.sf-search { display: flex; gap: 12px; align-items: flex-end; background: #fff; border-radius: var(--radius-md); padding: 20px; box-shadow: var(--shadow-md); }
+.sf-search { display: flex; gap: 12px; align-items: flex-end; background: #fff; border: 1px solid #DCE5F0; border-radius: 12px; padding: 20px; box-shadow: 0 10px 28px rgba(11,45,92,0.07); }
 .sf-search-field { flex: 1; min-width: 0; }
 .sf-search-btn { height: 50px; padding: 0 30px; flex: none; }
-.sf-hint { margin: 14px 4px 0; font-size: 14.5px; line-height: 1.6; color: color-mix(in srgb, var(--color-text) 78%, transparent); }
+.sf-hint { margin: 14px 4px 0; font-size: 15px; line-height: 1.65; color: #52657D; }
 .sf-hint a, .sf-hint .link-btn { color: var(--color-accent-700); font-weight: 600; text-decoration: underline; }
 
 .sf-tabs { display: flex; flex-wrap: wrap; gap: 10px; margin: 30px 0 22px; }
 .sf-tab {
   min-height: 44px; padding: 0 20px; font: inherit; font-size: 14.5px; font-weight: 600; cursor: pointer;
-  color: var(--color-text); background: #fff; border: 1.5px solid transparent; border-radius: 100px; box-shadow: var(--shadow-sm);
+  color: #203956; background: #fff; border: 1px solid #DCE5F0; border-radius: 100px; box-shadow: none;
   transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
 }
-.sf-tab:hover { border-color: var(--color-accent); }
+.sf-tab:hover { border-color: #AFC5DF; background: #F7FAFD; }
 .sf-tab:focus-visible, .sf-card:focus-visible { outline: 3px solid #8CB8FF; outline-offset: 2px; }
-.sf-tab-active { background: var(--color-accent-900); color: #fff; }
+.sf-tab-active { background: var(--color-accent-900); color: #fff; border-color: var(--color-accent-900); }
 .sf-tab-active:hover { border-color: transparent; }
 
 .sf-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: clamp(14px, 1.8vw, 22px); }
 .sf-card {
   display: flex; flex-direction: column; align-items: flex-start; gap: 8px; text-align: left; font: inherit; color: inherit;
-  background: #fff; border: 1.5px solid transparent; border-radius: var(--radius-md); padding: 26px 24px 22px; cursor: pointer;
-  box-shadow: var(--shadow-sm); transition: box-shadow 200ms ease, transform 200ms ease, border-color 200ms ease;
+  background: #fff; border: 1px solid #DCE5F0; border-radius: 10px; padding: 26px 24px 22px; cursor: pointer;
+  box-shadow: 0 3px 12px rgba(11,45,92,0.04); transition: box-shadow 200ms ease, border-color 200ms ease;
 }
-.sf-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); border-color: color-mix(in srgb, var(--color-accent) 40%, transparent); }
+.sf-card:hover { box-shadow: 0 12px 28px rgba(11,45,92,0.09); border-color: #B9CBE0; }
 .sf-icon {
   display: inline-flex; align-items: center; justify-content: center; width: 50px; height: 50px; margin-bottom: 8px;
   border-radius: 14px; color: var(--color-accent-700); background: color-mix(in srgb, var(--color-accent) 10%, #fff);
 }
-.sf-card-title { font-size: 19px; font-weight: 600; letter-spacing: -0.012em; line-height: 1.25; }
-.sf-card-body { flex: 1; font-size: 14.5px; line-height: 1.65; color: color-mix(in srgb, var(--color-text) 72%, transparent); }
+.sf-card-title { font-size: 19px; font-weight: 700; letter-spacing: 0; line-height: 1.3; color: #102B4D; }
+.sf-card-body { flex: 1; font-size: 15px; line-height: 1.65; color: #52657D; }
 .sf-card-foot { margin-top: 8px; font-size: 14px; font-weight: 600; color: var(--color-accent-700); }
 
 .sf-help {
@@ -40,7 +40,7 @@
 }
 .sf-help > div { display: grid; gap: 4px; min-width: 0; flex: 1 1 320px; }
 .sf-help strong { font-size: 17px; font-weight: 600; }
-.sf-help span { font-size: 14.5px; line-height: 1.55; color: color-mix(in srgb, var(--color-text) 74%, transparent); }
+.sf-help span { font-size: 15px; line-height: 1.6; color: #52657D; }
 .sf-help .btn-gradient { height: 48px; padding: 0 28px; }
 
 @media (max-width: 640px) {
@@ -52,4 +52,4 @@
   .sf-tab { flex: none; }
   .sf-help .btn-gradient { width: 100%; }
 }
-@media (prefers-reduced-motion: reduce) { .sf-card, .sf-tab { transition: none; } .sf-card:hover { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .sf-card, .sf-tab { transition: none; } }
