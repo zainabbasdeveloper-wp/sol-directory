@@ -110,7 +110,14 @@ function auditHtml(url: string, response: Response, html: string): PageResult {
   if (jsonLdCount === 0) errors.push('missing JSON-LD');
   if (title.length > 65) warnings.push(`title is ${title.length} characters`);
   if (description.length < 80 || description.length > 165) warnings.push(`description is ${description.length} characters`);
-  if (words < 120) warnings.push(`thin content: ${words} words`);
+  const pathname = new URL(url).pathname;
+  const minimumWords = pathname.startsWith('/services/') ? 1000 : 120;
+  const isServiceLocation = /^\/services\/[^/]+\/[^/]+\/[^/]+\/?$/.test(pathname);
+  if (words < minimumWords) {
+    const message = `thin content: ${words} words (target ${minimumWords})`;
+    if (isServiceLocation) errors.push(message);
+    else warnings.push(message);
+  }
 
   try {
     const expected = new URL(url);

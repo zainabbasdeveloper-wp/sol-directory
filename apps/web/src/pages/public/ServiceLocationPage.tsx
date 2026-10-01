@@ -22,6 +22,7 @@ import { listPublicProviders, type PublicProviderRow } from '../../api/providerR
 import { applySeoTags, setJsonLd } from '../../lib/seo';
 import RegisterNearby from './register/RegisterNearby';
 import LocationWorkers from './register/LocationWorkers';
+import { serviceEditorialFor } from '@soldirectory/service-content';
 import './ServiceLocationPage.css';
 
 // REAL DATA, TWO SOURCES, PER THE ARCHITECTURE DECIDED WITH THE USER:
@@ -93,6 +94,7 @@ export default function ServiceLocationPage() {
 
   const serviceName = unslugify(serviceSlug);
   const serviceLower = serviceName.toLowerCase();
+  const serviceEditorial = serviceEditorialFor(serviceName);
   const suburbName = unslugify(suburbSlug);
   // The real, register-backed route carries its own :state segment
   // (disambiguates same-named suburbs across states, same as
@@ -181,6 +183,9 @@ export default function ServiceLocationPage() {
   // appear only when an editor has filled in their ACF group.
   const toc = wp?.toc?.length ? [
     ...wp.toc,
+    ...(serviceEditorial && !wp.toc.some((item) => item.href === '#service-guide')
+      ? [{ label: `${serviceName} guide`, href: '#service-guide' }]
+      : []),
     ...(!wp.toc.some((item) => item.href === '#register')
       ? [{ label: 'Providers on the register', href: '#register' }]
       : []),
@@ -195,6 +200,7 @@ export default function ServiceLocationPage() {
     { label: 'Providers on the register', href: '#register' },
     { label: 'Independent workers', href: '#workers' },
     { label: `About ${serviceLower}`, href: '#about-service' },
+    ...(serviceEditorial ? [{ label: `${serviceName} guide`, href: '#service-guide' }] : []),
     { label: 'Plan your support', href: '#plan-support' },
     ...(wp?.editorialContentHtml ? [{ label: 'Local guide', href: '#editorial-content' }] : []),
     { label: 'What to compare', href: '#compare' },
@@ -430,6 +436,54 @@ export default function ServiceLocationPage() {
             <h2 className="svc-h2-sm">About home {serviceLower} in {suburbName}</h2>
             <p className="svc-p">{introParagraph}</p>
           </section>
+
+          {serviceEditorial && (
+            <section id="service-guide" className="svc-service-guide">
+              <span className="svc-section-kicker">Understand the support</span>
+              <h2 className="svc-h2-sm">A practical guide to {serviceLower}</h2>
+              <p className="svc-service-answer">{serviceEditorial.shortAnswer}</p>
+              <div className="svc-service-overview">
+                {serviceEditorial.overview.map((paragraph) => <p className="svc-p" key={paragraph}>{paragraph}</p>)}
+              </div>
+
+              <div className="svc-service-guide-grid">
+                <article>
+                  <h3>What {serviceLower} may include</h3>
+                  <ul>{serviceEditorial.includes.map((item) => <li key={item}>{item}</li>)}</ul>
+                </article>
+                <article>
+                  <h3>Planning the support</h3>
+                  <ul>{serviceEditorial.planning.map((item) => <li key={item}>{item}</li>)}</ul>
+                </article>
+              </div>
+
+              <div className="svc-service-guide-block">
+                <h3>Questions to ask providers</h3>
+                <ol>{serviceEditorial.providerQuestions.map((item) => <li key={item}>{item}</li>)}</ol>
+              </div>
+
+              <div className="svc-service-guide-grid">
+                <article>
+                  <h3>Funding considerations</h3>
+                  {serviceEditorial.funding.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+                </article>
+                <article>
+                  <h3>Safeguards and records</h3>
+                  <ul>{serviceEditorial.safeguards.map((item) => <li key={item}>{item}</li>)}</ul>
+                </article>
+              </div>
+
+              <div className="svc-service-sources">
+                <h3>Official information</h3>
+                <ul>
+                  {serviceEditorial.sources.map((source) => (
+                    <li key={source.href}><a href={source.href} target="_blank" rel="noopener nofollow noreferrer">{source.label}</a></li>
+                  ))}
+                </ul>
+                <p>Program rules, prices and eligibility can change. Confirm current requirements with the responsible government body and the provider before relying on this general information.</p>
+              </div>
+            </section>
+          )}
 
           <section id="plan-support">
             <span className="svc-section-kicker">Before you contact providers</span>

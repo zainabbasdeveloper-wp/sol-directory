@@ -123,6 +123,21 @@
 .svc-editorial-content .svc-rich ol { padding-left: 24px; }
 .svc-editorial-content .svc-rich li + li { margin-top: 8px; }
 .svc-editorial-content .svc-rich a { color: var(--color-accent); text-decoration: underline; text-underline-offset: 2px; }
+.svc-service-guide { scroll-margin-top: 100px; }
+.svc-service-answer { margin: 0 0 22px; padding: 20px 22px; border-left: 3px solid var(--color-accent); background: #F2F7FF; color: var(--color-text); font-size: 16px; line-height: 1.75; }
+.svc-service-overview { display: grid; gap: 2px; }
+.svc-service-guide-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-top: 26px; }
+.svc-service-guide-grid article { padding: 24px; border: 1px solid var(--color-border); border-radius: 8px; background: #FFFFFF; }
+.svc-service-guide h3 { margin: 0 0 12px; color: var(--color-text); font-size: 18px; line-height: 1.35; }
+.svc-service-guide ul,
+.svc-service-guide ol { display: grid; gap: 10px; margin: 0; padding-left: 21px; color: var(--color-text-muted); font-size: 14.5px; line-height: 1.65; }
+.svc-service-guide article p { margin: 0 0 12px; color: var(--color-text-muted); font-size: 14.5px; line-height: 1.7; }
+.svc-service-guide-block { margin-top: 18px; padding: 24px; background: #F5F7FA; border: 1px solid var(--color-border); border-radius: 8px; }
+.svc-service-sources { margin-top: 22px; padding-top: 22px; border-top: 1px solid var(--color-border); }
+.svc-service-sources ul { display: flex; flex-wrap: wrap; gap: 8px 20px; padding: 0; list-style: none; }
+.svc-service-sources a { color: var(--color-accent-700); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.svc-service-sources p { margin: 16px 0 0; color: var(--color-text-muted); font-size: 13.5px; line-height: 1.65; }
+@media (max-width: 720px) { .svc-service-guide-grid { grid-template-columns: 1fr; } }
 .svc-footnote { margin: 20px 0 0; font-size: 12.5px; line-height: 1.6; color: color-mix(in srgb, var(--color-text) 58%, transparent); }
 .svc-link-strong { font-size: 14.5px; font-weight: 600; color: var(--color-accent); }
 

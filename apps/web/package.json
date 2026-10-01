@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@soldirectory/design-tokens": "*",
+    "@soldirectory/service-content": "*",
     "@soldirectory/shared-types": "*",
     "chart.js": "^4.5.1",
     "dompurify": "^3.4.15",
