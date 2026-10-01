@@ -21,7 +21,7 @@ export default function Locations() {
     <>
       <PublicHeader />
 
-      <div className="directory-page-header">
+      <div className="directory-page-header directory-page-header--locations">
         <div className="directory-page-header-inner">
           <span className="eyebrow eyebrow-light">
             <span className="eyebrow-rule" />

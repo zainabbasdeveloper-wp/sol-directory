@@ -82,21 +82,24 @@ export default function WorkerPublicProfile() {
   return (
     <>
       <PublicHeader />
-      <main className="reg-page">
-        <Breadcrumbs items={[{ label: 'Home', to: '/' }, { label: 'Independent workers', to: '/independent-workers/find' }, { label: name }]} />
-
-        <div className="pp-head">
-          <Avatar src={workerPhotoUrl(w)} name={name} size="lg" />
-          <div className="pp-head-text">
-            <h1>{name}</h1>
-            <p className="pp-sub">
-              {w.role && <span>{w.role}</span>}
-              {where && <span>{where}</span>}
-              {w.rating !== null && <span><Stars value={w.rating} /> {w.rating.toFixed(1)} ({w.reviewCount} {w.reviewCount === 1 ? 'review' : 'reviews'})</span>}
-            </p>
+      <section className="provider-page-header provider-page-header--worker">
+        <div className="provider-page-header-inner">
+          <Breadcrumbs items={[{ label: 'Home', to: '/' }, { label: 'Independent workers', to: '/independent-workers/find' }, { label: name }]} />
+          <div className="pp-head">
+            <Avatar src={workerPhotoUrl(w)} name={name} size="lg" />
+            <div className="pp-head-text">
+              <h1>{name}</h1>
+              <p className="pp-sub">
+                {w.role && <span>{w.role}</span>}
+                {where && <span>{where}</span>}
+                {w.rating !== null && <span><Stars value={w.rating} /> {w.rating.toFixed(1)} ({w.reviewCount} {w.reviewCount === 1 ? 'review' : 'reviews'})</span>}
+              </p>
+            </div>
           </div>
         </div>
+      </section>
 
+      <main className="reg-page">
         <div className="pp-layout">
           <div className="pp-main">
             {w.bio && (<><h2 className="reg-h2">About</h2><p className="pp-lede">{w.bio}</p></>)}
