@@ -8,7 +8,7 @@ import Combobox, { type ComboItem } from '../../components/ui/Combobox';
 import { listPublicWorkers, workerPhotoUrl, type PublicWorkerList } from '../../api/profilesApi';
 import { listActiveServices } from '../../api/serviceCatalogue';
 import { Stars } from '../../components/reviews/WorkerReviews';
-import { applySeoTags } from '../../lib/seo';
+import { applySeoTags, setJsonLd } from '../../lib/seo';
 import './Home.css';
 import './Directory.css';
 import './register/register.css';
@@ -63,6 +63,15 @@ export default function WorkerFinder() {
       canonicalUrl: `${window.location.origin}/independent-workers/find${page > 1 && !filtered ? `?page=${page}` : ''}`,
       noindex: filtered || (data !== null && total === 0),
     });
+    setJsonLd('worker-finder-breadcrumbs', {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: `${window.location.origin}/` },
+        { '@type': 'ListItem', position: 2, name: 'Independent workers', item: `${window.location.origin}/independent-workers` },
+        { '@type': 'ListItem', position: 3, name: 'Find a worker', item: `${window.location.origin}/independent-workers/find` },
+      ],
+    });
+    return () => setJsonLd('worker-finder-breadcrumbs', null);
   }, [page, filtered, data, total]);
 
   function update(next: { service?: string; suburb?: string; q?: string; page?: number }) {
@@ -94,6 +103,18 @@ export default function WorkerFinder() {
       </div>
 
       <section className="directory-section dir">
+        <section className="worker-finder-intro" aria-labelledby="worker-finder-intro-heading">
+          <div>
+            <span className="directory-section-label">Before you search</span>
+            <h2 id="worker-finder-intro-heading">Public profiles, with contact details kept private</h2>
+          </div>
+          <p>
+            Workers publish the services, experience and availability shown in their profiles. SolDirectory does not employ,
+            supervise or recommend them. Eligible organisations can sign in to request contact after checking whether a worker
+            may suit the role.
+          </p>
+        </section>
+
         <form
           className="dir-search pp-filters"
           role="search"
@@ -200,6 +221,30 @@ export default function WorkerFinder() {
         </ul>
 
         <Pagination page={page} totalPages={totalPages} disabled={loading} onChange={(n) => { update({ page: n }); topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }} />
+
+        <section className="directory-guidance worker-finder-guidance" aria-labelledby="worker-checks-heading">
+          <div className="directory-section-heading">
+            <span className="directory-section-label">Before making contact</span>
+            <h2 id="worker-checks-heading">Three checks for a safer, clearer engagement</h2>
+          </div>
+          <ol className="directory-guidance-grid">
+            <li><span>01</span><h3>Check role fit</h3><p>Compare the support required with the worker’s stated experience, availability, location and communication needs.</p></li>
+            <li><span>02</span><h3>Verify safeguards</h3><p>Confirm relevant screening, qualifications, registrations, references and insurance directly before work begins.</p></li>
+            <li><span>03</span><h3>Agree on the arrangement</h3><p>Document duties, schedule, rate, cancellations, supervision and whether the engagement is employment or contracting.</p></li>
+          </ol>
+        </section>
+
+        <section className="directory-content-cta worker-finder-cta">
+          <div>
+            <span className="directory-section-label">Use the worker directory</span>
+            <h2>Continue with the right account</h2>
+            <p>Organisations can sign in to request contact. Independent workers can create a profile and choose whether it appears publicly.</p>
+          </div>
+          <div className="worker-finder-actions">
+            <Link className="btn-tint" to="/login">Organisation sign in</Link>
+            <Link className="btn-gradient" to="/signup?type=worker">Create worker profile</Link>
+          </div>
+        </section>
       </section>
       <PublicFooter />
     </>
