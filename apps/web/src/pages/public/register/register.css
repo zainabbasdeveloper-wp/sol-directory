@@ -21,7 +21,7 @@
 .reg-card h3 a:hover { color: var(--color-accent-700, #0F4FA8); text-decoration: underline; }
 .reg-card { min-height: 520px; padding: 24px; gap: 18px; border-radius: 14px; }
 .reg-card .dir-card-top { align-items: flex-start; }
-.reg-card .dir-card-title h3 { font-size: 20px; line-height: 1.25; }
+.reg-card .dir-card-title h3 { font-size: 17px; line-height: 1.35; }
 .reg-card .dir-areas { font-size: 15px; line-height: 1.65; }
 .reg-card-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; margin: 0; overflow: hidden; border: 1px solid var(--color-border, #E8EEF7); background: var(--color-border, #E8EEF7); }
 .reg-card-facts > div { min-width: 0; padding: 13px 14px; background: var(--color-primary-tint, #F2F7FF); }
@@ -58,10 +58,50 @@
 .reg-chip:focus-visible { outline: 3px solid #8CB8FF; outline-offset: 2px; }
 .reg-chip small { margin-left: 6px; font-weight: 500; opacity: 0.75; }
 .reg-search { display: flex; gap: 10px; flex-wrap: wrap; margin: 6px 0 4px; }
+.reg-search-live { display: block; max-width: 760px; margin-top: 18px; }
+.reg-search-live .cbx-input { padding-right: 44px; }
+.reg-search-live .cbx-option-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .reg-search input { flex: 1 1 260px; min-height: 48px; padding: 0 14px; font: inherit; font-size: 16px; border: 1.5px solid var(--color-border-strong, #DDE4EF); border-radius: 10px; background: #fff; }
 .reg-search input:focus { outline: none; border-color: #1769E0; box-shadow: 0 0 0 3px rgba(23,105,224,0.16); }
 
 /* Provider detail */
+.provider-page-header {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  color: #fff;
+  background: var(--color-accent-900, #0B2D5C);
+}
+.provider-page-header::before,
+.provider-page-header::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+}
+.provider-page-header::before {
+  background: url('/images/providers.jpg') center 38% / cover;
+}
+.provider-page-header--worker::before {
+  background-image: url('/images/why-sol-directory.jpg');
+  background-position: center 35%;
+}
+.provider-page-header::after {
+  background: linear-gradient(90deg, rgba(5, 27, 58, 0.95) 0%, rgba(8, 39, 79, 0.86) 56%, rgba(8, 39, 79, 0.62) 100%);
+}
+.provider-page-header-inner {
+  max-width: var(--layout-content-max-width);
+  margin: 0 auto;
+  padding: clamp(28px, 4vw, 48px) clamp(20px, 5vw, 56px) clamp(36px, 5vw, 64px);
+}
+.provider-page-header .reg-crumbs { color: rgba(255, 255, 255, 0.78); }
+.provider-page-header .reg-crumbs a { color: #fff; }
+.provider-page-header .reg-detail-head,
+.provider-page-header .pp-head { margin-bottom: 0; }
+.provider-page-header .reg-detail-head h1,
+.provider-page-header .pp-head h1 { color: #fff; }
+.provider-page-header .pp-sub { color: rgba(255, 255, 255, 0.88); }
+.provider-page-header .reg-badge { background: #fff; color: #0F4FA8; }
 .reg-detail-head { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: center; margin: 0 0 6px; }
 .reg-detail-head h1 { margin: 0; font-size: clamp(28px, 3.4vw, 42px); line-height: 1.15; letter-spacing: -0.025em; }
 .reg-glance { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0; margin: 22px 0 0; background: #fff; border: 1px solid var(--color-border, #E8EEF7); border-radius: 14px; overflow: hidden; }

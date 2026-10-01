@@ -27,7 +27,7 @@ import 'dotenv/config';
 import fs from 'fs';
 import readline from 'readline';
 import {
-  REGISTER_TYPES, normaliseName, normalisePhone, normaliseServices, normaliseWebsite, rowToArea, safeProviderSlug,
+  REGISTER_TYPES, normalisePhone, normaliseServices, normaliseWebsite, rowToArea, safeProviderSlug, safeRegisterName,
   type RegisterArea, type RegisterType, type SupportCategory,
 } from '../services/registerNormalise.js';
 
@@ -70,8 +70,8 @@ async function readListings(file: string, limit?: number) {
     try { row = JSON.parse(line); } catch { stats.badRows++; continue; }
 
     const type = row.provider_type as RegisterType;
-    const name = normaliseName(row.name);
     const slug = typeof row.slug === 'string' ? row.slug.trim().toLowerCase() : '';
+    const name = safeRegisterName(row.name, slug);
     if (!REGISTER_TYPES.includes(type) || !name || !/^[a-z0-9][a-z0-9-]*$/.test(slug)) { stats.skippedRows++; continue; }
 
     const key = `${type}|${slug}`;

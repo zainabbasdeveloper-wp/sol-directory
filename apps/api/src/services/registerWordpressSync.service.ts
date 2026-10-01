@@ -1,5 +1,6 @@
 import type { RegisterListingDoc } from '../models/RegisterListing.js';
 import RegisterListing from '../models/RegisterListing.js';
+import { safeRegisterName } from './registerNormalise.js';
 
 // Mirrors an imported/unclaimed RegisterListing to WordPress as its OWN
 // post type ('register_listing' — see apps/cms's post-types.php),
@@ -67,7 +68,7 @@ export async function syncRegisterListingToWordPress(listing: RegisterListingDoc
 
   try {
     const payload = {
-      title: listing.name,
+      title: safeRegisterName(listing.name, listing.slug),
       // Draft = still just an imported/unclaimed register fact; Publish =
       // a real business has claimed it. Mirrors the same draft/publish
       // convention already used for 'provider', so it reads the same way

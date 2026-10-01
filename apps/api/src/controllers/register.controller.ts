@@ -7,7 +7,7 @@ import SuburbGeo from '../models/SuburbGeo.js';
 import { VISIBLE_PROVIDER, publicLogoUrl } from './providersPublic.controller.js';
 import { EmailService } from '../services/email.service.js';
 import {
-  MIN_SUBURB_LISTINGS, REGISTER_SUPPORT_CATEGORIES, REGISTER_TYPES, STATE_CODES,
+  MIN_SUBURB_LISTINGS, REGISTER_SUPPORT_CATEGORIES, REGISTER_TYPES, STATE_CODES, safeRegisterName,
   type RegisterType, type StateCode,
 } from '../services/registerNormalise.js';
 
@@ -43,7 +43,7 @@ function toListItem(
     location,
     type: d.type,
     slug: d.slug,
-    name: d.name,
+    name: safeRegisterName(d.name, d.slug),
     states: d.states,
     areaCount: d.areaCount,
     areas: d.areas.slice(0, AREAS_IN_LIST),
@@ -397,7 +397,7 @@ export async function getRegisterListing(req: Request, res: Response) {
   res.json({
     type: doc.type,
     slug: doc.slug,
-    name: doc.name,
+    name: safeRegisterName(doc.name, doc.slug),
     states: doc.states,
     areaCount: doc.areaCount,
     areas: doc.areas.slice(0, AREAS_IN_DETAIL),
@@ -453,19 +453,20 @@ export async function submitClaimRequest(req: Request, res: Response) {
   const listing = await RegisterListing.findOne({ type, slug }).select('_id name type slug claimStatus').lean();
   if (!listing) return res.status(404).json({ error: 'Listing not found.' });
   if (listing.claimStatus === 'claimed') return res.status(409).json({ error: 'This listing has already been claimed.' });
+  const listingName = safeRegisterName(listing.name, listing.slug);
 
   // The same person asking twice about the same listing is one request.
   const duplicate = await ClaimRequest.findOne({ listingId: listing._id, email, status: 'new' }).select('_id').lean();
   if (!duplicate) {
-    await ClaimRequest.create({ listingId: listing._id, type, slug, listingName: listing.name, name, email, phone: phone || undefined, role, message: message || undefined });
+    await ClaimRequest.create({ listingId: listing._id, type, slug, listingName, name, email, phone: phone || undefined, role, message: message || undefined });
     await RegisterListing.updateOne({ _id: listing._id, claimStatus: 'unclaimed' }, { $set: { claimStatus: 'requested' } });
 
     const notify = process.env.ADMIN_NOTIFY_EMAIL || process.env.ADMIN_NOTIFICATION_EMAIL;
     if (notify) {
       EmailService.sendAdminNotification(
         notify,
-        `Claim request: ${listing.name}`,
-        `${escapeHtml(name)} (${escapeHtml(role)}) asked to claim the ${type === 'ndis' ? 'NDIS' : 'aged care'} register listing for <strong>${escapeHtml(listing.name)}</strong>.<br>` +
+        `Claim request: ${listingName}`,
+        `${escapeHtml(name)} (${escapeHtml(role)}) asked to claim the ${type === 'ndis' ? 'NDIS' : 'aged care'} register listing for <strong>${escapeHtml(listingName)}</strong>.<br>` +
           `Email: ${escapeHtml(email)}${phone ? `<br>Phone: ${escapeHtml(phone)}` : ''}${message ? `<br>Message: ${escapeHtml(message)}` : ''}<br>` +
           'Verify against the business’s own website or ABN before linking it to an account.'
       ).catch(() => {});

@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { PublicHeader, PublicFooter } from '../PublicLayout';
 import Pagination from '../../../components/ui/Pagination';
+import Combobox, { type ComboItem } from '../../../components/ui/Combobox';
 import ProviderMap from '../../../components/ProviderMap';
-import { getRegisterHub, searchRegister, type RegisterHub, type RegisterSearchResult } from '../../../api/registerApi';
+import { getRegisterHub, searchRegister, type RegisterHub, type RegisterListItem, type RegisterSearchResult } from '../../../api/registerApi';
 import { MIN_INDEXABLE, absoluteUrl, registerPath, stateBySlug, type RegisterKind } from '../../../lib/registerMeta';
 import { applySeoTags, setJsonLd } from '../../../lib/seo';
 import RegisterCard from './RegisterCard';
@@ -25,6 +26,7 @@ interface Props { kind: RegisterKind; stateSlug: string; suburbSlug?: string }
  * search results while thin or filtered (see the noindex rule below).
  */
 export default function RegisterListPage({ kind, stateSlug, suburbSlug }: Props) {
+  const navigate = useNavigate();
   const state = stateBySlug(stateSlug);
   const [params, setParams] = useSearchParams();
   const category = params.get('category') ?? '';
@@ -37,6 +39,8 @@ export default function RegisterListPage({ kind, stateSlug, suburbSlug }: Props)
   const [hub, setHub] = useState<RegisterHub | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
+  const [suggestions, setSuggestions] = useState<RegisterListItem[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const facetsFor = useRef('');
 
   const areaKey = `${kind.type}|${stateSlug}|${suburbSlug ?? ''}`;
@@ -56,6 +60,34 @@ export default function RegisterListPage({ kind, stateSlug, suburbSlug }: Props)
   }, [text]);
 
   useEffect(() => { setText(q); }, [areaKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Faster, small autocomplete request alongside the paginated results query.
+  // It uses the same state/suburb/category filters, so every suggestion really
+  // belongs to the page the person is searching.
+  useEffect(() => {
+    if (!state || text.trim().length < 2) {
+      setSuggestions([]);
+      setSuggestionsLoading(false);
+      return;
+    }
+    let alive = true;
+    setSuggestions([]);
+    setSuggestionsLoading(true);
+    const timer = setTimeout(() => {
+      searchRegister({
+        type: kind.type,
+        state: state.code,
+        suburb: suburbSlug,
+        category: category || undefined,
+        q: text.trim(),
+        limit: 8,
+      })
+        .then((result) => { if (alive) setSuggestions(result.items); })
+        .catch(() => { if (alive) setSuggestions([]); })
+        .finally(() => { if (alive) setSuggestionsLoading(false); });
+    }, 150);
+    return () => { alive = false; clearTimeout(timer); };
+  }, [kind.type, state, suburbSlug, category, text]);
 
   // Suburb links for internal navigation (cached server-side).
   useEffect(() => {
@@ -97,6 +129,11 @@ export default function RegisterListPage({ kind, stateSlug, suburbSlug }: Props)
   const basePath = registerPath(kind, stateSlug, suburbSlug);
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const topFacets = facets.slice(0, 3);
+  const suggestionItems: ComboItem[] = suggestions.map((item) => ({
+    key: item.slug,
+    label: item.name,
+    hint: item.supportCategories[0] ?? item.states.join(', '),
+  }));
 
   // A page is worth indexing only if it's a real, unfiltered list. Suburb
   // pages also need a few genuine listings — below that it's a near-empty
@@ -189,14 +226,19 @@ export default function RegisterListPage({ kind, stateSlug, suburbSlug }: Props)
           </div>
         )}
 
-        <div className="reg-search" role="search">
-          <input
-            type="search"
+        <div className="reg-search reg-search-live" role="search">
+          <Combobox
+            label="Search providers by name"
             value={text}
-            placeholder={`Search ${areaName} by provider name`}
-            aria-label="Search by provider name"
-            autoComplete="off"
-            onChange={(e) => setText(e.target.value)}
+            placeholder={`Start typing a provider in ${areaName}`}
+            items={suggestionItems}
+            loading={suggestionsLoading}
+            emptyText={`No providers found in ${areaName}`}
+            openOnFocus={text.trim().length >= 2}
+            onInputChange={setText}
+            onSelect={(selected) => navigate(registerPath(kind, selected.key))}
+            onEnterText={(value) => { setText(value); setParam({ q: value, page: null }); }}
+            onClear={() => { setText(''); setSuggestions([]); setParam({ q: null, page: null }); }}
           />
         </div>
 

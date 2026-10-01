@@ -100,14 +100,18 @@ export default function RegisterProviderPage({ kind, slug }: { kind: RegisterKin
   return (
     <>
       <PublicHeader />
-      <main className="reg-page">
-        <Breadcrumbs items={[{ label: 'Home', to: '/' }, { label: `${kind.label} providers`, to: registerPath(kind) }, { label: listing.name }]} />
-
-        <div className="reg-detail-head">
-          <Avatar src={listing.logoUrl} name={listing.name} size="lg" shape="square" />
-          <h1>{listing.name}</h1>
-          <span className="reg-badge">Listed on the {kind.label} register</span>
+      <section className="provider-page-header">
+        <div className="provider-page-header-inner">
+          <Breadcrumbs items={[{ label: 'Home', to: '/' }, { label: `${kind.label} providers`, to: registerPath(kind) }, { label: listing.name }]} />
+          <div className="reg-detail-head">
+            <Avatar src={listing.logoUrl} name={listing.name} size="lg" shape="square" />
+            <h1>{listing.name}</h1>
+            <span className="reg-badge">Listed on the {kind.label} register</span>
+          </div>
         </div>
+      </section>
+
+      <main className="reg-page">
         <p className="reg-lede">
           {listing.name} is {kind.listedAs}
           {listing.areas.length > 0 && <> for {listing.areas.slice(0, 3).map(areaLabel).join(', ')}{listing.areaCount > 3 ? ` and ${formatCount(listing.areaCount - 3)} more area${listing.areaCount - 3 === 1 ? '' : 's'}` : ''}</>}.

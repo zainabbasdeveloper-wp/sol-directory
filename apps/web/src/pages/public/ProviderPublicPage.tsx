@@ -108,21 +108,24 @@ export default function ProviderPublicPage() {
   return (
     <>
       <PublicHeader />
-      <main className="reg-page">
-        <Breadcrumbs items={[{ label: 'Home', to: '/' }, { label: 'Provider directory', to: '/find-a-provider' }, { label: p.name }]} />
-
-        <div className="pp-head">
-          <Avatar src={p.logoUrl} name={p.name} size="lg" shape="square" />
-          <div className="pp-head-text">
-            <h1>{p.name}</h1>
-            <p className="pp-sub">
-              {st && <span className={`dir-status dir-status-${st.tone}`}>{st.label}</span>}
-              {base && <span>Based in {base}</span>}
-              {p.serviceSuburbs.length > 0 && <span>Supports {p.serviceSuburbs.length} {p.serviceSuburbs.length === 1 ? 'area' : 'areas'}</span>}
-            </p>
+      <section className="provider-page-header">
+        <div className="provider-page-header-inner">
+          <Breadcrumbs items={[{ label: 'Home', to: '/' }, { label: 'Provider directory', to: '/find-a-provider' }, { label: p.name }]} />
+          <div className="pp-head">
+            <Avatar src={p.logoUrl} name={p.name} size="lg" shape="square" />
+            <div className="pp-head-text">
+              <h1>{p.name}</h1>
+              <p className="pp-sub">
+                {st && <span className={`dir-status dir-status-${st.tone}`}>{st.label}</span>}
+                {base && <span>Based in {base}</span>}
+                {p.serviceSuburbs.length > 0 && <span>Supports {p.serviceSuburbs.length} {p.serviceSuburbs.length === 1 ? 'area' : 'areas'}</span>}
+              </p>
+            </div>
           </div>
         </div>
+      </section>
 
+      <main className="reg-page">
         <div className="pp-layout">
           <div className="pp-main">
             {p.registrationGroups.length > 0 && (

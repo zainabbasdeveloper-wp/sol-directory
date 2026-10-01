@@ -83,7 +83,7 @@ export default function WorkerFinder() {
   return (
     <>
       <PublicHeader />
-      <div className="directory-page-header">
+      <div className="directory-page-header directory-page-header--workers">
         <div className="directory-page-header-inner">
           <span className="eyebrow eyebrow-light"><span className="eyebrow-rule" />Independent workers</span>
           <h1 className="section-heading section-heading-light">Find an independent support worker</h1>
