@@ -226,7 +226,10 @@ export default function ServiceLocationPage() {
       title: wp?.seo.title || `${serviceName} providers in ${suburbName}, ${stateAbbr} | SolDirectory`,
       description: wp?.seo.description || introParagraph,
       ogImage: wp?.seo.ogImage,
-      noindex: wp?.seo.noindex,
+      canonicalUrl: `${window.location.origin}${stateSlug
+        ? `/services/${serviceSlug}/${stateSlug}/${suburbSlug}`
+        : `/services/${serviceSlug}/${suburbSlug}`}`,
+      noindex: !stateSlug || wp?.seo.noindex,
     });
     setJsonLd('service-location', {
       '@type': 'Service',
@@ -237,9 +240,20 @@ export default function ServiceLocationPage() {
       description: introParagraph,
       url: window.location.href,
     });
-    return () => setJsonLd('service-location', null);
+    setJsonLd('service-location-faq', {
+      '@type': 'FAQPage',
+      mainEntity: faqItems.map((faq) => ({
+        '@type': 'Question',
+        name: faq.q,
+        acceptedAnswer: { '@type': 'Answer', text: faq.a },
+      })),
+    });
+    return () => {
+      setJsonLd('service-location', null);
+      setJsonLd('service-location-faq', null);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wpLoading, wp, serviceName, suburbName, stateAbbr, stateName, introParagraph]);
+  }, [wpLoading, wp, serviceName, suburbName, stateAbbr, stateName, introParagraph, stateSlug, serviceSlug, suburbSlug, faqItems]);
 
   const heroProviderLabel = providersLoading
     ? `Checking providers serving ${suburbName}`
@@ -293,7 +307,7 @@ export default function ServiceLocationPage() {
               </span>
               <h1 className="svc-hero-heading">Home {serviceLower} providers in {suburbName}, {stateName}</h1>
               <p className="svc-hero-sub">
-                Real, verified {serviceLower} providers serving {suburbName} — matched to your actual request, not a generic list.
+                Compare provider profiles and public-register listings for {serviceLower} in {suburbName}, then send one request to providers serving your area.
               </p>
               <div className="svc-hero-stats">
                 <span><strong>{heroProviderLabel}</strong></span>
@@ -341,7 +355,7 @@ export default function ServiceLocationPage() {
             ) : providers.length > 0 ? (
               <>
                 <p className="svc-showing">
-                  Showing {providers.length} of {providersTotal} real registered providers
+                  Showing {providers.length} of {providersTotal} SolDirectory provider {providersTotal === 1 ? 'profile' : 'profiles'}
                 </p>
                 <div className="svc-provider-list">
                   {providers.map((p, i) => (
@@ -406,7 +420,7 @@ export default function ServiceLocationPage() {
               </div>
             </div>
 
-            <Link to={`/find-a-provider?service=${encodeURIComponent(serviceName)}`} className="svc-seeall-card">
+            <Link to={`/find-a-provider?service=${encodeURIComponent(serviceName)}&suburb=${encodeURIComponent(suburbName)}`} className="svc-seeall-card">
               <span><MapPinIcon /> See all providers in {suburbName}, {stateAbbr}</span>
               <span>›</span>
             </Link>

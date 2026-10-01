@@ -17,6 +17,7 @@
     "fetch:register-emails": "tsx src/scripts/fetchRegisterEmails.ts",
     "fetch:register-contact-info": "tsx src/scripts/fetchRegisterContactInfo.ts",
     "sync:register-wp": "tsx src/scripts/syncRegisterListingsToWordPress.ts",
+    "audit:seo": "tsx src/scripts/auditPublicSeo.ts",
     "remove:demo-providers": "tsx src/scripts/removeDemoProviders.ts",
     "seed:conditions": "tsx src/scripts/seedConditionCatalogue.ts",
     "list:providers": "tsx src/scripts/listProviders.ts",

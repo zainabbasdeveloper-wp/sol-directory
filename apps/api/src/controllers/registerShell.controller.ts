@@ -732,6 +732,10 @@ async function serviceLocationPage(site: string, serviceSlug: string, stateSlug:
       `<ul>${topNationally.map((s) => li(`/services/${serviceSlug}/${s.state.toLowerCase()}/${s.slug}`, `${service} in ${s.suburb}, ${s.state}`, `(${fmt(s.count)})`)).join('')}</ul>`
     : '';
 
+  const description = providerTotal > 0
+    ? `${fmt(providerTotal)} SolDirectory ${providerTotal === 1 ? 'provider offers' : 'providers offer'} ${serviceLower} in ${suburbName}${registerTotal > 0 ? `, plus ${fmt(registerTotal)} organisations listed on the public register` : ''}. Compare options and get matched for free.`
+    : `${fmt(registerTotal)} organisations on the public NDIS and My Aged Care registers list ${serviceLower} for ${suburbName}, ${code}. Browse supports, compare options and get matched for free.`;
+
   const body =
     `<nav aria-label="Breadcrumb">${crumbs.map((c, i) => (i < crumbs.length - 1 ? `<a href="${esc(c.path)}">${esc(c.name)}</a>` : esc(c.name))).join(' / ')}</nav>` +
     `<h1>Home ${esc(serviceLower)} providers in ${esc(suburbName)}, ${esc(stateName)}</h1>` +
@@ -757,7 +761,7 @@ async function serviceLocationPage(site: string, serviceSlug: string, stateSlug:
   return {
     status: 200,
     title: `${service} providers in ${suburbName}, ${code} | SolDirectory`,
-    description: trimTo(`${fmt(providerTotal)} SolDirectory ${providerTotal === 1 ? 'provider offers' : 'providers offer'} ${serviceLower} in ${suburbName}${registerTotal > 0 ? `, plus ${fmt(registerTotal)} organisations listed on the public register` : ''}. Compare providers and get matched for free.`, 158),
+    description: trimTo(description, 158),
     canonical: path,
     noindex: false,
     jsonLd: [
@@ -766,6 +770,14 @@ async function serviceLocationPage(site: string, serviceSlug: string, stateSlug:
         '@type': 'Service', name: `${service} in ${suburbName}, ${code}`, serviceType: service,
         areaServed: { '@type': 'City', name: suburbName, containedInPlace: { '@type': 'State', name: stateName } },
         provider: { '@type': 'Organization', name: 'SolDirectory', url: `${site}/` },
+      } },
+      { id: 'service-location-faq', data: {
+        '@type': 'FAQPage',
+        mainEntity: SVC_FAQ.map(([question, answer]) => ({
+          '@type': 'Question',
+          name: question,
+          acceptedAnswer: { '@type': 'Answer', text: answer },
+        })),
       } },
     ],
     body,
