@@ -3,6 +3,9 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { PublicHeader, PublicFooter } from './PublicLayout';
 import Pagination from '../../components/ui/Pagination';
 import { Breadcrumbs } from './register/RegisterParts';
+import TopicLayout, { heroExcerpt, type TopicTocItem } from '../../components/topic/TopicLayout';
+import TopicRegisterProviders from '../../components/topic/TopicRegisterProviders';
+import { fundingProviderLink } from '../../data/topicProviderLinks';
 import { ProviderCardItem } from './ProviderListingPage';
 import { listProvidersBy, type PublicProviderCard } from '../../api/profilesApi';
 import { applySeoTags, setJsonLd } from '../../lib/seo';
@@ -31,7 +34,7 @@ export default function FundingTopicPage() {
   const { openMatchModal } = useMatchModal();
   const [params, setParams] = useSearchParams();
   const page = Math.max(1, Number(params.get('page')) || 1);
-  const topRef = useRef<HTMLDivElement>(null);
+  const topRef = useRef<HTMLElement>(null);
 
   const [items, setItems] = useState<PublicProviderCard[]>([]);
   const [total, setTotal] = useState(0);
@@ -96,76 +99,84 @@ export default function FundingTopicPage() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const group = FUNDING_CATEGORY_GROUPS.find((g) => g.title === meta.categoryGroup);
   const siblings = (group?.items ?? []).filter((f) => f.slug !== meta.slug);
+  const link = fundingProviderLink(meta.slug);
+  const hasMembers = !!meta.fundingFilter && !loading && items.length > 0;
+
+  const toc: TopicTocItem[] = [{ id: 'overview', label: 'Overview' }];
+  if (hasMembers) toc.push({ id: 'providers', label: 'Providers on SolDirectory' });
+  if (link) toc.push({ id: 'register-providers', label: 'Providers on the register' });
+  if (siblings.length > 0) toc.push({ id: 'related-funding', label: `Other ${meta.categoryGroup} topics` });
+  toc.push({ id: 'wp-cpt-cta', label: 'Get matched' });
 
   return (
-    <>
-      <PublicHeader />
-      <main className="reg-page">
-        <Breadcrumbs items={[{ label: 'Home', to: '/' }, { label: 'Funding', to: '/funding' }, { label: meta.name }]} />
-        <h1 className="pp-head-h1" ref={topRef as never}>{meta.name}</h1>
-        <p className="reg-lede">{meta.summary}</p>
-        <p className="reg-note">
-          This is general information, not financial or funding advice. Program names, amounts and eligibility rules change over
-          time — always confirm current detail with the relevant official body before relying on it.
+    <TopicLayout
+      crumbs={[{ label: 'Home', to: '/' }, { label: 'Funding', to: '/funding' }, { label: meta.name }]}
+      eyebrow={meta.categoryGroup}
+      title={meta.name}
+      description={heroExcerpt(meta.summary)}
+      image="/images/providers.jpg"
+      toc={toc}
+    >
+      <section id="overview" className="wp-cpt-short" ref={topRef}>
+        <h2>About {meta.name}</h2>
+        <p>{meta.summary}</p>
+      </section>
+      <p className="wp-cpt-table-note" style={{ marginBottom: 20 }}>
+        This is general information, not financial or funding advice. Program names, amounts and eligibility rules change over
+        time — always confirm current detail with the relevant official body before relying on it.
+      </p>
+
+      {hasMembers && (
+        <section id="providers" className="wp-cpt-section">
+          <h2>Providers on SolDirectory who accept {meta.name.toLowerCase()} funding</h2>
+          <p className="wp-cpt-showing">
+            {fmt(total)} {total === 1 ? 'provider' : 'providers'} on SolDirectory {total === 1 ? 'accepts' : 'accept'} {meta.name.toLowerCase()} funding.
+            Providers write their own profiles — confirm details with them directly.
+          </p>
+          <ul className="dir-grid" aria-busy={loading}>
+            {items.map((p) => <ProviderCardItem key={p.id} p={p} />)}
+          </ul>
+          <Pagination
+            page={page} totalPages={totalPages} disabled={loading}
+            onChange={(n) => { setParams(n > 1 ? { page: String(n) } : {}); topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
+          />
+        </section>
+      )}
+
+      {link ? (
+        <TopicRegisterProviders
+          id="register-providers"
+          heading={`Providers on the ${link.type === 'ndis' ? 'NDIS' : 'aged care'} register`}
+          intro={link.intro}
+          defaultType={link.type}
+          categories={link.categories}
+          includeAll={link.includeAll}
+          disclaimer={link.disclaimer}
+        />
+      ) : (
+        <p className="wp-cpt-table-note">
+          SolDirectory doesn’t currently track which providers work with {meta.name.toLowerCase()} specifically — this page is
+          general information only. <Link to="/find-a-provider">Browse all providers</Link> and ask directly.
         </p>
+      )}
 
-        {meta.fundingFilter ? (
-          <section id="providers" style={{ marginTop: 32 }}>
-            <h2 className="reg-h2" style={{ marginTop: 0 }}>Providers who accept {meta.name.toLowerCase()} funding</h2>
-            <p className="reg-lede" style={{ marginBottom: 14 }}>
-              {!loading
-                ? `${fmt(total)} ${total === 1 ? 'provider' : 'providers'} on SolDirectory ${total === 1 ? 'accepts' : 'accept'} ${meta.name.toLowerCase()} funding. Providers write their own profiles — confirm details with them directly.`
-                : 'Loading…'}
-            </p>
+      {siblings.length > 0 && (
+        <section id="related-funding" className="wp-cpt-section">
+          <h2>Other topics in {meta.categoryGroup}</h2>
+          <ul className="reg-linkgrid">
+            {siblings.map((f) => (
+              <li key={f.slug}><Link to={`/funding/${f.slug}/`}><span>{f.name}</span></Link></li>
+            ))}
+          </ul>
+        </section>
+      )}
 
-            {!loading && items.length === 0 ? (
-              <div className="dir-empty">
-                <h2>No providers currently list this</h2>
-                <p>No providers on SolDirectory currently list {meta.name.toLowerCase()} as funding they accept. Submit a free enquiry and we’ll notify suitable providers as they join.</p>
-                <div className="dir-empty-actions">
-                  <button type="button" className="btn-gradient" onClick={() => openMatchModal()}>Submit an enquiry →</button>
-                </div>
-              </div>
-            ) : (
-              <ul className="dir-grid" aria-busy={loading}>
-                {items.map((p) => <ProviderCardItem key={p.id} p={p} />)}
-              </ul>
-            )}
-
-            <Pagination
-              page={page} totalPages={totalPages} disabled={loading}
-              onChange={(n) => { setParams(n > 1 ? { page: String(n) } : {}); topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
-            />
-          </section>
-        ) : (
-          <div className="reg-note">
-            SolDirectory doesn’t currently track which providers work with {meta.name.toLowerCase()} specifically — this page is
-            general information only. <Link to="/find-a-provider">Browse all providers</Link> and ask directly, or{' '}
-            <button type="button" className="link-btn" onClick={() => openMatchModal()}>submit a free enquiry</button> and mention it.
-          </div>
-        )}
-
-        {siblings.length > 0 && (
-          <section id="related-funding">
-            <h2 className="reg-h2">Other topics in {meta.categoryGroup}</h2>
-            <ul className="reg-linkgrid">
-              {siblings.map((f) => (
-                <li key={f.slug}><Link to={`/funding/${f.slug}/`}><span>{f.name}</span></Link></li>
-              ))}
-            </ul>
-          </section>
-        )}
-
-        <div className="reg-cta" style={{ marginTop: 32 }}>
-          <div>
-            <strong>Not sure what funding applies to you?</strong>
-            <span>Tell us your situation and we’ll connect you with providers who can help you work it out — free, no obligation.</span>
-          </div>
-          <button type="button" className="btn-gradient" onClick={() => openMatchModal()}>Submit an enquiry →</button>
-        </div>
-      </main>
-      <PublicFooter />
-    </>
+      <section id="wp-cpt-cta" className="wp-cpt-cta">
+        <h2>Not sure what funding applies to you?</h2>
+        <p>Tell us your situation and we’ll connect you with providers who can help you work it out — free, no obligation.</p>
+        <button type="button" className="btn-gradient" onClick={() => openMatchModal()}>Get matched, free →</button>
+      </section>
+    </TopicLayout>
   );
 }
 

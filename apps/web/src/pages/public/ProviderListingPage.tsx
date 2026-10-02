@@ -4,6 +4,8 @@ import { PublicHeader, PublicFooter } from './PublicLayout';
 import Avatar from '../../components/ui/Avatar';
 import Pagination from '../../components/ui/Pagination';
 import { Breadcrumbs, trimTo } from './register/RegisterParts';
+import TopicLayout, { heroExcerpt, type TopicTocItem } from '../../components/topic/TopicLayout';
+import TopicRegisterProviders from '../../components/topic/TopicRegisterProviders';
 import { listProvidersBy, listPublicAreas, listPublicConditions, type CountRow, type PublicProviderCard } from '../../api/profilesApi';
 import { applySeoTags, setJsonLd } from '../../lib/seo';
 import { useMatchModal } from '../../context/MatchModalContext';
@@ -62,7 +64,7 @@ export default function ProviderListingPage({ mode }: { mode: Mode }) {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const topRef = useRef<HTMLDivElement>(null);
+  const topRef = useRef<HTMLParagraphElement>(null);
 
   // Real educational content for this condition, if it's one of the 40
   // the site has written up (data/conditionContent.ts) — independent of
@@ -151,130 +153,160 @@ export default function ProviderListingPage({ mode }: { mode: Mode }) {
     );
   }
 
+  const groupNote = mode === 'condition' && conditionMeta ? CONDITION_CATEGORY_GROUPS.find((g) => g.title === conditionMeta.categoryGroup)?.note : undefined;
+  const hasMembers = !loading && !error && items.length > 0;
+  const showEmptyArea = !loading && !error && items.length === 0 && mode === 'area';
+
+  const toc: TopicTocItem[] = [];
+  if (conditionMeta) toc.push({ id: 'about', label: 'Overview' });
+  if (hasMembers || showEmptyArea) toc.push({ id: 'providers', label: 'Providers on SolDirectory' });
+  if (conditionMeta) {
+    toc.push({ id: 'register-providers', label: 'Providers on the register' });
+    if (conditionMeta.relatedCategories.length > 0) toc.push({ id: 'support-types', label: 'Related supports' });
+    toc.push({ id: 'method', label: 'How providers are listed' });
+    toc.push({ id: 'checking-experience', label: 'Checking experience' });
+    toc.push({ id: 'related-conditions', label: 'Other conditions' });
+    toc.push({ id: 'faq', label: 'FAQ' });
+  }
+  toc.push({ id: 'wp-cpt-cta', label: 'Get matched' });
+
+  const description = conditionMeta
+    ? heroExcerpt(conditionMeta.summary)
+    : row && !loading
+      ? `${fmt(total)} ${total === 1 ? 'provider' : 'providers'} on SolDirectory ${total === 1 ? 'lists' : 'list'} ${mode === 'area' ? `${row.name} as an area they support` : `experience supporting ${row.name}`}. Providers write their own profiles — confirm details with them directly.`
+      : undefined;
+
   return (
-    <>
-      <PublicHeader />
-      <main className="reg-page">
-        <Breadcrumbs
-          items={[
-            { label: 'Home', to: '/' },
-            mode === 'area' ? { label: 'Provider directory', to: '/find-a-provider' } : { label: 'Condition', to: '/condition' },
-            { label: row?.name ?? '…' },
-          ]}
-        />
-        <h1 className="pp-head-h1">{heading}</h1>
-        <p className="reg-lede" ref={topRef}>
-          {row && !loading
-            ? `${fmt(total)} ${total === 1 ? 'provider' : 'providers'} on SolDirectory ${total === 1 ? 'lists' : 'list'} ${mode === 'area' ? `${row.name} as an area they support` : `experience supporting ${row.name}`}. Providers write their own profiles — confirm details with them directly.`
-            : 'Loading…'}
-        </p>
+    <TopicLayout
+      crumbs={[
+        { label: 'Home', to: '/' },
+        mode === 'area' ? { label: 'Provider directory', to: '/find-a-provider' } : { label: 'Condition', to: '/condition' },
+        { label: row?.name ?? '…' },
+      ]}
+      eyebrow={mode === 'area' ? 'Local providers' : conditionMeta?.categoryGroup ?? 'Provider experience'}
+      title={heading}
+      description={description}
+      image={mode === 'area' ? '/images/front-view-smiley-girl-woman-indoors-hero.jpg' : '/images/reviews.jpg'}
+      toc={toc}
+    >
+      {conditionMeta && (
+        <>
+          <section id="about" className="wp-cpt-short">
+            <h2>About {conditionMeta.name}</h2>
+            <p>{conditionMeta.summary}</p>
+          </section>
+          <p className="wp-cpt-table-note" style={{ marginBottom: 20 }}>
+            This is general information, not medical advice or a diagnosis. Every person’s needs are different — a provider’s general
+            experience with {conditionMeta.name.toLowerCase()} is a starting point for a conversation, not a guarantee of fit.
+            {groupNote ? ` ${groupNote}` : ''}
+          </p>
+        </>
+      )}
 
-        {mode === 'condition' && conditionMeta && CONDITION_CATEGORY_GROUPS.find((g) => g.title === conditionMeta.categoryGroup)?.note && (
-          <div className="reg-note" role="note">
-            {CONDITION_CATEGORY_GROUPS.find((g) => g.title === conditionMeta.categoryGroup)?.note}
-          </div>
-        )}
+      {error && <div className="dir-empty" role="alert"><p>We couldn’t load providers just now. Please try again.</p></div>}
 
-        {error && <div className="dir-empty" role="alert"><p>We couldn’t load providers just now. Please try again.</p></div>}
-
-        {!loading && !error && items.length === 0 ? (
-          <div className="dir-empty">
-            <h2>No providers currently list this</h2>
-            <p>
-              {mode === 'area'
-                ? 'No providers on SolDirectory currently list this suburb as an area they support.'
-                : `No providers on SolDirectory currently list experience supporting ${row?.name ?? 'this'}.`}{' '}
-              Submit a free enquiry and we’ll notify suitable providers as they join.
-            </p>
-            <div className="dir-empty-actions">
-              <button type="button" className="btn-gradient" onClick={() => openMatchModal()}>Submit an enquiry →</button>
+      {(hasMembers || showEmptyArea || loading) && (
+        <section id="providers" className="wp-cpt-section">
+          <h2>Providers on SolDirectory</h2>
+          <p className="wp-cpt-showing" ref={topRef}>
+            {row && !loading
+              ? `${fmt(total)} ${total === 1 ? 'provider' : 'providers'} on SolDirectory ${total === 1 ? 'lists' : 'list'} ${mode === 'area' ? `${row.name} as an area they support` : `experience supporting ${row.name}`}. Providers write their own profiles — confirm details with them directly.`
+              : 'Loading…'}
+          </p>
+          {showEmptyArea ? (
+            <div className="dir-empty">
+              <h2>No providers currently list this</h2>
+              <p>No providers on SolDirectory currently list this suburb as an area they support. Submit a free enquiry and we’ll notify suitable providers as they join.</p>
+              <div className="dir-empty-actions">
+                <button type="button" className="btn-gradient" onClick={() => openMatchModal()}>Submit an enquiry →</button>
+              </div>
             </div>
-          </div>
-        ) : (
-          <ul className="dir-grid" aria-busy={loading}>
-            {items.map((p) => <ProviderCardItem key={p.id} p={p} />)}
-          </ul>
-        )}
+          ) : (
+            <ul className="dir-grid" aria-busy={loading}>
+              {items.map((p) => <ProviderCardItem key={p.id} p={p} />)}
+            </ul>
+          )}
+          <Pagination page={page} totalPages={totalPages} disabled={loading} onChange={(n) => { setParams(n > 1 ? { page: String(n) } : {}); topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }} />
+        </section>
+      )}
 
-        <Pagination page={page} totalPages={totalPages} disabled={loading} onChange={(n) => { setParams(n > 1 ? { page: String(n) } : {}); topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }} />
+      {conditionMeta && (
+        <>
+          {!loading && !error && items.length === 0 && (
+            <p className="wp-cpt-table-note" style={{ marginBottom: 12 }}>
+              No SolDirectory members have listed experience supporting {conditionMeta.name.toLowerCase()} yet. The register providers
+              below list supports people with {conditionMeta.name.toLowerCase()} commonly look for.
+            </p>
+          )}
+          <TopicRegisterProviders
+            id="register-providers"
+            heading={`Providers on the register for ${conditionMeta.name.toLowerCase()} supports`}
+            intro={`These are providers on the public registers that list supports people with ${conditionMeta.name.toLowerCase()} commonly look for. Pick a support type to browse them.`}
+            defaultType="ndis"
+            categories={conditionMeta.relatedCategories}
+            disclaimer={`A listing shows that a business lists this support on the public register. It does not show that it has experience supporting ${conditionMeta.name.toLowerCase()} — ask the provider directly.`}
+          />
+          <ConditionContentSections meta={conditionMeta} />
+        </>
+      )}
 
-        <div className="reg-note">
-          <strong>Need help choosing?</strong> Tell us where you are, when you need support and how it’s funded, and relevant providers
-          will review your enquiry — it’s free.{' '}
-          <button type="button" className="link-btn" onClick={() => openMatchModal()}>Submit an enquiry</button>
-        </div>
-
-        {mode === 'condition' && conditionMeta && <ConditionContentSections meta={conditionMeta} />}
-      </main>
-      <PublicFooter />
-    </>
+      <section id="wp-cpt-cta" className="wp-cpt-cta">
+        <h2>{conditionMeta ? `Looking for support with ${conditionMeta.name.toLowerCase()}?` : 'Need help choosing?'}</h2>
+        <p>Tell us where you are, when you need support and how it’s funded, and relevant providers will review your enquiry — free, no obligation.</p>
+        <button type="button" className="btn-gradient" onClick={() => openMatchModal()}>Submit an enquiry →</button>
+      </section>
+    </TopicLayout>
   );
 }
 
 /**
- * The extra ~700-900 words of real content on a condition page: an
- * honest "about" summary (general information, not medical advice —
- * see data/conditionContent.ts), links to relevant support categories,
- * the same "how providers are listed" / "checking experience" method
- * explanation used across the site (reused verbatim here, not
+ * The long-form part of a condition page: links to related support
+ * categories, the same "how providers are listed" / "checking experience"
+ * method explanation used across the site (reused verbatim, not
  * per-condition — it's genuinely the same process for every condition),
  * links to sibling conditions, and a short condition-specific FAQ.
+ * General information, not medical advice — see data/conditionContent.ts.
  */
 function ConditionContentSections({ meta }: { meta: NonNullable<ReturnType<typeof conditionBySlug>> }) {
   const group = CONDITION_CATEGORY_GROUPS.find((g) => g.title === meta.categoryGroup);
   const siblings = (group?.items ?? []).filter((c) => c.slug !== meta.slug);
-  const { openMatchModal } = useMatchModal();
+  const lower = meta.name.toLowerCase();
 
   return (
     <>
-      <section id="about" style={{ marginTop: 40 }}>
-        <h2 className="reg-h2" style={{ marginTop: 0 }}>About {meta.name}</h2>
-        <p className="reg-lede">{meta.summary}</p>
-        <p className="reg-note" style={{ marginTop: 12 }}>
-          This is general information, not medical advice or a diagnosis. Every person’s needs are different — a provider’s general
-          experience with {meta.name.toLowerCase()} is a starting point for a conversation, not a guarantee of fit.
-        </p>
-      </section>
-
       {meta.relatedCategories.length > 0 && (
-        <section id="support-types">
-          <h2 className="reg-h2">Support commonly linked to {meta.name}</h2>
-          <p className="reg-lede" style={{ marginBottom: 14 }}>
-            These are supports people with {meta.name.toLowerCase()} commonly look for — not a personal recommendation, just a starting
-            point for browsing.
-          </p>
-          <ul className="reg-services">
+        <section id="support-types" className="wp-cpt-section">
+          <h2>Support commonly linked to {meta.name}</h2>
+          <p>These are supports people with {lower} commonly look for — not a personal recommendation, just a starting point for browsing.</p>
+          <div className="wp-cpt-provider-grid">
             {meta.relatedCategories.map((c) => (
-              <li key={c}><Link to={`/find-a-provider?service=${encodeURIComponent(c)}`}>{c}</Link></li>
+              <Link key={c} className="wp-cpt-provider-card" to={`/find-a-provider?service=${encodeURIComponent(c)}`}>{c}</Link>
             ))}
-          </ul>
+          </div>
         </section>
       )}
 
-      <section id="method">
-        <h2 className="reg-h2">How providers are listed</h2>
-        <p className="reg-lede" style={{ marginBottom: 8 }}>
-          <strong>Provider-supplied.</strong> Whether a provider has experience supporting {meta.name.toLowerCase()} is written by the
-          provider themselves, the same way they write their supports and service areas. SolDirectory doesn’t independently verify
-          clinical experience or assess quality.
+      <section id="method" className="wp-cpt-section">
+        <h2>How providers are listed</h2>
+        <p>
+          <strong>Provider-supplied.</strong> Whether a provider has experience supporting {lower} is written by the provider themselves,
+          the same way they write their supports and service areas. SolDirectory doesn’t independently verify clinical experience or assess quality.
         </p>
-        <p className="reg-lede" style={{ marginBottom: 8 }}>
+        <p>
           <strong>Alphabetical, not ranked.</strong> Providers are shown alphabetically. Payment for a subscription doesn’t change
           whether or where a provider appears.
         </p>
-        <p className="reg-lede">
+        <p>
           <strong>Availability.</strong> Providers confirm each week that they’re taking referrals. One that hasn’t confirmed recently
           is removed from results until they do.
         </p>
       </section>
 
-      <section id="checking-experience">
-        <h2 className="reg-h2">Checking a provider’s experience with {meta.name}</h2>
-        <p className="reg-lede" style={{ marginBottom: 14 }}>
-          A listing here is a starting point, not a substitute for asking directly. Before engaging a provider, it’s worth confirming:
-        </p>
-        <ol className="reg-checklist">
-          <li>How many people with {meta.name.toLowerCase()} specifically they’ve supported, not disability support in general.</li>
+      <section id="checking-experience" className="wp-cpt-section">
+        <h2>Checking a provider’s experience with {meta.name}</h2>
+        <p>A listing here is a starting point, not a substitute for asking directly. Before engaging a provider, it’s worth confirming:</p>
+        <ol className="wp-cpt-plain-list">
+          <li>How many people with {lower} specifically they’ve supported, not disability support in general.</li>
           <li>Which staff member would actually work with you or your family member, and their relevant training.</li>
           <li>How they’d handle a change in needs over time — a one-off assessment or an ongoing, adjustable plan.</li>
           <li>Their current registration, insurance and worker screening — ask to see it directly, don’t assume from the listing.</li>
@@ -282,8 +314,8 @@ function ConditionContentSections({ meta }: { meta: NonNullable<ReturnType<typeo
       </section>
 
       {siblings.length > 0 && (
-        <section id="related-conditions">
-          <h2 className="reg-h2">Other conditions in {meta.categoryGroup}</h2>
+        <section id="related-conditions" className="wp-cpt-section">
+          <h2>Other conditions in {meta.categoryGroup}</h2>
           <ul className="reg-linkgrid">
             {siblings.map((c) => (
               <li key={c.slug}><Link to={`/condition/${c.slug}/`}><span>{c.name}</span></Link></li>
@@ -292,40 +324,23 @@ function ConditionContentSections({ meta }: { meta: NonNullable<ReturnType<typeo
         </section>
       )}
 
-      <section id="faq">
-        <h2 className="reg-h2">Frequently asked questions</h2>
-        <div style={{ display: 'grid', gap: 18 }}>
-          <div>
-            <p style={{ fontWeight: 700, marginBottom: 4 }}>Does SolDirectory verify a provider’s experience with {meta.name.toLowerCase()}?</p>
-            <p className="reg-lede" style={{ marginBottom: 0 }}>
-              No. Providers write their own profiles, including which conditions they have experience supporting. Confirm the details
-              that matter to you directly with the provider.
-            </p>
-          </div>
-          <div>
-            <p style={{ fontWeight: 700, marginBottom: 4 }}>No providers are listed here yet — what can I do?</p>
-            <p className="reg-lede" style={{ marginBottom: 0 }}>
-              Submit a free enquiry and we’ll notify suitable providers in your area as they join and confirm their capacity — there’s
-              no cost and no obligation.
-            </p>
-          </div>
-          <div>
-            <p style={{ fontWeight: 700, marginBottom: 4 }}>Is this page medical advice?</p>
-            <p className="reg-lede" style={{ marginBottom: 0 }}>
-              No. It’s general information to help with browsing providers. For anything about diagnosis, treatment or a specific
-              person’s needs, speak with a GP or the relevant specialist.
-            </p>
-          </div>
+      <section id="faq" className="wp-cpt-section">
+        <h2>Frequently asked questions</h2>
+        <div className="wp-cpt-faq-list">
+          <details className="wp-cpt-faq-item">
+            <summary>Does SolDirectory verify a provider’s experience with {lower}?</summary>
+            <p>No. Providers write their own profiles, including which conditions they have experience supporting. Confirm the details that matter to you directly with the provider.</p>
+          </details>
+          <details className="wp-cpt-faq-item">
+            <summary>No providers are listed here yet — what can I do?</summary>
+            <p>Submit a free enquiry and we’ll notify suitable providers in your area as they join and confirm their capacity — there’s no cost and no obligation.</p>
+          </details>
+          <details className="wp-cpt-faq-item">
+            <summary>Is this page medical advice?</summary>
+            <p>No. It’s general information to help with browsing providers. For anything about diagnosis, treatment or a specific person’s needs, speak with a GP or the relevant specialist.</p>
+          </details>
         </div>
       </section>
-
-      <div className="reg-cta" style={{ marginTop: 32 }}>
-        <div>
-          <strong>Looking for support with {meta.name.toLowerCase()}?</strong>
-          <span>Tell us what you need and we’ll connect you with providers who confirm they can help — free, no obligation.</span>
-        </div>
-        <button type="button" className="btn-gradient" onClick={() => openMatchModal()}>Submit an enquiry →</button>
-      </div>
     </>
   );
 }

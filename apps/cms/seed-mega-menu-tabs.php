@@ -89,15 +89,15 @@ function sd_funding_url(string $title): string {
     return '/funding/' . sd_plain_slug($title) . '/';
 }
 
-function sd_links(array $titles, string $urlFn): array {
+function sd_links(array $titles, string $urlFn, array $groupByTitle = []): array {
     return array_map(fn($t) => [
-        'label' => $t, 'url' => $urlFn($t), 'description' => '', 'icon' => '',
+        'label' => $t, 'url' => $urlFn($t), 'group' => $groupByTitle[$t] ?? '', 'description' => '', 'icon' => '',
         'badge' => '', 'open_in_new_tab' => false, 'active' => true,
     ], $titles);
 }
 
-function sd_columns(array $groups, string $urlFn): array {
-    return array_map(fn($g) => ['title' => $g[0], 'links' => sd_links($g[1], $urlFn)], $groups);
+function sd_columns(array $groups, string $urlFn, array $groupByTitle = []): array {
+    return array_map(fn($g) => ['title' => $g[0], 'links' => sd_links($g[1], $urlFn, $groupByTitle)], $groups);
 }
 
 // The 15 real NDIS categories are the source of truth for content,
@@ -105,7 +105,8 @@ function sd_columns(array $groups, string $urlFn): array {
 // overwhelmed both the frontend grid and the ACF/SCF admin UI (15
 // separate repeater blocks made Add link/Add column unresponsive).
 // Regrouped into 4 wider columns here, matching the frontend's same
-// regrouping in staticMegaMenuFallback.ts exactly.
+// regrouping in staticMegaMenuFallback.ts exactly — each link keeps its
+// original category as a 'group' sub-heading.
 $serviceCategoriesRaw = [
     'Personal & Nursing Care' => ['Personal care', 'Medication assistance', 'Overnight support', 'High-intensity personal care', 'Community nursing care'],
     'Accommodation & Living Supports' => ['Supported Independent Living (SIL)', 'Individualised Living Options (ILO)', 'Short Term Accommodation (STA) / respite', 'Medium Term Accommodation (MTA)', 'Group / shared living support'],
@@ -137,7 +138,12 @@ $serviceGroups = [
     ['Therapy, Equipment & Home', sd_merge($cats, [9, 11, 12, 13, 14])],
 ];
 $id = sd_get_or_create_tab('service', 'Service', 'NDIS, aged care, allied health, and more');
-sd_set_columns($id, sd_columns($serviceGroups, 'sd_real_service_url'));
+// Each service keeps its real NDIS category as a sub-heading inside its merged column.
+$serviceGroupByTitle = [];
+foreach ($serviceCategoriesRaw as $categoryTitle => $items) {
+    foreach ($items as $item) $serviceGroupByTitle[$item] = $categoryTitle;
+}
+sd_set_columns($id, sd_columns($serviceGroups, 'sd_real_service_url', $serviceGroupByTitle));
 echo "Seeded: Service ($id)\n";
 
 // --- Condition ---

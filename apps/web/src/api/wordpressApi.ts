@@ -402,6 +402,8 @@ export async function getServiceMegaColumnsFromPosts(columnCount = 4): Promise<M
 // Link structure, already assembled server-side. ---
 export interface MegaMenuLink {
   label: string;
+  /** Sub-heading this link sits under inside its column (e.g. a service's NDIS category). Consecutive links sharing a group are listed under one heading. */
+  group?: string;
   url?: string;
   description?: string;
   icon?: string;

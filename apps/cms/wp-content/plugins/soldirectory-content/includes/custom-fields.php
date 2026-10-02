@@ -77,6 +77,7 @@ function soldirectory_field_groups(): array {
                                 'sub_fields' => [
                                     ['name' => 'label', 'label' => 'Label', 'type' => 'text', 'required' => true, 'width' => 50],
                                     ['name' => 'url', 'label' => 'URL', 'type' => 'text', 'width' => 50, 'instructions' => 'A relative app path (e.g. /services/personal-care) or a full URL.'],
+                                    ['name' => 'group', 'label' => 'Sub-heading (optional)', 'type' => 'text', 'instructions' => 'Consecutive links with the same sub-heading are listed together under it inside this column (e.g. "Therapeutic Supports"). Leave blank for none.'],
                                     ['name' => 'description', 'label' => 'Description', 'type' => 'text'],
                                     ['name' => 'icon', 'label' => 'Icon', 'type' => 'text', 'width' => 34],
                                     ['name' => 'badge', 'label' => 'Badge', 'type' => 'text', 'width' => 33, 'instructions' => 'e.g. "New" — leave blank for none.'],

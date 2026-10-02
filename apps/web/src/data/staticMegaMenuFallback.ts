@@ -86,15 +86,25 @@ const SERVICE_CATEGORIES: { title: string; items: string[] }[] = [
 // ACF/SCF admin UI (15 separate repeater blocks was too much for
 // Add link/Add column to stay responsive). Regrouped into 4 wider
 // columns here, matching the mega menu's original 4-column design —
-// each column merges several of the 15 real categories' items into
-// one flat list. This does mean losing the sub-heading distinction
-// between merged categories within a column; if that distinction
-// matters enough to keep, the real fix is a 3-level ACF schema
-// (Column -> Group -> Link) rather than flattening, which is a
-// larger change than this pass — flag it if you want that instead.
+// each column merges several of the 15 real categories' items. Each
+// link keeps its original category as `group`, which the menu renders
+// as a sub-heading, so the categories stay visible inside a column
+// without a 3-level (Column -> Group -> Link) ACF schema.
 function groupInto(title: string, indices: number[]): { title: string; items: string[] } {
   return { title, items: indices.flatMap((i) => SERVICE_CATEGORIES[i].items) };
 }
+
+/**
+ * Which of the 15 real NDIS categories a service belongs to — the
+ * sub-heading it's shown under inside its column. Exported because the
+ * live WordPress menu returns the same flat Column -> Link shape without
+ * these headings (see MegaMenu.tsx, which falls back to this map by label
+ * when a link carries no `group` of its own).
+ */
+export const SERVICE_GROUP_BY_LABEL: ReadonlyMap<string, string> = new Map(
+  SERVICE_CATEGORIES.flatMap((cat) => cat.items.map((item) => [item, cat.title] as [string, string])),
+);
+
 const SERVICE_COLUMNS_4 = [
   groupInto('Daily Living & Accommodation', [0, 1, 2]),
   groupInto('Community & Consumables', [3, 4, 5]),
@@ -109,7 +119,7 @@ export const STATIC_MEGA_MENU_FALLBACK: MegaMenuTab[] = [
     description: 'NDIS, aged care, allied health, and more',
     columns: SERVICE_COLUMNS_4.map((cat) => ({
       title: cat.title,
-      links: cat.items.map(serviceLink),
+      links: cat.items.map((item) => ({ ...serviceLink(item), group: SERVICE_GROUP_BY_LABEL.get(item) })),
     })),
   },
   {

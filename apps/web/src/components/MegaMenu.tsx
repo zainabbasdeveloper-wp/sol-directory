@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getMegaMenuTabs, type MegaMenuTab } from '../api/wordpressApi';
-import { STATIC_MEGA_MENU_FALLBACK } from '../data/staticMegaMenuFallback';
+import { getMegaMenuTabs, type MegaMenuLink, type MegaMenuTab } from '../api/wordpressApi';
+import { STATIC_MEGA_MENU_FALLBACK, SERVICE_GROUP_BY_LABEL } from '../data/staticMegaMenuFallback';
 import { useMatchModal } from '../context/MatchModalContext';
 import { decodeHtmlEntities } from '../lib/decodeHtmlEntities';
 import { runAction } from '../lib/runAction';
@@ -59,6 +59,9 @@ export default function MegaMenu() {
   }
 
   const activeTab = tabs.find((t) => t.key === tab) ?? tabs[0];
+  // A link's own `group` wins; the Service tab falls back to the known NDIS category for its label, so the live WordPress menu (flat links) still shows its sub-headings.
+  const groupOf = (link: MegaMenuLink): string | undefined =>
+    link.group || (activeTab.key === 'service' ? SERVICE_GROUP_BY_LABEL.get(link.label) : undefined);
 
   return (
     <div className="mega-root" onMouseEnter={show} onMouseLeave={hideDelayed}>
@@ -109,18 +112,24 @@ export default function MegaMenu() {
                       <h3 className="mega-group-title">{decodeHtmlEntities(col.title)}</h3>
                       <div className="mega-group-rule" />
                       <div className="mega-group-links">
-                        {col.links.filter((l) => l.active !== false).map((link) => (
-                          <a
-                            key={link.label}
-                            href={link.url || '#'}
-                            className="mega-link"
-                            onClick={(e) => { e.preventDefault(); handleLinkClick(link.url, link.open_in_new_tab); }}
-                            title={link.description || undefined}
-                          >
-                            {decodeHtmlEntities(link.label)}
-                            {link.badge && <span className="mega-link-badge">{decodeHtmlEntities(link.badge)}</span>}
-                          </a>
-                        ))}
+                        {col.links.filter((l) => l.active !== false).map((link, i, shown) => {
+                          const group = groupOf(link);
+                          const startsGroup = !!group && (i === 0 || groupOf(shown[i - 1]) !== group);
+                          return (
+                            <Fragment key={link.label}>
+                              {startsGroup && <p className="mega-subgroup-title">{decodeHtmlEntities(group!)}</p>}
+                              <a
+                                href={link.url || '#'}
+                                className="mega-link"
+                                onClick={(e) => { e.preventDefault(); handleLinkClick(link.url, link.open_in_new_tab); }}
+                                title={link.description || undefined}
+                              >
+                                {decodeHtmlEntities(link.label)}
+                                {link.badge && <span className="mega-link-badge">{decodeHtmlEntities(link.badge)}</span>}
+                              </a>
+                            </Fragment>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
