@@ -10,6 +10,7 @@
     "dev:web": "npm run dev --workspace=apps/web",
     "build:api": "npm run build --workspace=apps/api",
     "build:web": "npm run build --workspace=apps/web",
+    "audit:seo": "npm run audit:seo --workspace=apps/api --",
     "seed": "npm run seed --workspace=apps/api"
   }
 }

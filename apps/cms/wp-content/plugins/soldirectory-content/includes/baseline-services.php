@@ -121,6 +121,42 @@ function soldirectory_baseline_excerpt(string $text): string {
     return $pos === false ? $text : substr($text, 0, $pos + 1);
 }
 
+/** Restore catalogue entries accidentally removed from an otherwise complete installation. */
+function soldirectory_repair_service_catalogue(): int {
+    $ids = get_posts([
+        'post_type' => 'service',
+        'post_status' => ['publish', 'draft', 'pending', 'private', 'future', 'trash'],
+        'numberposts' => -1,
+        'fields' => 'ids',
+        'no_found_rows' => true,
+    ]);
+    // Do not turn a new or intentionally small WordPress site into a seeded catalogue.
+    if (count($ids) < 80) return 0;
+
+    $existing = [];
+    foreach ($ids as $id) {
+        $title = html_entity_decode((string) get_post_field('post_title', (int) $id), ENT_QUOTES, 'UTF-8');
+        $existing[$title] = true;
+    }
+
+    $created = 0;
+    foreach (array_keys(soldirectory_baseline_service_text()) as $title) {
+        if (isset($existing[$title])) continue;
+        $result = wp_insert_post([
+            'post_type' => 'service',
+            'post_status' => 'publish',
+            'post_title' => $title,
+        ], true);
+        if (is_numeric($result) && (int) $result > 0) {
+            $created++;
+        } else {
+            $message = is_object($result) && method_exists($result, 'get_error_message') ? $result->get_error_message() : 'unknown error';
+            error_log('[soldirectory] failed to restore service "' . $title . '": ' . $message);
+        }
+    }
+    return $created;
+}
+
 /**
  * Fills BLANK fields on service posts whose title has baseline text. Never
  * overwrites anything an editor wrote. Returns the number of posts changed.

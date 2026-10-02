@@ -340,6 +340,7 @@ function ConditionContentSections({ meta }: { meta: NonNullable<ReturnType<typeo
  */
 export function ConditionsHubPage() {
   const [rows, setRows] = useState<CountRow[]>([]);
+  const { openMatchModal } = useMatchModal();
 
   useEffect(() => {
     listPublicConditions().then((r) => setRows(r.items)).catch(() => setRows([]));
@@ -359,16 +360,34 @@ export function ConditionsHubPage() {
   return (
     <>
       <PublicHeader />
-      <main className="reg-page">
+      <div className="directory-page-header directory-page-header--conditions">
+        <div className="directory-page-header-inner">
+          <span className="eyebrow eyebrow-light"><span className="eyebrow-rule" />Provider experience</span>
+          <h1 className="section-heading section-heading-light">Find providers by condition or support need</h1>
+          <p className="directory-page-subtitle">Explore general information and providers who say they have relevant experience, then confirm fit directly.</p>
+        </div>
+      </div>
+      <main className="reg-page category-hub-page">
         <Breadcrumbs items={[{ label: 'Home', to: '/' }, { label: 'Condition' }]} />
-        <h1 className="pp-head-h1">Find providers by condition</h1>
-        <p className="reg-lede">
-          Providers choose the conditions and needs they have experience supporting. This isn’t a clinical recommendation — always confirm
-          a provider’s experience and qualifications with them.
-        </p>
+        <section className="directory-intro">
+          <span className="directory-section-label">Experience is one part of fit</span>
+          <h2>Use a condition page to start a more specific conversation</h2>
+          <p>Providers choose the conditions and needs shown on their own profiles. This is not a clinical recommendation or proof of specialist expertise. Ask what experience is relevant to the person, who will deliver the support and how outcomes are reviewed.</p>
+        </section>
+
+        <section className="directory-guidance" aria-labelledby="condition-checks-heading">
+          <div className="directory-section-heading"><span className="directory-section-label">Before engaging a provider</span><h2 id="condition-checks-heading">Three questions worth asking</h2></div>
+          <ol className="directory-guidance-grid">
+            <li><span>01</span><h3>What experience is relevant?</h3><p>Ask about similar support needs, age groups, communication preferences and the provider’s role in previous work.</p></li>
+            <li><span>02</span><h3>Who provides the support?</h3><p>Confirm qualifications, worker screening, supervision and whether the same team members can provide continuity.</p></li>
+            <li><span>03</span><h3>How is support adapted?</h3><p>Discuss the person’s goals, routines, culture, communication and sensory or accessibility needs before services begin.</p></li>
+          </ol>
+        </section>
+
         {CONDITION_CATEGORY_GROUPS.map((group) => (
-          <section key={group.title}>
+          <section className="category-hub-group" key={group.title}>
             <h2 className="reg-h2">{group.title}</h2>
+            {group.note && <p className="reg-lede">{group.note}</p>}
             <ul className="reg-linkgrid">
               {group.items.map((c) => {
                 const count = countFor(c.slug);
@@ -381,7 +400,11 @@ export function ConditionsHubPage() {
             </ul>
           </section>
         ))}
-        <p className="reg-note">Provider counts shown only once at least one real provider lists that experience.</p>
+        <p className="reg-note"><strong>About the counts:</strong> A count appears only when at least one real provider profile lists that experience. It is not a quality score or recommendation.</p>
+        <section className="directory-content-cta">
+          <div><span className="directory-section-label">Need support tailored to one person?</span><h2>Describe the person’s needs and preferences</h2><p>Send a free enquiry so relevant providers can review the support, location, funding and preferred timeframe.</p></div>
+          <button type="button" className="btn-gradient" onClick={() => openMatchModal()}>Submit an enquiry</button>
+        </section>
       </main>
       <PublicFooter />
     </>

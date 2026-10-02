@@ -18,7 +18,50 @@ import { REAL_SERVICES, REGISTER_TYPES, STATE_CODES, type RegisterType } from '.
 // pages alone are in the tens of thousands, so they're split up front
 // rather than left to break later.
 
-const STATIC_PUBLIC_ROUTES = ['/', '/find-a-provider', '/services', '/locations', '/providers', '/independent-workers', '/independent-workers/find', '/ndis-providers', '/aged-care-providers'];
+// Keep these authored route slugs in step with apps/web/src/pages/public/guideContent.ts
+// and apps/web/src/data/fundingContent.ts. Unlike WordPress routes, these pages
+// exist in the web build itself and must not depend on a CMS response to enter
+// the sitemap.
+const GUIDE_ROUTES = [
+  '/guides',
+  '/guides/ndis-price-guide',
+  '/guides/choosing-a-provider',
+  '/guides/plan-management-basics',
+  '/guides/aged-care-support',
+];
+const FUNDING_ROUTES = [
+  '/funding',
+  '/funding/agency-managed',
+  '/funding/plan-managed',
+  '/funding/self-managed',
+  '/funding/plan-reviews',
+  '/funding/change-of-circumstances',
+  '/funding/first-plan-support',
+  '/funding/home-care-packages',
+  '/funding/commonwealth-home-support',
+  '/funding/support-at-home',
+  '/funding/residential-fees',
+  '/funding/dva-community-nursing',
+  '/funding/dva-home-care',
+  '/funding/veterans-home-care',
+  '/funding/rehabilitation-appliances',
+  '/funding/open-arms-referrals',
+  '/funding/private-fee-for-service',
+  '/funding/icare-workers-compensation',
+  '/funding/private-health-insurance',
+  '/funding/medicare-care-plans',
+  '/funding/state-funded-programs',
+  '/funding/plan-managers',
+  '/funding/bookkeeping-invoicing',
+  '/funding/price-guide-explained',
+  '/funding/funding-eligibility',
+  '/funding/budget-categories',
+];
+const STATIC_PUBLIC_ROUTES = [
+  '/', '/find-a-provider', '/services', '/locations', '/providers',
+  '/independent-workers', '/independent-workers/find', '/ndis-providers',
+  '/aged-care-providers', ...GUIDE_ROUTES, ...FUNDING_ROUTES,
+];
 const REGISTER_PATH: Record<RegisterType, string> = { ndis: '/ndis-providers', aged_care: '/aged-care-providers' };
 const REGISTER_CHUNK = 10_000;
 const SERVICE_CHUNK = 10_000;
@@ -33,7 +76,11 @@ let registerCache: { urls: UrlEntry[]; at: number } | null = null;
 let serviceAreaCache: { urls: UrlEntry[]; at: number } | null = null;
 
 const xmlEscape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
-const siteUrlFor = (req: Request) => (process.env.SITE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
+const siteUrlFor = (req: Request) => {
+  if (process.env.SITE_URL) return process.env.SITE_URL.replace(/\/$/, '');
+  const protocol = (req.get('x-forwarded-proto') || req.protocol).split(',')[0].trim();
+  return `${protocol}://${req.get('host')}`.replace(/\/$/, '');
+};
 
 // Skips anything an editor has flagged "Hide from search engines"
 // (the SEO field group's seo_noindex toggle, custom-fields.php) — a

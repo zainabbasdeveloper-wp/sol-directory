@@ -19,13 +19,13 @@
  * HOW IT RUNS: once, on the first wp-admin load after deploy; and on demand from
  * Tools > Service content (fills anything still blank, e.g. after you delete a
  * duplicate post or clear a field). Every post it touches is marked
- * (_sd_content_v4). Editing anything afterwards is safe.
+ * (_sd_content_v5). Editing anything afterwards is safe.
  */
 
 if (!defined('ABSPATH')) exit;
 
-const SOLDIRECTORY_CONTENT_VERSION = '4';
-const SOLDIRECTORY_CONTENT_OPTION = 'soldirectory_service_content_v4';
+const SOLDIRECTORY_CONTENT_VERSION = '5';
+const SOLDIRECTORY_CONTENT_OPTION = 'soldirectory_service_content_v5';
 
 /** Title => [group, who, [[q, a] x3]] */
 function soldirectory_service_editorial(): array {
@@ -293,7 +293,7 @@ function soldirectory_apply_service_content(bool $force = false): array {
         try {
             $t = $titles[$id];
             if (!isset($editorial[$t])) continue;
-            if (!$force && get_post_meta($id, '_sd_content_v4', true)) { $summary['skipped']++; continue; }
+            if (!$force && get_post_meta($id, '_sd_content_v5', true)) { $summary['skipped']++; continue; }
 
             $group = $editorial[$t][0];
             $list = $siblings[$group] ?? [];
@@ -318,8 +318,8 @@ function soldirectory_apply_service_content(bool $force = false): array {
                 'faq_repeater' => [soldirectory_machine_faq_rows($t, $editorial[$t], null), soldirectory_machine_faq_rows($t, $editorial[$t], $long)],
             ];
             $written = soldirectory_fill_service_post($id, $fields, $replaceable);
+            update_post_meta($id, '_sd_content_v5', SOLDIRECTORY_CONTENT_VERSION);
             if ($written) {
-                update_post_meta($id, '_sd_content_v4', SOLDIRECTORY_CONTENT_VERSION);
                 $summary['posts']++;
                 $summary['fields'] += count($written);
             }
@@ -335,6 +335,7 @@ function soldirectory_apply_service_content(bool $force = false): array {
 add_action('admin_init', function () {
     if (get_option(SOLDIRECTORY_CONTENT_OPTION)) return;
     if (!current_user_can('edit_posts')) return;
+    soldirectory_repair_service_catalogue();
     foreach (get_posts(['post_type' => 'service', 'post_status' => 'any', 'numberposts' => -1, 'fields' => 'ids', 'no_found_rows' => true]) as $id) {
         soldirectory_migrate_post_from_acf((int) $id);
     }
@@ -363,7 +364,7 @@ add_action('admin_post_soldirectory_apply_service_content', function () {
 function soldirectory_render_service_content_page(): void {
     if (!current_user_can('manage_options')) return;
     $total = count(get_posts(['post_type' => 'service', 'post_status' => 'any', 'numberposts' => -1, 'fields' => 'ids', 'no_found_rows' => true]));
-    $marked = count(get_posts(['post_type' => 'service', 'post_status' => 'any', 'numberposts' => -1, 'fields' => 'ids', 'no_found_rows' => true, 'meta_key' => '_sd_content_v4']));
+    $marked = count(get_posts(['post_type' => 'service', 'post_status' => 'any', 'numberposts' => -1, 'fields' => 'ids', 'no_found_rows' => true, 'meta_key' => '_sd_content_v5']));
     echo '<div class="wrap"><h1>Service content</h1>';
     if (isset($_GET['done'])) {
         echo '<div class="notice notice-success"><p>Filled ' . (int) $_GET['fields'] . ' blank fields on ' . (int) $_GET['done'] . ' service posts.</p></div>';

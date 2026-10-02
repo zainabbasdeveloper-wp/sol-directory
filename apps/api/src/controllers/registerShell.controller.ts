@@ -9,6 +9,7 @@ import { MIN_SUBURB_LISTINGS, REAL_SERVICES, STATE_CODES, safeRegisterName, type
 import { categoryListings, computeCategoryOverview, computeHub, computeServiceSuburbs } from './register.controller.js';
 import { workersForService, workersInArea } from './workersPublic.controller.js';
 import { MIN_INDEXABLE_PROVIDERS, VISIBLE_PROVIDER, areaRows, conditionRows, publicLogoUrl } from './providersPublic.controller.js';
+import { serviceEditorialFor } from '@soldirectory/service-content';
 
 /**
  * Crawler-readable HTML for the public-register pages.
@@ -678,6 +679,7 @@ async function serviceLocationPage(site: string, serviceSlug: string, stateSlug:
   const stateName = STATE_NAMES[code] ?? code;
   const serviceLower = service.toLowerCase();
   const path = `/services/${serviceSlug}/${stateSlug}/${suburbSlug}`;
+  const editorial = serviceEditorialFor(service);
 
   const providerFilter = {
     accountStatus: 'active', listingPaused: { $ne: true },
@@ -732,6 +734,22 @@ async function serviceLocationPage(site: string, serviceSlug: string, stateSlug:
       `<ul>${topNationally.map((s) => li(`/services/${serviceSlug}/${s.state.toLowerCase()}/${s.slug}`, `${service} in ${s.suburb}, ${s.state}`, `(${fmt(s.count)})`)).join('')}</ul>`
     : '';
 
+  const description = providerTotal > 0
+    ? `${fmt(providerTotal)} SolDirectory ${providerTotal === 1 ? 'provider offers' : 'providers offer'} ${serviceLower} in ${suburbName}${registerTotal > 0 ? `, plus ${fmt(registerTotal)} organisations listed on the public register` : ''}. Compare options and get matched for free.`
+    : `${fmt(registerTotal)} organisations on the public NDIS and My Aged Care registers list ${serviceLower} for ${suburbName}, ${code}. Browse supports, compare options and get matched for free.`;
+  const editorialHtml = editorial
+    ? `<h2>A practical guide to ${esc(serviceLower)}</h2>` +
+      `<p>${esc(editorial.shortAnswer)}</p>` +
+      editorial.overview.map((paragraph) => `<p>${esc(paragraph)}</p>`).join('') +
+      `<h3>What ${esc(serviceLower)} may include</h3><ul>${editorial.includes.map((item) => `<li>${esc(item)}</li>`).join('')}</ul>` +
+      `<h3>Planning the support</h3><ul>${editorial.planning.map((item) => `<li>${esc(item)}</li>`).join('')}</ul>` +
+      `<h3>Questions to ask providers</h3><ul>${editorial.providerQuestions.map((item) => `<li>${esc(item)}</li>`).join('')}</ul>` +
+      `<h3>Funding considerations</h3>${editorial.funding.map((paragraph) => `<p>${esc(paragraph)}</p>`).join('')}` +
+      `<h3>Safeguards and records</h3><ul>${editorial.safeguards.map((item) => `<li>${esc(item)}</li>`).join('')}</ul>` +
+      `<h3>Official information</h3><ul>${editorial.sources.map((source) => `<li><a href="${esc(source.href)}" rel="noopener nofollow">${esc(source.label)}</a></li>`).join('')}</ul>` +
+      `<p>Program rules, prices and eligibility can change. Confirm current requirements with the responsible government body and the provider before relying on this general information.</p>`
+    : '';
+
   const body =
     `<nav aria-label="Breadcrumb">${crumbs.map((c, i) => (i < crumbs.length - 1 ? `<a href="${esc(c.path)}">${esc(c.name)}</a>` : esc(c.name))).join(' / ')}</nav>` +
     `<h1>Home ${esc(serviceLower)} providers in ${esc(suburbName)}, ${esc(stateName)}</h1>` +
@@ -740,6 +758,7 @@ async function serviceLocationPage(site: string, serviceSlug: string, stateSlug:
     `${providerTotal > 0 ? `, and ${fmt(providerTotal)} SolDirectory ${providerTotal === 1 ? 'provider currently offers' : 'providers currently offer'} it here` : ''}.` +
     ` Providers set their own supports, service areas and availability, and confirm their capacity each week. Before you engage a provider, confirm their registration, insurance and worker screening directly with them.</p>` +
     (SVC_DESCRIPTION[service] ? `<h2>About ${esc(serviceLower)}</h2><p>${esc(SVC_DESCRIPTION[service])} People in ${esc(suburbName)} and the surrounding ${esc(stateName)} area can search for a provider below, or send a free request and let providers who cover this area respond directly.</p>` : '') +
+    editorialHtml +
     providersHtml + registerHtml +
     `<h2>What to compare before choosing</h2><p>Use these ${esc(serviceLower)}-specific checks when you contact providers in ${esc(suburbName)}. Confirm each answer directly: a directory listing does not prove current capacity.</p>` +
     SVC_COMPARE.map(([t, b, ask]) => `<h3>${esc(t)}</h3><p>${esc(b)}</p><p><strong>Ask:</strong> ${esc(ask)}</p>`).join('') +
@@ -757,7 +776,7 @@ async function serviceLocationPage(site: string, serviceSlug: string, stateSlug:
   return {
     status: 200,
     title: `${service} providers in ${suburbName}, ${code} | SolDirectory`,
-    description: trimTo(`${fmt(providerTotal)} SolDirectory ${providerTotal === 1 ? 'provider offers' : 'providers offer'} ${serviceLower} in ${suburbName}${registerTotal > 0 ? `, plus ${fmt(registerTotal)} organisations listed on the public register` : ''}. Compare providers and get matched for free.`, 158),
+    description: trimTo(description, 158),
     canonical: path,
     noindex: false,
     jsonLd: [
@@ -766,6 +785,14 @@ async function serviceLocationPage(site: string, serviceSlug: string, stateSlug:
         '@type': 'Service', name: `${service} in ${suburbName}, ${code}`, serviceType: service,
         areaServed: { '@type': 'City', name: suburbName, containedInPlace: { '@type': 'State', name: stateName } },
         provider: { '@type': 'Organization', name: 'SolDirectory', url: `${site}/` },
+      } },
+      { id: 'service-location-faq', data: {
+        '@type': 'FAQPage',
+        mainEntity: SVC_FAQ.map(([question, answer]) => ({
+          '@type': 'Question',
+          name: question,
+          acceptedAnswer: { '@type': 'Answer', text: answer },
+        })),
       } },
     ],
     body,

@@ -76,7 +76,7 @@
   border: 1px solid #E5EBF3;
   border-radius: 10px;
 }
-.reg-card-areas-label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #61738B; }
+.reg-card-areas-label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #000000; }
 .reg-card-area-links { color: #40546D; }
 .reg-card-area-links a { color: #123F73; font-weight: 700; text-decoration: underline; text-decoration-color: #C1D1E3; text-underline-offset: 3px; }
 .reg-card-area-links a:hover { text-decoration: underline; }
