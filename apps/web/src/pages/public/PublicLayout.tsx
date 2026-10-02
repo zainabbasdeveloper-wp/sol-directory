@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import MegaMenu from '../../components/MegaMenu';
 import ReadAloudButton from '../../components/ReadAloudButton';
@@ -32,6 +32,13 @@ function ScrollToTopButton() {
 
 export function PublicHeader() {
   const { openMatchModal } = useMatchModal();
+  // Phones and small tablets get a hamburger; the link group is always in the
+  // DOM so desktop keeps its single-row layout (see PublicLayout.css).
+  const [menuOpen, setMenuOpen] = useState(false);
+  const { pathname } = useLocation();
+  useEffect(() => { setMenuOpen(false); }, [pathname]);
+  const getMatched = () => { setMenuOpen(false); openMatchModal(); };
+
   return (
     <header className="public-header">
       <div className="utility-bar">
@@ -60,25 +67,44 @@ export function PublicHeader() {
         </div>
       </div>
 
-      <nav className="public-nav">
+      <nav className="public-nav" aria-label="Main">
         <div className="public-nav-inner">
           <Link to="/" className="public-brand-link">
             <img className="public-brand-logo" src="/images/sol-directory-logo-black-transparent-v2.png" alt="Sol Directory by Sol Business Consultant" />
           </Link>
-          <Link to="/find-a-provider" className="public-nav-link">
-            Find a provider
-          </Link>
-          <MegaMenu />
-          <Link to="/locations" className="public-nav-link">
-            Locations
-          </Link>
-          <Link to="/independent-workers" className="public-nav-link">
-            Independent Workers
-          </Link>
-          <button onClick={() => openMatchModal()} className="public-cta-btn">
+
+          <button type="button" onClick={getMatched} className="public-cta-btn public-cta-btn--bar">
             Get matched free
           </button>
-          <ReadAloudButton selector="main" label="Listen" compact />
+          <button
+            type="button"
+            className="public-menu-toggle"
+            aria-expanded={menuOpen}
+            aria-controls="public-nav-links"
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            onClick={() => setMenuOpen((o) => !o)}
+          >
+            <span className="public-menu-bars" aria-hidden="true" />
+          </button>
+
+          <div id="public-nav-links" className={`public-nav-links${menuOpen ? ' is-open' : ''}`}>
+            <Link to="/find-a-provider" className="public-nav-link">
+              Find a provider
+            </Link>
+            <MegaMenu />
+            <Link to="/locations" className="public-nav-link">
+              Locations
+            </Link>
+            <Link to="/independent-workers" className="public-nav-link">
+              Independent Workers
+            </Link>
+            <div className="public-nav-actions">
+              <button type="button" onClick={getMatched} className="public-cta-btn public-cta-btn--panel">
+                Get matched free
+              </button>
+              <ReadAloudButton selector="main" label="Listen" compact />
+            </div>
+          </div>
         </div>
       </nav>
     </header>

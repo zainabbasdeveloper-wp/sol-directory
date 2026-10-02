@@ -41,9 +41,20 @@
 .wp-cpt-toc-link:hover { color: var(--color-primary, #1769E0); }
 .wp-cpt-main .wp-template-page { max-width: none; margin: 0; }
 
-@media (max-width: 720px) {
-  .wp-cpt-body { grid-template-columns: 1fr; }
-  .wp-cpt-toc { position: static; max-height: 250px; overflow-y: auto; }
+/* Anchors (the sidebar links, the hero CTA) must land below the sticky site header, not under it. */
+.wp-cpt-main [id] { scroll-margin-top: 120px; }
+
+@media (max-width: 860px) {
+  .wp-cpt-body { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 16px 16px 56px; }
+  /* The sidebar becomes a one-line scrolling chip bar so the hero stays on screen. */
+  .wp-cpt-toc { position: static; padding: 10px 12px; border-radius: 14px; background: #fff; }
+  .wp-cpt-toc-title { display: none; }
+  .wp-cpt-toc-list { flex-direction: row; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; }
+  .wp-cpt-toc-list::-webkit-scrollbar { display: none; }
+  .wp-cpt-toc-link { flex: none; white-space: nowrap; padding: 8px 14px; border-radius: 999px; background: var(--color-primary-tint, #F2F7FF); font-size: 13px; font-weight: 600; }
+  .wp-cpt-hero { border-radius: 16px; margin-bottom: 20px; }
+  .wp-cpt-hero-cta { width: 100%; }
+  .wp-cpt-main [id] { scroll-margin-top: 96px; }
 }
 
 /* Hero — photo + navy overlay card; copy on the left, optional summary

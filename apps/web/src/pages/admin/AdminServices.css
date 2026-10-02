@@ -22,3 +22,7 @@
 
 .svc-category-block { margin-bottom: 24px; }
 .svc-category-title { margin: 0 0 10px; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted, #5A6B84); }
+
+@media (max-width: 640px) {
+  .svc-form-grid { grid-template-columns: minmax(0, 1fr); }
+}

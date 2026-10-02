@@ -19,6 +19,7 @@ export default function MegaMenu() {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState(STATIC_MEGA_MENU_FALLBACK[0].key);
   const closeTimer = useRef<ReturnType<typeof setTimeout>>();
+  const openedByHoverAt = useRef(0);
   const navigate = useNavigate();
   const { openMatchModal } = useMatchModal();
 
@@ -40,7 +41,14 @@ export default function MegaMenu() {
 
   function show() {
     if (closeTimer.current) clearTimeout(closeTimer.current);
+    openedByHoverAt.current = Date.now();
     setOpen(true);
+  }
+  // A tap (or a click right after the pointer enters) fires hover THEN click:
+  // without this the click toggles the menu straight back shut.
+  function toggleFromClick() {
+    if (Date.now() - openedByHoverAt.current < 500) return;
+    setOpen((o) => !o);
   }
   function hideDelayed() {
     closeTimer.current = setTimeout(() => setOpen(false), 150);
@@ -70,7 +78,7 @@ export default function MegaMenu() {
         className="mega-trigger"
         aria-expanded={open}
         aria-haspopup="true"
-        onClick={() => setOpen((o) => !o)}
+        onClick={toggleFromClick}
       >
         Services
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 240ms cubic-bezier(.2,.8,.25,1)' }}>

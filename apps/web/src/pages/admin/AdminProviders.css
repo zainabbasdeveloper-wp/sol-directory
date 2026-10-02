@@ -41,3 +41,10 @@
 
 /* Listing paused for not confirming weekly capacity — distinct from suspended. */
 .admin-status-pill-paused { background: #FFF6E5; color: #8A5A00; margin-left: 6px; }
+
+@media (max-width: 760px) {
+  .admin-providers-row { grid-template-columns: minmax(0, 1fr); row-gap: 4px; }
+  .admin-providers-row-head { display: none; }
+  .admin-providers-filter-group { align-items: flex-start; }
+  .admin-providers-filter { flex-wrap: wrap; }
+}

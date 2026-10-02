@@ -216,3 +216,11 @@
   color: var(--color-text-muted);
   text-align: center;
 }
+
+/* Phones and small tablets: the form comes first and the brand panel becomes a
+   compact strip beneath it, instead of a full screen of navy before the form. */
+@media (max-width: 899px) {
+  .login-form-panel { order: 1; }
+  .login-aside { order: 2; min-height: 0; padding: 28px 22px; align-items: flex-start; }
+  .login-feature-image { display: none; }
+}

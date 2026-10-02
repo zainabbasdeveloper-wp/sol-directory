@@ -13,6 +13,7 @@ import { setJsonLd } from '../../lib/seo';
 import NotFound from './NotFound';
 import type { CPTRouteConfig } from '../../lib/cptRouteConfig';
 import { runAction } from '../../lib/runAction';
+import { decodeHtmlEntities } from '../../lib/decodeHtmlEntities';
 import './WordPressCPTPage.css';
 
 interface FAQItem { question: string; answer: string }
@@ -111,9 +112,9 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
   const meta = content?.meta ?? {};
 
   // --- Hero ---
-  const heroEyebrow = str(meta.hero_eyebrow);
-  const heroHeadline = str(meta.hero_headline) || content?.title || '';
-  const heroDescription = str(meta.hero_description) || content?.excerpt || '';
+  const heroEyebrow = decodeHtmlEntities(str(meta.hero_eyebrow));
+  const heroHeadline = decodeHtmlEntities(str(meta.hero_headline) || content?.title || '');
+  const heroDescription = decodeHtmlEntities(str(meta.hero_description) || content?.excerpt || '');
   const fallbackHeroImages: Record<string, string> = {
     services: '/images/six-checks-on-every-provider.jpg',
     locations: '/images/front-view-smiley-girl-woman-indoors-hero.jpg',
