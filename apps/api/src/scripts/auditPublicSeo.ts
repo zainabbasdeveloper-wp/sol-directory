@@ -72,6 +72,9 @@ function sitemapLocations(xml: string): string[] {
 async function discoverUrls(): Promise<string[]> {
   const { response, body } = await fetchText(`${options.baseUrl}/sitemap.xml`);
   if (!response.ok) throw new Error(`Sitemap index returned ${response.status}`);
+  if (response.headers.get('content-type')?.includes('text/html')) {
+    throw new Error('Sitemap index returned HTML instead of XML');
+  }
   const locations = sitemapLocations(body);
   const sitemapUrls = locations.filter((url) => /\/sitemap-[^/]+\.xml(?:\?|$)/i.test(url));
   const pageUrls = locations.filter((url) => !sitemapUrls.includes(url));
@@ -83,7 +86,9 @@ async function discoverUrls(): Promise<string[]> {
   }
 
   const unique = [...new Set(pageUrls)];
-  return options.limit ? unique.slice(0, options.limit) : unique;
+  const urls = options.limit ? unique.slice(0, options.limit) : unique;
+  if (urls.length === 0) throw new Error('Sitemap discovery returned no page URLs');
+  return urls;
 }
 
 function auditHtml(url: string, response: Response, html: string): PageResult {

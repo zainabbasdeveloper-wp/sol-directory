@@ -46,6 +46,7 @@ function get_post($id) { return $GLOBALS['POSTS'][$id] ?? ($id === 3 || $id === 
 function get_post_thumbnail_id($id) { return 0; }
 function get_post_field($f, $id) { $p = $GLOBALS['POSTS'][$id] ?? null; return $p ? $p->$f : ''; }
 function wp_update_post($a) { $p = $GLOBALS['POSTS'][$a['ID']]; foreach ($a as $k => $v) if ($k !== 'ID') $p->$k = $v; return $a['ID']; }
+function wp_insert_post($a, $wp_error = false) { $id = $GLOBALS['POSTS'] ? max(array_keys($GLOBALS['POSTS'])) + 1 : 1; $p = new WP_Post($id, $a['post_type'], $a['post_title']); $p->post_status = $a['post_status'] ?? 'draft'; $GLOBALS['POSTS'][$id] = $p; $GLOBALS['TYPES'][$id] = $a['post_type']; return $id; }
 function esc_html($s) { return htmlspecialchars((string) $s); }
 function do_action($h, ...$a) { foreach ($GLOBALS['ACTIONS'][$h] ?? [] as $cb) $cb(...$a); }
 
@@ -274,7 +275,7 @@ check('content: related services are real sibling post ids, not self, no duplica
 check('content: hero + CTA use action keys the frontend understands', $GLOBALS['META'][603]['hero_cta_url'] === 'get_matched' && $GLOBALS['META'][603]['cta_primary_action'] === 'get_matched' && $GLOBALS['META'][603]['cta_secondary_action'] === '/directory');
 check('content: no cost / wait / hours / availability fields are written', !isset($GLOBALS['META'][603]['typical_cost']) && !isset($GLOBALS['META'][603]['wait_time']) && !isset($GLOBALS['META'][603]['hours']) && !isset($GLOBALS['META'][603]['availability']));
 check('content: the two duplicate posts both get content but related links use ONE post per title', isset($GLOBALS['META'][608]['who_for']) && isset($GLOBALS['META'][609]['who_for']));
-check('content: marked with the version', ($GLOBALS['META'][603]['_sd_content_v4'] ?? '') === '4');
+check('content: marked with the version', ($GLOBALS['META'][603]['_sd_content_v5'] ?? '') === '5');
 $before = $GLOBALS['META'][603];
 $sum2 = soldirectory_apply_service_content(false);
 check('content: second run without force is a no-op', $sum2['posts'] === 0 && $GLOBALS['META'][603] === $before);
@@ -383,7 +384,10 @@ check('deep: a fresh post gets 11 FAQs (3 + 3 + 3 + 2 shared)', count(json_decod
 
 // 13) Whole-page word count from the WordPress fields alone (the live register tables, provider and worker lists come on top).
 $GLOBALS['POSTS'] = []; $GLOBALS['OPTIONS'] = []; $GLOBALS['META'] = [];
-$pid = 900; foreach ($baseTitles as $bt) { $pid++; $mk($pid, $bt); }
+$pid = 900; foreach ($baseTitles as $bt) { if ($bt === 'Specialist Disability Accommodation (SDA)') continue; $pid++; $mk($pid, $bt); }
+$repaired = soldirectory_repair_service_catalogue();
+$repairedTitles = array_map(fn($post) => $post->post_title, $GLOBALS['POSTS']);
+check('page: a missing service is restored in an otherwise complete catalogue', $repaired === 1 && count($GLOBALS['POSTS']) === 89 && in_array('Specialist Disability Accommodation (SDA)', $repairedTitles, true));
 soldirectory_apply_service_content(false);
 $pageWords = [];
 foreach ($GLOBALS['META'] as $id => $mm) {

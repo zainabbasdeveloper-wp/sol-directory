@@ -76,7 +76,11 @@ let registerCache: { urls: UrlEntry[]; at: number } | null = null;
 let serviceAreaCache: { urls: UrlEntry[]; at: number } | null = null;
 
 const xmlEscape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
-const siteUrlFor = (req: Request) => (process.env.SITE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
+const siteUrlFor = (req: Request) => {
+  if (process.env.SITE_URL) return process.env.SITE_URL.replace(/\/$/, '');
+  const protocol = (req.get('x-forwarded-proto') || req.protocol).split(',')[0].trim();
+  return `${protocol}://${req.get('host')}`.replace(/\/$/, '');
+};
 
 // Skips anything an editor has flagged "Hide from search engines"
 // (the SEO field group's seo_noindex toggle, custom-fields.php) — a
