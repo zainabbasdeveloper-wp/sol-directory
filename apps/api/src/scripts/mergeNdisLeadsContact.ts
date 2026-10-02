@@ -12,11 +12,21 @@
  *    already exists from the official register import — this file's own
  *    business names are unreliable (see below) and its status/services
  *    fields aren't touched.
- *  - Matches by suburb + state (from the "info" column) and a
- *    truncation-tolerant name match — the source's list view hard-cuts
- *    titles at 40 characters mid-word ("Myintegra Plan Management And
- *    Support Co", missing "...Company"), so an exact-string match would
- *    silently miss thousands of real matches.
+ *  - Matches a row to an existing listing by trying, in order: (1) suburb
+ *    + state (from the "info" column, tolerant of a street-address prefix
+ *    or extra reordered parts — see parseInfoLocation) with a
+ *    truncation-tolerant name match (the source's list view hard-cuts
+ *    titles at 40 characters mid-word, so an exact-string match would
+ *    silently miss thousands of real matches); (2) if that finds nothing
+ *    (or the row has no usable location at all — ~30% of rows have a
+ *    blank/garbled "info" field upstream), the same name match against
+ *    every existing listing that shares the row's own website domain,
+ *    regardless of state; (3) if even that finds nothing but the row's
+ *    website domain belongs to EXACTLY ONE existing listing in the whole
+ *    collection, that's still a safe match on its own — a domain is a
+ *    much harder identifier to coincide on than a truncated name. Any
+ *    step that matches more than one DIFFERENT listing is skipped rather
+ *    than guessed at, same as before.
  *  - contactVerified is set true only when the row's own email domain
  *    matches the row's own website domain — the one independent signal
  *    available in this file. Unverified phone/email are still stored
@@ -81,9 +91,8 @@ function isWordPrefixMatch(a: string[], b: string[]): boolean {
 
 interface CsvRow {
   title: string;
-  suburb: string;
-  suburbSlug: string;
-  state: StateCode;
+  /** Absent when the "info" column was blank/unparseable upstream — the row can still be matched by website domain (see discoverMatch). */
+  loc?: { suburb: string; suburbSlug: string; state: StateCode };
   phone?: string;
   email?: string;
   website?: string;
@@ -91,14 +100,20 @@ interface CsvRow {
 }
 
 function parseInfoLocation(info: string): { suburb: string; suburbSlug: string; state: StateCode } | null {
-  // "Diamond Valley, QLD, 4553" — suburb, state, postcode.
+  // Usually "Diamond Valley, QLD, 4553" — suburb, state, postcode — but a
+  // meaningful minority carry a street-address prefix ("30 North Street,
+  // Ardeer, VIC, 3022") or an extra part ("Loganholme, Queensland,
+  // Australia, QLD, 4129", a duplicated/garbled part), which pushes the
+  // state code to a different position. Scanning for the first part that's
+  // actually a state code, rather than assuming it's parts[1], recovers
+  // all of these: the suburb is whatever's immediately before it.
   const parts = info.split(',').map((p) => p.trim()).filter(Boolean);
   if (parts.length < 2) return null;
-  const state = parts[1].toUpperCase();
-  if (!STATE_CODES.includes(state as StateCode)) return null;
-  const suburb = parts[0];
+  const stateIdx = parts.findIndex((p) => STATE_CODES.includes(p.toUpperCase() as StateCode));
+  if (stateIdx < 1) return null; // no state code found, or it's parts[0] (no suburb before it)
+  const suburb = parts[stateIdx - 1];
   if (!suburb) return null;
-  return { suburb, suburbSlug: slugify(suburb), state: state as StateCode };
+  return { suburb, suburbSlug: slugify(suburb), state: parts[stateIdx].toUpperCase() as StateCode };
 }
 
 function domainOf(url: string | undefined): string | null {
@@ -134,47 +149,87 @@ async function main() {
   }
 
   const rows: CsvRow[] = [];
-  const stats = { total: 0, badLocation: 0, kept: 0 };
+  const stats = { total: 0, unusable: 0, kept: 0 };
   for (let i = 1; i < table.length; i++) {
     if (limit && stats.total >= limit) break;
     const r = table[i];
     if (!r || r.length < 2) continue;
     stats.total++;
     const title = normaliseName(r[col.title]);
-    const loc = parseInfoLocation(r[col.info] ?? '');
-    if (!title || !loc) { stats.badLocation++; continue; }
+    const loc = parseInfoLocation(r[col.info] ?? '') ?? undefined;
+    const website = normaliseWebsite(r[col.website]);
+    // Keep the row as long as there's SOMETHING to match it by — either a
+    // usable location (for the state+name pass) or a website (for the
+    // domain-based fallback passes below). Only truly give up when
+    // neither exists.
+    if (!title || (!loc && !website)) { stats.unusable++; continue; }
     const abnRaw = (r[col.abn] ?? '').replace(/^ABN:?\s*/i, '').replace(/\D/g, '');
     rows.push({
-      title, ...loc,
+      title, loc,
       phone: normalisePhone(r[col.phone]),
       email: (() => { const e = (r[col.email] ?? '').trim().toLowerCase(); return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) ? e : undefined; })(),
-      website: normaliseWebsite(r[col.website]),
+      website,
       abn: abnRaw.length === 11 ? abnRaw : undefined,
     });
     stats.kept++;
   }
-  console.log(`[merge-contact] ${stats.total} data rows, ${stats.badLocation} skipped (couldn't parse suburb/state), ${stats.kept} kept.`);
+  console.log(`[merge-contact] ${stats.total} data rows, ${stats.unusable} unusable (no title, or no location AND no website), ${stats.kept} kept.`);
 
   const { connectDB } = await import('../config/db.js');
   const { default: RegisterListing } = await import('../models/RegisterListing.js');
   await connectDB();
 
-  // Matched by NAME + STATE, not suburb: the official register's own
-  // "areas" for a listing come from ABS-style statistical regions ("Act
-  // Remainder - Kowen") rather than the common suburb names this CSV
-  // uses ("Ocean Grove"), so requiring an exact suburb match would miss
-  // most real matches even for a provider genuinely operating there.
-  // State is reliable on both sides, so the whole collection (fits
-  // easily in memory) is grouped by state once up front.
+  // Three ways to find the listing a row describes, tried in order of
+  // confidence:
+  //  1. name + STATE — the official register's own "areas" for a listing
+  //     come from ABS-style statistical regions ("Act Remainder - Kowen")
+  //     rather than the common suburb names this CSV uses ("Ocean
+  //     Grove"), so requiring an exact suburb match would miss most real
+  //     matches even for a provider genuinely operating there. State is
+  //     reliable on both sides.
+  //  2. name + the row's own website domain, against every listing that
+  //     shares that domain regardless of state — covers a row whose
+  //     location didn't parse at all (~30% of this file) or whose state
+  //     pass found nothing.
+  //  3. website domain alone, when it belongs to EXACTLY ONE listing in
+  //     the whole collection — a domain coinciding by chance is far
+  //     less likely than a truncated/reworded name failing to match, so
+  //     this is still a safe match on its own.
+  // Every candidate list fits easily in memory, so both indexes are
+  // built once up front, and each listing's word-tokenised name is
+  // cached once rather than recomputed on every comparison.
   console.log('[merge-contact] Loading existing register listings…');
-  const all = await RegisterListing.find({}).select('_id name states claimStatus').lean();
+  const all = await RegisterListing.find({}).select('_id name states website claimStatus').lean();
   const byState = new Map<string, typeof all>();
-  for (const d of all) for (const s of (d.states as string[])) (byState.get(s) ?? byState.set(s, []).get(s)!).push(d);
-  console.log(`[merge-contact] ${all.length} existing listings loaded.`);
+  const byDomain = new Map<string, typeof all>();
+  const wordsCache = new Map<string, string[]>();
+  for (const d of all) {
+    wordsCache.set(String(d._id), wordsOf(d.name as string));
+    for (const s of (d.states as string[])) (byState.get(s) ?? byState.set(s, []).get(s)!).push(d);
+    const domain = domainOf(d.website as string | undefined);
+    if (domain) (byDomain.get(domain) ?? byDomain.set(domain, []).get(domain)!).push(d);
+  }
+  console.log(`[merge-contact] ${all.length} existing listings loaded (${byDomain.size} distinct website domains).`);
+
+  /** Candidates whose (cached) word-tokenised name matches targetWords exactly or as a truncation-tolerant prefix. */
+  function nameMatches(candidates: typeof all, targetWords: string[]): typeof all {
+    return candidates.filter((c) => {
+      const cnWords = wordsCache.get(String((c as any)._id))!;
+      return cnWords.join(' ') === targetWords.join(' ') || isWordPrefixMatch(targetWords, cnWords);
+    });
+  }
+  /** Null = no safe match; returns the single hit otherwise. Ambiguous (>1 different listing) and claimed are reported via the mutable counters closed over below. */
+  function resolveUnique(hits: typeof all): (typeof all)[number] | null {
+    if (hits.length === 0) return null;
+    const uniqueIds = new Set(hits.map((h) => String((h as any)._id)));
+    if (uniqueIds.size > 1) { ambiguous++; return null; }
+    return hits[0];
+  }
 
   type Merge = { phone?: string; email?: string; abn?: string; verified: boolean };
   const updates = new Map<string, Merge>(); // by listing _id string
   let matched = 0, unmatched = 0, ambiguous = 0, skippedClaimed = 0;
+  let byStateCount = 0, byDomainCount = 0, byPureDomainCount = 0;
   const unmatchedSample: string[] = [];
 
   let done = 0;
@@ -182,27 +237,38 @@ async function main() {
     done++;
     if (done % 5000 === 0) process.stdout.write(`\r[merge-contact] matched ${done}/${rows.length} rows...`);
 
-    const candidates = byState.get(r.state) ?? [];
     const targetWords = wordsOf(r.title);
-    if (targetWords.length === 0) { unmatched++; continue; }
-    const hits = candidates.filter((c) => {
-      const cnWords = wordsOf(c.name as string);
-      return cnWords.join(' ') === targetWords.join(' ') || isWordPrefixMatch(targetWords, cnWords);
-    });
-    if (hits.length === 0) { unmatched++; if (unmatchedSample.length < 15) unmatchedSample.push(`${r.title} (${r.suburb}, ${r.state})`); continue; }
-    // More than one plausible match in this state: only safe to proceed
-    // if they're all actually the same underlying listing (can happen
-    // when a name appears twice in the in-memory candidate list because
-    // it's registered in several states) — otherwise skip rather than
-    // guess wrong.
-    const uniqueIds = new Set(hits.map((h) => String((h as any)._id)));
-    if (uniqueIds.size > 1) { ambiguous++; continue; }
-    const hit = hits[0];
+    const siteDomain = domainOf(r.website);
+
+    let hit: (typeof all)[number] | null = null;
+    let matchType: 'state' | 'domain' | 'pure-domain' | null = null;
+
+    if (targetWords.length > 0 && r.loc) {
+      hit = resolveUnique(nameMatches(byState.get(r.loc.state) ?? [], targetWords));
+      if (hit) matchType = 'state';
+    }
+    if (!hit && targetWords.length > 0 && siteDomain) {
+      hit = resolveUnique(nameMatches(byDomain.get(siteDomain) ?? [], targetWords));
+      if (hit) matchType = 'domain';
+    }
+    if (!hit && siteDomain) {
+      const domainCandidates = byDomain.get(siteDomain) ?? [];
+      const uniqueIds = new Set(domainCandidates.map((h) => String((h as any)._id)));
+      if (uniqueIds.size === 1) { hit = domainCandidates[0]; matchType = 'pure-domain'; }
+    }
+
+    if (!hit) {
+      unmatched++;
+      if (unmatchedSample.length < 15) unmatchedSample.push(`${r.title} (${r.loc ? `${r.loc.suburb}, ${r.loc.state}` : 'no location'})`);
+      continue;
+    }
     if ((hit as any).claimStatus === 'claimed') { skippedClaimed++; continue; }
     matched++;
+    if (matchType === 'state') byStateCount++;
+    else if (matchType === 'domain') byDomainCount++;
+    else byPureDomainCount++;
 
     const emailDomain = domainOfEmail(r.email);
-    const siteDomain = domainOf(r.website);
     const verified = !!(emailDomain && siteDomain && emailDomain === siteDomain);
 
     const id = String((hit as any)._id);
@@ -214,7 +280,7 @@ async function main() {
       verified: existing.verified || verified,
     });
   }
-  console.log(`\n[merge-contact] ${matched} row(s) matched an existing listing, ${unmatched} matched none, ${ambiguous} matched more than one different listing (skipped), ${skippedClaimed} matched a claimed listing (skipped).`);
+  console.log(`\n[merge-contact] ${matched} row(s) matched an existing listing (${byStateCount} by name+state, ${byDomainCount} by name+domain, ${byPureDomainCount} by domain alone), ${unmatched} matched none, ${ambiguous} matched more than one different listing (skipped), ${skippedClaimed} matched a claimed listing (skipped).`);
   if (unmatchedSample.length) console.log('[merge-contact] sample unmatched:', unmatchedSample);
 
   const withPhone = [...updates.values()].filter((u) => u.phone).length;
