@@ -57,6 +57,12 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  /* The panel is capped at the viewport height; on a short screen the tab list
+     (Service … Language) is taller than that and used to be cut off with no way to reach the last tabs. */
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
 }
 
 .mega-rail-heading {

@@ -222,7 +222,7 @@ async function providerPage(site: string, kindPath: KindPath, slug: string): Pro
 
   return {
     status: 200,
-    title: `${trimTo(registerName(doc), 44)} | ${kind.label} provider in ${where}`,
+    title: providerTitle(registerName(doc), kind.label, where),
     description: trimTo(
       `${registerName(doc)} is ${kind.listedAs}${shown.length ? ` for ${shown.join(' and ')}${more > 0 ? ` and ${more} more area${more === 1 ? '' : 's'}` : ''}` : ''}. See the supports listed, where it operates and how to check its current status.`,
       158
@@ -250,12 +250,25 @@ async function providerPage(site: string, kindPath: KindPath, slug: string): Pro
   };
 }
 
+/** "<name> | NDIS provider in <where>" within ~62 characters: only the business name gives way, so a long name can't push the title past what search results show. Mirrors the title in the web app's RegisterProviderPage — keep them in step. */
+function providerTitle(name: string, label: string, where: string): string {
+  const suffix = ` | ${label} provider in ${where}`;
+  return `${trimTo(name, Math.max(20, 62 - suffix.length))}${suffix}`;
+}
+
+// Pages with no photo of their own still get a share card, from an image the site already uses.
+const DEFAULT_SHARE_IMAGE = '/images/providers.jpg';
+
 function render(html: string, req: Request, page: Page, site: string): string {
+  const shareImage = page.ogImage || `${site}${DEFAULT_SHARE_IMAGE}`;
   const head = [
     page.canonical ? `<link rel="canonical" href="${esc(site + page.canonical)}" />` : '',
+    page.canonical ? `<meta property="og:url" content="${esc(site + page.canonical)}" />` : '',
+    `<meta property="og:type" content="website" />`,
+    `<meta property="og:site_name" content="SolDirectory" />`,
     `<meta property="og:title" content="${esc(page.title)}" />`,
     `<meta property="og:description" content="${esc(page.description)}" />`,
-    page.ogImage ? `<meta property="og:image" content="${esc(page.ogImage)}" />` : '',
+    `<meta property="og:image" content="${esc(shareImage)}" />`,
     `<meta name="twitter:card" content="${page.ogImage ? 'summary_large_image' : 'summary'}" />`,
     ...page.jsonLd.map((j) =>
       // "<" is escaped so a business name can never close the script tag.

@@ -59,7 +59,7 @@ const FUNDING_ROUTES = [
 ];
 const STATIC_PUBLIC_ROUTES = [
   '/', '/find-a-provider', '/services', '/locations', '/providers',
-  '/independent-workers', '/independent-workers/find', '/ndis-providers',
+  '/independent-workers', '/ndis-providers',
   '/aged-care-providers', ...GUIDE_ROUTES, ...FUNDING_ROUTES,
 ];
 const REGISTER_PATH: Record<RegisterType, string> = { ndis: '/ndis-providers', aged_care: '/aged-care-providers' };
@@ -158,6 +158,8 @@ async function buildPageUrls(): Promise<UrlEntry[]> {
   // Independent workers who opted in to a public profile and were approved.
   const workers = await Worker.find({ publicProfile: true, published: true, accountStatus: 'active', publicSlug: { $exists: true, $ne: null } }).select('publicSlug').lean();
   for (const w of workers) paths.push(`/independent-workers/${(w as any).publicSlug}`);
+  // The finder page is noindex while nobody is published (registerShell's workerFinderPage), so it only belongs in the sitemap once someone is.
+  if (workers.length) paths.push('/independent-workers/find');
 
   // Real WordPress content, best-effort — a WordPress outage
   // shouldn't take the whole sitemap down, it just means those URLs
