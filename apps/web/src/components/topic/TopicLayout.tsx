@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
 import { PublicHeader, PublicFooter } from '../../pages/public/PublicLayout';
 import { useMatchModal } from '../../context/MatchModalContext';
+import PageHero, { DEFAULT_PANEL_CHECKS, type HeroCrumb } from './PageHero';
 import '../../pages/wordpress/WordPressCPTPage.css';
 
-export interface TopicCrumb { label: string; to?: string }
+export type TopicCrumb = HeroCrumb;
 export interface TopicTocItem { id: string; label: string }
 
 interface Props {
@@ -14,24 +14,38 @@ interface Props {
   description?: string;
   /** Hero background photo (a /images/… path). */
   image?: string;
-  ctaLabel?: string;
+  /** Heading of the white call-to-action card in the banner. */
+  panelTitle?: string;
   toc: TopicTocItem[];
   children: ReactNode;
 }
 
 /**
- * The shared page frame for every content page that isn't a WordPress
- * service page — condition and funding topics today. It renders the same
- * hero banner, left "On this page" sidebar and content column as a
- * service page (WordPressCPTPage) by reusing its stylesheet, so the page
- * types look like one product instead of three.
+ * The shared page frame for content pages that aren't WordPress service pages
+ * (conditions and funding topics): the full-width PageHero banner across the
+ * top, then the "On this page" sidebar and content column beneath it — the same
+ * structure as a service page (WordPressCPTPage) and a service-in-suburb page.
  */
-export default function TopicLayout({ crumbs, eyebrow, title, description, image = '/images/providers.jpg', ctaLabel, toc, children }: Props) {
+export default function TopicLayout({ crumbs, eyebrow, title, description, image = '/images/providers.jpg', panelTitle = 'Find the right support', toc, children }: Props) {
   const { openMatchModal } = useMatchModal();
 
   return (
     <>
       <PublicHeader />
+      <PageHero
+        crumbs={crumbs}
+        eyebrow={eyebrow}
+        title={title}
+        description={description}
+        image={image}
+        panel={{
+          title: panelTitle,
+          checks: DEFAULT_PANEL_CHECKS,
+          ctaLabel: 'Get matched, free →',
+          onCta: () => openMatchModal(),
+          note: 'One minute to send, and it costs nothing.',
+        }}
+      />
       <div className="wp-cpt-body">
         <aside className="wp-cpt-toc">
           <p className="wp-cpt-toc-title">On this page</p>
@@ -40,32 +54,7 @@ export default function TopicLayout({ crumbs, eyebrow, title, description, image
           </div>
         </aside>
 
-        <main className="wp-cpt-main">
-          <section className="wp-cpt-hero" aria-labelledby="topic-hero-title">
-            <div className="wp-cpt-hero-photo" style={{ backgroundImage: `url(${image})` }} aria-hidden="true" />
-            <div className="wp-cpt-hero-overlay" aria-hidden="true" />
-            <div className="wp-cpt-hero-grid wp-cpt-hero-grid-single">
-              <div className="wp-cpt-hero-copy">
-                <nav className="wp-cpt-breadcrumb wp-cpt-breadcrumb-hero" aria-label="Breadcrumb">
-                  {crumbs.map((c, i) => (
-                    <span key={`${c.label}-${i}`}>
-                      {i > 0 && <span aria-hidden="true"> / </span>}
-                      {c.to ? <Link to={c.to}>{c.label}</Link> : <span>{c.label}</span>}
-                    </span>
-                  ))}
-                </nav>
-                {eyebrow && <p className="wp-cpt-hero-eyebrow"><span className="wp-cpt-hero-rule" />{eyebrow}</p>}
-                <h1 id="topic-hero-title" className="wp-cpt-hero-title">{title}</h1>
-                {description && <p className="wp-cpt-hero-excerpt">{description}</p>}
-                <button type="button" className="btn-gradient wp-cpt-hero-cta" onClick={() => openMatchModal()}>
-                  {ctaLabel ?? 'Get matched, free →'}
-                </button>
-              </div>
-            </div>
-          </section>
-
-          {children}
-        </main>
+        <main className="wp-cpt-main">{children}</main>
       </div>
       <PublicFooter />
     </>

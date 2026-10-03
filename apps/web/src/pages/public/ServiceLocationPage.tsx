@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import { canViewProviderProfiles } from '../../lib/profileAccess';
 import { useSiteStats } from '../../hooks/useSiteStats';
 import { providerCountLabel, stateGroupCount } from '../../lib/statsCounts';
-import PhotoSlot from '../../components/PhotoSlot';
+import PageHero from '../../components/topic/PageHero';
 import {
   COMPARE, REGULATORS, POLICIES, FAQ,
 } from '../../data/servicePageFixtures';
@@ -299,44 +299,21 @@ export default function ServiceLocationPage() {
       </div>
 
       {/* Hero */}
-      <section className="svc-hero-section">
-        <div className="svc-hero-card">
-          <div className="svc-hero-photo">
-            <PhotoSlot src="/images/front-view-smiley-girl-woman-indoors-hero.jpg" alt={`Support at home for people seeking ${serviceLower}`} variant="care" />
-          </div>
-          <div className="svc-hero-overlay" />
-          <div className="svc-hero-grid">
-            <div className="svc-hero-copy">
-              <span className="svc-hero-eyebrow">
-                <span className="svc-hero-eyebrow-rule" />
-                {serviceName} · {stateName}
-              </span>
-              <h1 className="svc-hero-heading">Home {serviceLower} providers in {suburbName}, {stateName}</h1>
-              <p className="svc-hero-sub">
-                Compare provider profiles and public-register listings for {serviceLower} in {suburbName}, then send one request to providers serving your area.
-              </p>
-              <div className="svc-hero-stats">
-                <span><strong>{heroProviderLabel}</strong></span>
-              </div>
-            </div>
-
-            <div className="svc-hero-panel">
-              <h2 className="svc-hero-panel-title">For {serviceLower}</h2>
-              <div className="svc-hero-checks">
-                {HERO_CHECKS.map((c) => (
-                  <span key={c} className="svc-hero-check">
-                    <CheckCircleIcon /> {c}
-                  </span>
-                ))}
-              </div>
-              <button className="btn-gradient svc-hero-search-btn" onClick={() => openMatchModal()}>
-                Find providers in {suburbName} →
-              </button>
-              <p className="svc-hero-panel-note">One minute to send, and it costs nothing.</p>
-            </div>
-          </div>
-        </div>
-      </section>
+      <PageHero
+        image="/images/front-view-smiley-girl-woman-indoors-hero.jpg"
+        imageAlt={`Support at home for people seeking ${serviceLower}`}
+        eyebrow={<>{serviceName} · {stateName}</>}
+        title={`Home ${serviceLower} providers in ${suburbName}, ${stateName}`}
+        description={`Compare provider profiles and public-register listings for ${serviceLower} in ${suburbName}, then send one request to providers serving your area.`}
+        stats={<span><strong>{heroProviderLabel}</strong></span>}
+        panel={{
+          title: `For ${serviceLower}`,
+          checks: HERO_CHECKS,
+          ctaLabel: `Find providers in ${suburbName} →`,
+          onCta: () => openMatchModal(),
+          note: 'One minute to send, and it costs nothing.',
+        }}
+      />
 
       {/* Body: TOC + main content */}
       <div className="svc-body">
@@ -871,14 +848,6 @@ function CheckIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flex: 'none', marginTop: 2 }}>
       <path d="m4 12.5 5 5 11-11" />
-    </svg>
-  );
-}
-function CheckCircleIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flex: 'none', marginTop: 1 }}>
-      <circle cx="12" cy="12" r="9.5" />
-      <path d="m8.3 12.2 2.5 2.5 4.9-5" />
     </svg>
   );
 }

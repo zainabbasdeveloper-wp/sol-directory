@@ -6,6 +6,7 @@ import { useMatchModal } from '../../context/MatchModalContext';
 import { PublicHeader, PublicFooter } from '../public/PublicLayout';
 import WordPressTemplate from '../../components/wordpress/WordPressTemplate';
 import ProviderMap from '../../components/ProviderMap';
+import PageHero, { DEFAULT_PANEL_CHECKS } from '../../components/topic/PageHero';
 import ServiceRegisterBlock from './ServiceRegisterBlock';
 import ServiceWorkersBlock from './ServiceWorkersBlock';
 import { categoryForService } from '../../lib/registerMeta';
@@ -221,6 +222,32 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
       <PublicHeader />
 
       {!loading && !error && content ? (
+        <>
+        <PageHero
+          crumbs={[
+            { label: 'Home', to: '/' },
+            { label: config.pathPrefix.charAt(0).toUpperCase() + config.pathPrefix.slice(1), to: `/${config.pathPrefix}` },
+            { label: content.title },
+          ]}
+          eyebrow={heroEyebrow || undefined}
+          title={heroHeadline}
+          description={heroDescription || undefined}
+          stats={heroStats.length > 0 ? heroStats.map((st, i) => (
+            <span key={`${st.label}-${i}`} title={st.description || undefined}><strong>{st.value}</strong> {st.label}</span>
+          )) : undefined}
+          image={heroBgImage}
+          imageAlt={content.title}
+          panel={{
+            title: (heroCardHasContent && heroCard?.title) || 'Find the right support',
+            checks: heroCardHasContent && heroCard
+              ? [heroCard.funding_text, heroCard.availability_text, heroCard.response_text].filter((t): t is string => !!t)
+              : DEFAULT_PANEL_CHECKS,
+            // An editor-set hero button wins; otherwise the summary card's own, otherwise the default.
+            ctaLabel: heroCtaLabel || (heroCardHasContent && heroCard?.cta_label) || 'Get matched, free →',
+            onCta: () => act(heroCtaLabel ? (heroCtaUrl || 'get_matched') : (heroCardHasContent && heroCard?.cta_url) || heroCtaUrl || 'get_matched'),
+            note: 'One minute to send, and it costs nothing.',
+          }}
+        />
         <div className="wp-cpt-body">
           <aside className="wp-cpt-toc">
             <p className="wp-cpt-toc-title">On this page</p>
@@ -232,59 +259,6 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
           </aside>
 
           <main className="wp-cpt-main">
-            <section className="wp-cpt-hero" aria-labelledby="wp-cpt-hero-title">
-              <div
-                className="wp-cpt-hero-photo"
-                style={heroBgImage ? { backgroundImage: `url(${heroBgImage})` } : undefined}
-                aria-hidden="true"
-              />
-              <div className="wp-cpt-hero-overlay" aria-hidden="true" />
-              <div className={`wp-cpt-hero-grid ${heroCardHasContent ? '' : 'wp-cpt-hero-grid-single'}`}>
-                <div className="wp-cpt-hero-copy">
-                  <nav className="wp-cpt-breadcrumb wp-cpt-breadcrumb-hero" aria-label="Breadcrumb">
-                    <Link to="/">Home</Link>
-                    <span aria-hidden="true"> / </span>
-                    <Link to={`/${config.pathPrefix}`} style={{ textTransform: 'capitalize' }}>{config.pathPrefix}</Link>
-                    <span aria-hidden="true"> / </span>
-                    <span>{content.title}</span>
-                  </nav>
-                  {heroEyebrow && <p className="wp-cpt-hero-eyebrow"><span className="wp-cpt-hero-rule" />{heroEyebrow}</p>}
-                  <h1 id="wp-cpt-hero-title" className="wp-cpt-hero-title">{heroHeadline}</h1>
-                  {heroDescription && <p className="wp-cpt-hero-excerpt">{heroDescription}</p>}
-
-                  {heroStats.length > 0 && (
-                    <div className="wp-cpt-hero-stats">
-                      {heroStats.map((s, i) => (
-                        <span key={`${s.label}-${i}`} className="wp-cpt-hero-stat" title={s.description || undefined}>
-                          <strong>{s.value}</strong> {s.label}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  <button type="button" className="btn-gradient wp-cpt-hero-cta" onClick={() => act(heroCtaUrl || 'get_matched')}>
-                    {heroCtaLabel || 'Get matched, free →'}
-                  </button>
-                </div>
-
-                {heroCardHasContent && heroCard && (
-                  <aside className="wp-cpt-hero-card">
-                    {heroCard.title && <h2 className="wp-cpt-hero-card-title">{heroCard.title}</h2>}
-                    <ul className="wp-cpt-hero-card-list">
-                      {heroCard.funding_text && <li>{heroCard.funding_text}</li>}
-                      {heroCard.availability_text && <li>{heroCard.availability_text}</li>}
-                      {heroCard.response_text && <li>{heroCard.response_text}</li>}
-                    </ul>
-                    {heroCard.cta_label && (
-                      <button type="button" className="btn-gradient wp-cpt-hero-card-cta" onClick={() => act(heroCard.cta_url || 'get_matched')}>
-                        {heroCard.cta_label}
-                      </button>
-                    )}
-                  </aside>
-                )}
-              </div>
-            </section>
-
             {shortAnswer && (
               <section id="wp-cpt-short" className="wp-cpt-short">
                 <h2>The short answer</h2>
@@ -538,6 +512,7 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
             </section>
           </main>
         </div>
+        </>
       ) : (
         <WordPressTemplate loading={loading} error={error} content={content} />
       )}
