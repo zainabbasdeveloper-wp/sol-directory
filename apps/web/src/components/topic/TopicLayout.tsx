@@ -46,11 +46,11 @@ export default function TopicLayout({ crumbs, eyebrow, title, description, image
           note: 'One minute to send, and it costs nothing.',
         }}
       />
-      <div className="wp-cpt-body">
-        <aside className="wp-cpt-toc">
-          <p className="wp-cpt-toc-title">On this page</p>
-          <div className="wp-cpt-toc-list">
-            {toc.map((t) => <a key={t.id} href={`#${t.id}`} className="wp-cpt-toc-link">{t.label}</a>)}
+      <div className="svc-body">
+        <aside className="svc-toc">
+          <p className="svc-toc-title">On this page</p>
+          <div className="svc-toc-list">
+            {toc.map((t) => <a key={t.id} href={`#${t.id}`} className="svc-toc-link">{t.label}</a>)}
           </div>
         </aside>
 

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import PhotoSlot from '../PhotoSlot';
 import './PageHero.css';
+import './PageLayout.css';
 
 export interface HeroCrumb { label: string; to?: string }
 
