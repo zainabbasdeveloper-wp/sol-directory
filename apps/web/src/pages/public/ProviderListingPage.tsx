@@ -105,8 +105,10 @@ export default function ProviderListingPage({ mode }: { mode: Mode }) {
   // (/condition/:slug/, permalink-style, per explicit request) rather
   // than nested under /directory — area pages are unchanged.
   const base = mode === 'area' ? `/directory/in/${slug}` : `/condition/${slug}/`;
-  const heading = row
-    ? (mode === 'area' ? `Providers supporting people in ${row.name}` : `Providers with experience supporting ${row.name}`)
+  // The condition's own name is known before the provider counts load, so the banner doesn't flash "Provider directory".
+  const knownName = row?.name ?? (mode === 'condition' ? conditionMeta?.name : undefined);
+  const heading = knownName
+    ? (mode === 'area' ? `Providers supporting people in ${knownName}` : `Providers with experience supporting ${knownName}`)
     : 'Provider directory';
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -181,7 +183,7 @@ export default function ProviderListingPage({ mode }: { mode: Mode }) {
       crumbs={[
         { label: 'Home', to: '/' },
         mode === 'area' ? { label: 'Provider directory', to: '/find-a-provider' } : { label: 'Condition', to: '/condition' },
-        { label: row?.name ?? '…' },
+        { label: knownName ?? '…' },
       ]}
       eyebrow={mode === 'area' ? 'Local providers' : conditionMeta?.categoryGroup ?? 'Provider experience'}
       title={heading}
@@ -194,12 +196,12 @@ export default function ProviderListingPage({ mode }: { mode: Mode }) {
           <section id="about" className="wp-cpt-short">
             <h2>About {conditionMeta.name}</h2>
             <p>{conditionMeta.summary}</p>
+            <p className="wp-cpt-table-note">
+              This is general information, not medical advice or a diagnosis. Every person’s needs are different — a provider’s general
+              experience with {conditionMeta.name.toLowerCase()} is a starting point for a conversation, not a guarantee of fit.
+              {groupNote ? ` ${groupNote}` : ''}
+            </p>
           </section>
-          <p className="wp-cpt-table-note" style={{ marginBottom: 20 }}>
-            This is general information, not medical advice or a diagnosis. Every person’s needs are different — a provider’s general
-            experience with {conditionMeta.name.toLowerCase()} is a starting point for a conversation, not a guarantee of fit.
-            {groupNote ? ` ${groupNote}` : ''}
-          </p>
         </>
       )}
 
@@ -232,14 +234,9 @@ export default function ProviderListingPage({ mode }: { mode: Mode }) {
 
       {conditionMeta && (
         <>
-          {!loading && !error && items.length === 0 && (
-            <p className="wp-cpt-table-note" style={{ marginBottom: 12 }}>
-              No SolDirectory members have listed experience supporting {conditionMeta.name.toLowerCase()} yet. The register providers
-              below list supports people with {conditionMeta.name.toLowerCase()} commonly look for.
-            </p>
-          )}
           <TopicRegisterProviders
             id="register-providers"
+            leadNote={!loading && !error && items.length === 0 ? `No SolDirectory members have listed experience supporting ${conditionMeta.name.toLowerCase()} yet. The register providers below list supports people with ${conditionMeta.name.toLowerCase()} commonly look for.` : undefined}
             heading={`Providers on the register for ${conditionMeta.name.toLowerCase()} supports`}
             intro={`These are providers on the public registers that list supports people with ${conditionMeta.name.toLowerCase()} commonly look for. Pick a support type to browse them.`}
             defaultType="ndis"

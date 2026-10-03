@@ -10,6 +10,8 @@ interface Props {
   id: string;
   heading: string;
   intro: string;
+  /** A short factual line shown above the intro (e.g. that no member has listed this yet). */
+  leadNote?: string;
   /** Register type used when no category is picked (or the category belongs to neither register exclusively). */
   defaultType: RegisterType;
   /** Support categories offered as chips. Empty = just the whole register. */
@@ -28,7 +30,7 @@ interface Props {
  * section never claims a listed provider has experience with the topic
  * or accepts a given funding, only that it lists a related support.
  */
-export default function TopicRegisterProviders({ id, heading, intro, defaultType, categories, includeAll, disclaimer }: Props) {
+export default function TopicRegisterProviders({ id, heading, intro, leadNote, defaultType, categories, includeAll, disclaimer }: Props) {
   const options = includeAll || categories.length === 0 ? ['', ...categories] : categories;
   const [category, setCategory] = useState(options[0]);
   const [data, setData] = useState<{ total: number; states: Record<string, number> } | null>(null);
@@ -49,6 +51,7 @@ export default function TopicRegisterProviders({ id, heading, intro, defaultType
   return (
     <section id={id} className="wp-cpt-section">
       <h2>{heading}</h2>
+      {leadNote && <p className="wp-cpt-table-note" style={{ marginBottom: 12 }}>{leadNote}</p>}
       <p>{intro}</p>
 
       {options.length > 1 && (

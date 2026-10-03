@@ -258,7 +258,7 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
             </div>
           </aside>
 
-          <main className="wp-cpt-main">
+          <main className="svc-main wp-cpt-main">
             {shortAnswer && (
               <section id="wp-cpt-short" className="wp-cpt-short">
                 <h2>The short answer</h2>

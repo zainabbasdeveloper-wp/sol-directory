@@ -54,7 +54,7 @@ export default function TopicLayout({ crumbs, eyebrow, title, description, image
           </div>
         </aside>
 
-        <main className="wp-cpt-main">{children}</main>
+        <main className="svc-main wp-cpt-main">{children}</main>
       </div>
       <PublicFooter />
     </>

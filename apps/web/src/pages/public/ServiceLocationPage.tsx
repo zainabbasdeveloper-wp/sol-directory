@@ -286,20 +286,10 @@ export default function ServiceLocationPage() {
     <>
       <PublicHeader />
 
-      <div className="svc-breadcrumb">
-        <Link to="/">Home</Link>
-        <span>›</span>
-        <Link to="/services">Services</Link>
-        <span>›</span>
-        <span>{serviceName}</span>
-        <span>›</span>
-        <span>{stateName}</span>
-        <span>›</span>
-        <strong>{suburbName}</strong>
-      </div>
 
       {/* Hero */}
       <PageHero
+        crumbs={[{ label: 'Home', to: '/' }, { label: 'Services', to: '/services' }, { label: serviceName }, { label: stateName }, { label: suburbName }]}
         image="/images/front-view-smiley-girl-woman-indoors-hero.jpg"
         imageAlt={`Support at home for people seeking ${serviceLower}`}
         eyebrow={<>{serviceName} · {stateName}</>}

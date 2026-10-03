@@ -1,3 +1,18 @@
+.svc-breadcrumb {
+  max-width: var(--layout-content-max-width);
+  margin: 0 auto;
+  padding: 20px clamp(20px, 5vw, 56px) 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: color-mix(in srgb, var(--color-text) 66%, transparent);
+}
+.svc-breadcrumb a { color: inherit; }
+.svc-breadcrumb a:hover { color: var(--color-accent); }
+.svc-breadcrumb strong { color: var(--color-text); font-weight: 500; }
+
 .svc-hero-section { max-width: var(--layout-content-max-width); margin: 0 auto; padding: 22px clamp(20px, 5vw, 56px) 0; }
 .svc-hero-card {
   position: relative;
@@ -47,11 +62,6 @@
 /* Used by PageHero on pages with no call-to-action card: copy only, over the photo. */
 .svc-hero-grid--single { grid-template-columns: minmax(0, 1fr); }
 .svc-hero-grid--single .svc-hero-sub { max-width: 52ch; }
-
-.svc-hero-crumbs { margin-bottom: 18px; font-size: 13px; color: rgba(255,255,255,0.78); }
-.svc-hero-crumbs a { color: rgba(255,255,255,0.92); }
-.svc-hero-crumbs a:hover { text-decoration: underline; }
-.svc-hero-crumbs + .svc-hero-eyebrow { margin-top: 0; }
 
 @media (max-width: 860px) {
   .svc-hero-card { min-height: 0; border-radius: 20px; }

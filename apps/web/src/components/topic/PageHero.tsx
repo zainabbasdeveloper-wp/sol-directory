@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import PhotoSlot from '../PhotoSlot';
 import './PageHero.css';
@@ -45,6 +45,17 @@ function CheckCircleIcon() {
  */
 export default function PageHero({ crumbs, eyebrow, title, description, stats, image, imageAlt = '', panel }: Props) {
   return (
+    <>
+    {crumbs && crumbs.length > 0 && (
+      <nav className="svc-breadcrumb" aria-label="Breadcrumb">
+        {crumbs.map((c, i) => (
+          <Fragment key={`${c.label}-${i}`}>
+            {i > 0 && <span aria-hidden="true">›</span>}
+            {i === crumbs.length - 1 ? <strong>{c.label}</strong> : c.to ? <Link to={c.to}>{c.label}</Link> : <span>{c.label}</span>}
+          </Fragment>
+        ))}
+      </nav>
+    )}
     <section className="svc-hero-section">
       <div className="svc-hero-card">
         <div className="svc-hero-photo">
@@ -53,16 +64,6 @@ export default function PageHero({ crumbs, eyebrow, title, description, stats, i
         <div className="svc-hero-overlay" />
         <div className={`svc-hero-grid${panel ? '' : ' svc-hero-grid--single'}`}>
           <div className="svc-hero-copy">
-            {crumbs && crumbs.length > 0 && (
-              <nav className="svc-hero-crumbs" aria-label="Breadcrumb">
-                {crumbs.map((c, i) => (
-                  <span key={`${c.label}-${i}`}>
-                    {i > 0 && <span aria-hidden="true"> / </span>}
-                    {c.to ? <Link to={c.to}>{c.label}</Link> : <span>{c.label}</span>}
-                  </span>
-                ))}
-              </nav>
-            )}
             {eyebrow && (
               <span className="svc-hero-eyebrow">
                 <span className="svc-hero-eyebrow-rule" />
@@ -95,6 +96,7 @@ export default function PageHero({ crumbs, eyebrow, title, description, stats, i
         </div>
       </div>
     </section>
+    </>
   );
 }
 

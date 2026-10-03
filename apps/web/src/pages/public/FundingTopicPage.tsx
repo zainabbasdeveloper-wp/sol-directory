@@ -120,11 +120,17 @@ export default function FundingTopicPage() {
       <section id="overview" className="wp-cpt-short" ref={topRef}>
         <h2>About {meta.name}</h2>
         <p>{meta.summary}</p>
+        <p className="wp-cpt-table-note">
+          This is general information, not financial or funding advice. Program names, amounts and eligibility rules change over
+          time — always confirm current detail with the relevant official body before relying on it.
+        </p>
+        {!link && (
+          <p className="wp-cpt-table-note">
+            SolDirectory doesn’t currently track which providers work with {meta.name.toLowerCase()} specifically — this page is
+            general information only. <Link to="/find-a-provider">Browse all providers</Link> and ask directly.
+          </p>
+        )}
       </section>
-      <p className="wp-cpt-table-note" style={{ marginBottom: 20 }}>
-        This is general information, not financial or funding advice. Program names, amounts and eligibility rules change over
-        time — always confirm current detail with the relevant official body before relying on it.
-      </p>
 
       {hasMembers && (
         <section id="providers" className="wp-cpt-section">
@@ -153,12 +159,7 @@ export default function FundingTopicPage() {
           includeAll={link.includeAll}
           disclaimer={link.disclaimer}
         />
-      ) : (
-        <p className="wp-cpt-table-note">
-          SolDirectory doesn’t currently track which providers work with {meta.name.toLowerCase()} specifically — this page is
-          general information only. <Link to="/find-a-provider">Browse all providers</Link> and ask directly.
-        </p>
-      )}
+      ) : null}
 
       {siblings.length > 0 && (
         <section id="related-funding" className="wp-cpt-section">
