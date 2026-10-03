@@ -7,7 +7,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
-    "seed": "tsx src/seed/seed.ts" ,
+    "seed": "tsx src/seed/seed.ts",
     "db:seed:admin": "tsx src/seed/seedAdminDemo.ts",
     "import:providers": "tsx src/scripts/importScrapedProviders.ts",
     "import:register": "tsx src/scripts/importRegisterListings.ts",
@@ -32,7 +32,8 @@
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.5.2",
-    "nodemailer": "^6.9.15"
+    "nodemailer": "^6.9.15",
+    "stripe": "^23.0.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

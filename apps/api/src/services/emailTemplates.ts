@@ -223,3 +223,65 @@ export function welcomeTemplate(input: { name: string }): { subject: string; htm
   });
   return { subject: 'Welcome to SolDirectory', html };
 }
+
+// ---- Billing emails (sent automatically from the Stripe webhook, services/stripe.service.ts) ----
+
+export function subscriptionStartedTemplate(input: { name: string; planName: string; quotaText: string; leadsUrl?: string }): { subject: string; html: string } {
+  const html = renderEmailLayout({
+    preheader: `Your ${escapeHtml(input.planName)} plan is active`,
+    heading: `Your ${escapeHtml(input.planName)} plan is active`,
+    bodyHtml: `
+      <p>Hi ${escapeHtml(input.name)},</p>
+      <p>Thanks for subscribing — your <strong>${escapeHtml(input.planName)}</strong> plan is now active. ${escapeHtml(input.quotaText)}</p>
+      <p>Open your leads to see requests matched to your service areas and unlock the full brief and contact details.</p>
+    `,
+    ctaLabel: input.leadsUrl ? 'View your leads' : undefined,
+    ctaUrl: input.leadsUrl,
+  });
+  return { subject: `Your SolDirectory ${input.planName} plan is active`, html };
+}
+
+export function paymentReceivedTemplate(input: { name: string; planName: string; amount: string; nextBilling?: string; billingUrl?: string }): { subject: string; html: string } {
+  const html = renderEmailLayout({
+    preheader: `Payment received — ${escapeHtml(input.amount)}`,
+    heading: 'Payment received',
+    bodyHtml: `
+      <p>Hi ${escapeHtml(input.name)},</p>
+      <p>We've received your payment of <strong>${escapeHtml(input.amount)}</strong> for the <strong>${escapeHtml(input.planName)}</strong> plan. Your lead unlocks for the new month are ready to use.</p>
+      ${input.nextBilling ? `<p>Your next payment is due on <strong>${escapeHtml(input.nextBilling)}</strong>.</p>` : ''}
+    `,
+    ctaLabel: input.billingUrl ? 'View billing' : undefined,
+    ctaUrl: input.billingUrl,
+  });
+  return { subject: 'Payment received — SolDirectory', html };
+}
+
+export function paymentFailedTemplate(input: { name: string; planName: string; billingUrl?: string }): { subject: string; html: string } {
+  const html = renderEmailLayout({
+    preheader: 'We could not take your payment',
+    heading: 'We couldn’t take your payment',
+    bodyHtml: `
+      <p>Hi ${escapeHtml(input.name)},</p>
+      <p>The latest payment for your <strong>${escapeHtml(input.planName)}</strong> plan didn't go through. This is usually an expired card or a bank decline.</p>
+      <p>Please update your payment method so your plan and lead unlocks aren't interrupted. We'll retry automatically over the next few days.</p>
+    `,
+    ctaLabel: input.billingUrl ? 'Update payment method' : undefined,
+    ctaUrl: input.billingUrl,
+  });
+  return { subject: 'Action needed: your SolDirectory payment failed', html };
+}
+
+export function subscriptionCancelledTemplate(input: { name: string; planName: string; plansUrl?: string }): { subject: string; html: string } {
+  const html = renderEmailLayout({
+    preheader: `Your ${escapeHtml(input.planName)} plan has ended`,
+    heading: `Your ${escapeHtml(input.planName)} plan has ended`,
+    bodyHtml: `
+      <p>Hi ${escapeHtml(input.name)},</p>
+      <p>Your <strong>${escapeHtml(input.planName)}</strong> subscription has ended and your account is back on the free Starter plan. Your listing stays public; lead details are hidden until you subscribe again.</p>
+      <p>You can resubscribe at any time.</p>
+    `,
+    ctaLabel: input.plansUrl ? 'View plans' : undefined,
+    ctaUrl: input.plansUrl,
+  });
+  return { subject: 'Your SolDirectory plan has ended', html };
+}

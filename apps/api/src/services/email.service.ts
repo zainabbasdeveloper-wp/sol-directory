@@ -5,6 +5,7 @@ import {
   adminNotificationTemplate, renderEmailLayout,
   passwordResetTemplate, passwordChangedTemplate, verificationResultTemplate, welcomeTemplate,
   capacityConfirmationTemplate,
+  subscriptionStartedTemplate, paymentReceivedTemplate, paymentFailedTemplate, subscriptionCancelledTemplate,
 } from './emailTemplates.js';
 import EmailLog from '../models/EmailLog.js';
 
@@ -137,6 +138,26 @@ export const EmailService = {
 
   async sendWelcome(to: string, name: string) {
     const { subject, html } = welcomeTemplate({ name });
+    return sendMail(to, subject, html);
+  },
+
+  async sendSubscriptionStarted(to: string, input: Parameters<typeof subscriptionStartedTemplate>[0]) {
+    const { subject, html } = subscriptionStartedTemplate(input);
+    return sendMail(to, subject, html);
+  },
+
+  async sendPaymentReceived(to: string, input: Parameters<typeof paymentReceivedTemplate>[0]) {
+    const { subject, html } = paymentReceivedTemplate(input);
+    return sendMail(to, subject, html);
+  },
+
+  async sendPaymentFailed(to: string, input: Parameters<typeof paymentFailedTemplate>[0]) {
+    const { subject, html } = paymentFailedTemplate(input);
+    return sendMail(to, subject, html);
+  },
+
+  async sendSubscriptionCancelled(to: string, input: Parameters<typeof subscriptionCancelledTemplate>[0]) {
+    const { subject, html } = subscriptionCancelledTemplate(input);
     return sendMail(to, subject, html);
   },
 

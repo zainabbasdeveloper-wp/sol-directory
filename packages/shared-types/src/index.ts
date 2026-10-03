@@ -97,7 +97,7 @@ export function isLeadUnlocked(l: Lead): l is LeadUnlocked {
 }
 
 export interface PlanConfig {
-  key: 'starter' | 'growth' | 'scale';
+  key: 'starter' | 'growth' | 'pro';
   name: string;
   priceCents: number;
   quota: number | null; // null = unlimited

@@ -100,6 +100,19 @@ export function getPlans(): Promise<PlanConfig[]> {
   return api.get<PlanConfig[]>('/plans');
 }
 
+export interface Billing {
+  plan: PlanConfig['key'];
+  planStatus: 'active' | 'trial' | 'expired' | 'cancelled' | 'suspended';
+  renewsOrEndsAt: string | null;
+  hasBillingAccount: boolean;
+  leadUnlocksUsed: number;
+  paymentsEnabled: boolean;
+}
+export const getBilling = () => api.get<Billing>('/plans/billing');
+/** Starts Stripe Checkout; the plan itself only changes once Stripe's webhook confirms payment. */
+export const startCheckout = (planKey: PlanConfig['key']) => api.post<{ url: string }>('/plans/checkout', { planKey });
+export const openBillingPortal = () => api.post<{ url: string }>('/plans/portal');
+
 // --- Onboarding ---
 
 export function getOnboarding() {

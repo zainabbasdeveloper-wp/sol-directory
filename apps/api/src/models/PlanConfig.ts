@@ -1,7 +1,7 @@
 import mongoose, { Schema, type Document } from 'mongoose';
 
 export interface PlanConfigDoc extends Document {
-  key: 'starter' | 'growth' | 'scale';
+  key: 'starter' | 'growth' | 'pro';
   name: string;
   priceCents: number;
   quota: number | null; // null = unlimited
@@ -11,7 +11,7 @@ export interface PlanConfigDoc extends Document {
 }
 
 const planConfigSchema = new Schema<PlanConfigDoc>({
-  key: { type: String, enum: ['starter', 'growth', 'scale'], required: true, unique: true },
+  key: { type: String, enum: ['starter', 'growth', 'pro'], required: true, unique: true },
   name: { type: String, required: true },
   priceCents: { type: Number, required: true },
   quota: { type: Number, default: null }, // null stored, not Infinity — Mongo can't store Infinity
@@ -29,6 +29,15 @@ const PlanConfig = mongoose.model<PlanConfigDoc>('PlanConfig', planConfigSchema)
  * Idempotent: safe to call on every server start.
  */
 export async function ensureDefaultPlans(): Promise<void> {
+  // Provider.plan calls the top tier 'pro'; this collection used to seed it as
+  // 'scale' (see scripts/migratePlanConfigScaleToPro.ts). Rename a leftover
+  // 'scale' row in place — keeping whatever price/quota an admin set — so the
+  // upsert below doesn't create a second top tier.
+  const legacy = await PlanConfig.collection.findOne({ key: 'scale' });
+  if (legacy && !(await PlanConfig.collection.findOne({ key: 'pro' }))) {
+    await PlanConfig.collection.updateOne({ key: 'scale' }, { $set: { key: 'pro' } });
+  }
+
   const defaults: Omit<PlanConfigDoc, keyof Document>[] = [
     {
       key: 'starter',
@@ -47,8 +56,8 @@ export async function ensureDefaultPlans(): Promise<void> {
       features: ['15 lead unlocks per month', 'Full brief, budget and contact details', 'Matched to your service areas', 'Three team seats', 'Response time reporting'],
     },
     {
-      key: 'scale',
-      name: 'Scale',
+      key: 'pro',
+      name: 'Pro',
       priceCents: 64900,
       quota: null,
       seats: 10,

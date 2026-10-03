@@ -16,6 +16,7 @@ import plansRoutes from './routes/plans.routes.js';
 import onboardingRoutes from './routes/onboarding.routes.js';
 import verificationRoutes from './routes/verification.routes.js';
 import webhooksRoutes from './routes/webhooks.routes.js';
+import stripeRoutes from './routes/stripe.routes.js';
 import wpRoutes from './routes/wp.routes.js';
 import matchRequestsRoutes from './routes/matchRequests.routes.js';
 import notificationsRoutes from './routes/notifications.routes.js';
@@ -40,6 +41,8 @@ import statsRoutes from './routes/stats.routes.js';
 const app = express();
 
 app.use(cors({ origin: process.env.CLIENT_ORIGIN ?? 'http://localhost:5173' }));
+// Stripe signs the raw request body, so its webhook is mounted BEFORE express.json() parses it.
+app.use('/api/stripe', stripeRoutes);
 app.use(express.json());
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
