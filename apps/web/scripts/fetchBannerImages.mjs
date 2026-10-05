@@ -1,18 +1,21 @@
 /**
- * Downloads one free banner photo per NDIS topic from Pexels (official API, free key) into
- * public/images/banners/<topic>.jpg, sized for a full-width banner, and records which topics now have
- * a photo in src/data/bannerManifest.json so bannerFor() starts using them.
+ * Downloads one free banner photo per NDIS topic into public/images/banners/<topic>.jpg, sized for a
+ * full-width banner, and records which topics now have a photo in src/data/bannerManifest.json so
+ * bannerFor() starts using them. Uses an official free photo API, whichever key you have:
  *
- * Get a free key at https://www.pexels.com/api/ (instant, no card), then:
- *   PEXELS_API_KEY=xxxx npm run images:fetch-banners -w apps/web
+ *   Unsplash: create a free app at https://unsplash.com/oauth/applications, copy its Access Key, then
+ *     UNSPLASH_ACCESS_KEY=xxxx npm run images:fetch-banners -w apps/web
+ *   Pexels (new keys are paused at the moment): https://www.pexels.com/api/
+ *     PEXELS_API_KEY=xxxx npm run images:fetch-banners -w apps/web
  *
  * Options:
  *   --topic=therapy     only this topic
  *   --pick=2            use the 2nd best match instead of the 1st (to swap a photo you don't like)
  *   --force             re-download topics that already have a photo
  *
- * Photo credits are written to public/images/banners/credits.json. Pexels photos are free for commercial
- * use without attribution, but credits are kept so a photographer can be named if you choose to.
+ * Photo credits are written to public/images/banners/credits.json. Both services allow free commercial
+ * use; Unsplash's API rules ask you to credit the photographer and Unsplash, so keep credits.json and show
+ * a "Photos: Unsplash" credit where you can (e.g. the footer).
  */
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
@@ -45,11 +48,13 @@ const TOPICS = {
   general: ['support worker and client talking warmly', 'carer and woman walking in park'],
 };
 
-const key = process.env.PEXELS_API_KEY;
-if (!key) {
-  console.error('Set PEXELS_API_KEY first. Free key: https://www.pexels.com/api/');
+const unsplashKey = process.env.UNSPLASH_ACCESS_KEY;
+const pexelsKey = process.env.PEXELS_API_KEY;
+if (!unsplashKey && !pexelsKey) {
+  console.error('Set UNSPLASH_ACCESS_KEY (https://unsplash.com/oauth/applications) or PEXELS_API_KEY first. See the top of this file.');
   process.exit(1);
 }
+const provider = unsplashKey ? 'unsplash' : 'pexels';
 
 const arg = (name) => process.argv.find((a) => a.startsWith(`--${name}=`))?.split('=')[1];
 const only = arg('topic');
@@ -63,12 +68,33 @@ await mkdir(outDir, { recursive: true });
 
 const usedPhotoIds = new Set(Object.values(credits).map((c) => c.photoId));
 
+// Each provider is mapped to the same shape: { id, width, height, imageUrl(width), pageUrl, photographer, photographerUrl, alt }.
 async function search(query) {
+  if (provider === 'unsplash') {
+    const url = `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&orientation=landscape&per_page=30`;
+    const res = await fetch(url, { headers: { Authorization: `Client-ID ${unsplashKey}` } });
+    if (res.status === 403 || res.status === 429) throw new RateLimited('Unsplash hourly limit reached (free apps get 50 requests an hour)');
+    if (!res.ok) throw new Error(`Unsplash ${res.status} ${res.statusText} for "${query}"`);
+    return ((await res.json()).results ?? []).map((p) => ({
+      id: p.id, width: p.width, height: p.height,
+      imageUrl: (w) => `${p.urls.raw}&w=${w}&q=75&fm=jpg&fit=max`,
+      pageUrl: p.links.html, photographer: p.user.name, photographerUrl: p.user.links.html, alt: p.alt_description ?? '',
+      // Unsplash's API rules ask apps to report each download.
+      onDownload: () => fetch(p.links.download_location, { headers: { Authorization: `Client-ID ${unsplashKey}` } }).catch(() => {}),
+    }));
+  }
   const url = `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&orientation=landscape&size=large&per_page=30`;
-  const res = await fetch(url, { headers: { Authorization: key } });
+  const res = await fetch(url, { headers: { Authorization: pexelsKey } });
+  if (res.status === 429) throw new RateLimited('Pexels rate limit reached');
   if (!res.ok) throw new Error(`Pexels ${res.status} ${res.statusText} for "${query}"`);
-  return (await res.json()).photos ?? [];
+  return ((await res.json()).photos ?? []).map((p) => ({
+    id: String(p.id), width: p.width, height: p.height,
+    imageUrl: (w) => `${p.src.original}?auto=compress&cs=tinysrgb&w=${w}`,
+    pageUrl: p.url, photographer: p.photographer, photographerUrl: p.photographer_url, alt: p.alt ?? '',
+  }));
 }
+
+class RateLimited extends Error {}
 
 // A banner is wide, so the photo must be large and clearly landscape; the subject should survive a crop.
 const usable = (p) => p.width >= 2400 && p.width / p.height >= 1.45 && p.width / p.height <= 2.1 && !usedPhotoIds.has(p.id);
@@ -81,9 +107,16 @@ for (const [topic, queries] of Object.entries(TOPICS)) {
   }
 
   let candidates = [];
-  for (const q of queries) {
-    candidates = candidates.concat((await search(q)).filter(usable));
-    if (candidates.length > pick) break;
+  try {
+    for (const q of queries) {
+      candidates = candidates.concat((await search(q)).filter(usable));
+      if (candidates.length > pick) break;
+    }
+  } catch (err) {
+    if (!(err instanceof RateLimited)) throw err;
+    console.warn(`
+${err.message}. Progress is saved; run the same command again later to continue.`);
+    break;
   }
   const photo = candidates[pick];
   if (!photo) {
@@ -91,7 +124,7 @@ for (const [topic, queries] of Object.entries(TOPICS)) {
     continue;
   }
 
-  const imgRes = await fetch(`${photo.src.original}?auto=compress&cs=tinysrgb&w=1920`);
+  const imgRes = await fetch(photo.imageUrl(1920));
   if (!imgRes.ok) {
     console.warn(`${topic}: download failed (${imgRes.status}), skipped`);
     continue;
@@ -100,9 +133,10 @@ for (const [topic, queries] of Object.entries(TOPICS)) {
   await writeFile(path.join(outDir, `${topic}.jpg`), buf);
 
   usedPhotoIds.add(photo.id);
-  credits[topic] = { photoId: photo.id, photographer: photo.photographer, photographerUrl: photo.photographer_url, pageUrl: photo.url, alt: photo.alt ?? '' };
+  await photo.onDownload?.();
+  credits[topic] = { provider, photoId: photo.id, photographer: photo.photographer, photographerUrl: photo.photographerUrl, pageUrl: photo.pageUrl, alt: photo.alt };
   if (!manifest.available.includes(topic)) manifest.available.push(topic);
-  console.log(`${topic}: ${(buf.length / 1024).toFixed(0)} KB  ${photo.url}`);
+  console.log(`${topic}: ${(buf.length / 1024).toFixed(0)} KB  ${photo.pageUrl}`);
 }
 
 manifest.available.sort();
