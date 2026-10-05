@@ -18,9 +18,8 @@
  * `location = / { try_files /home.html /index.html; }`. The app replaces #root when it starts, so people see
  * the normal page — the content is the same, not something shown only to bots.
  *
- * Content comes from the same data files the pages themselves read
- * (guideContent.ts, fundingContent.ts, staticMegaMenuFallback.ts), bundled on
- * the fly with esbuild, so there is one copy of the words.
+ * Content comes from the same shared package and data files the pages read,
+ * bundled on the fly with esbuild, so there is one copy of the words.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -52,7 +51,7 @@ async function loadTs(relPath) {
   return mod;
 }
 
-const { GUIDE_DOCS } = await loadTs('src/pages/public/guideContent.ts');
+const { GUIDE_DOCS, fundingShellEditorial } = await import(pathToFileURL(path.resolve(webRoot, '../../packages/topic-content/index.js')).href);
 const { FUNDING_CATEGORY_GROUPS, FUNDING_CONTENT } = await loadTs('src/data/fundingContent.ts');
 const { STATIC_MEGA_MENU_FALLBACK } = await loadTs('src/data/staticMegaMenuFallback.ts');
 
@@ -183,6 +182,7 @@ pages.push({
 
 for (const f of FUNDING_CONTENT) {
   const siblings = FUNDING_CATEGORY_GROUPS.find((g) => g.title === f.categoryGroup)?.items.filter((s) => s.slug !== f.slug) ?? [];
+  const editorial = fundingShellEditorial(f);
   pages.push({
     path: `/funding/${f.slug}`,
     canonical: `/funding/${f.slug}/`, // the form the menu and FundingTopicPage's own canonical use
@@ -191,6 +191,17 @@ for (const f of FUNDING_CONTENT) {
     crumbs: [{ name: 'Home', path: '/' }, { name: 'Funding', path: '/funding' }, { name: f.name, path: `/funding/${f.slug}` }],
     body: (c) => `${c}<h1>${esc(f.name)}</h1><p>${esc(f.summary)}</p>` +
       '<p>This is general information, not financial or funding advice. Program names, amounts and eligibility rules change over time — always confirm current detail with the relevant official body before relying on it.</p>' +
+      `<h2>How to understand ${esc(f.name)}</h2><p>${esc(editorial.overview)}</p>` +
+      `<h2>What to confirm before arranging support</h2>${ul(editorial.checks.map(esc))}` +
+      `<h2>How to prepare before arranging support</h2>${ul((editorial.steps ?? []).map(esc))}` +
+      `<h2>What this page can and cannot confirm</h2><p>This guide explains the usual questions, records and safeguards connected with ${esc(f.name.toLowerCase())}, but it cannot confirm an individual approval, available budget, current provider capacity or payment outcome. Check the current arrangement with the responsible funding body and ask the provider to put its role, complete fees, service scope and approval dependencies in writing before support begins.</p>` +
+      `<h2>Information and records to have ready</h2><p>Organised records help a funding body or provider answer the right question, prepare an accurate quote and resolve billing issues before they interrupt support.</p>${ul((editorial.records ?? []).map(esc))}` +
+      `<h2>Questions to ask providers</h2>${ul((editorial.providerQuestions ?? []).map(esc))}` +
+      `<h2>Common mistakes to avoid</h2>${ul((editorial.pitfalls ?? []).map(esc))}` +
+      `<h2>How to make and review the funding arrangement</h2>${(editorial.deepDive ?? []).map((paragraph) => `<p>${esc(paragraph)}</p>`).join('')}` +
+      `<h2>Review checklist</h2><p>Recheck the arrangement whenever services, circumstances, rates or program rules change. Confirm that older approvals still cover the service, provider and dates involved.</p>${ul((editorial.reviewChecklist ?? []).map(esc))}` +
+      `<h2>Frequently asked questions</h2>${editorial.faq.map((item) => `<h3>${esc(item.question)}</h3><p>${esc(item.answer)}</p>`).join('')}` +
+      `<h2>Official sources</h2>${ul((editorial.sources ?? []).map((source) => `<a href="${esc(source.href)}" rel="noopener">${esc(source.label)}</a>`))}` +
       (siblings.length ? `<h2>Other topics in ${esc(f.categoryGroup)}</h2>${ul(siblings.map((s) => a(`/funding/${s.slug}/`, s.name)))}` : '') +
       `<p>${a('/find-a-provider', 'Find a provider')} &middot; ${a('/funding', 'All funding topics')}</p>`,
   });

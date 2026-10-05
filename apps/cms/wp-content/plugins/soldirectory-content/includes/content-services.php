@@ -333,9 +333,9 @@ function soldirectory_apply_service_content(bool $force = false): array {
 // Once, on the first wp-admin load after deploy - after the ACF migration and
 // the baseline text, so existing content counts as "not blank".
 add_action('admin_init', function () {
-    if (get_option(SOLDIRECTORY_CONTENT_OPTION)) return;
     if (!current_user_can('edit_posts')) return;
-    soldirectory_repair_service_catalogue();
+    $repaired = soldirectory_repair_service_catalogue();
+    if (get_option(SOLDIRECTORY_CONTENT_OPTION) && $repaired === 0) return;
     foreach (get_posts(['post_type' => 'service', 'post_status' => 'any', 'numberposts' => -1, 'fields' => 'ids', 'no_found_rows' => true]) as $id) {
         soldirectory_migrate_post_from_acf((int) $id);
     }
@@ -352,6 +352,7 @@ add_action('admin_menu', function () {
 add_action('admin_post_soldirectory_apply_service_content', function () {
     if (!current_user_can('manage_options')) wp_die('Not allowed.');
     check_admin_referer('soldirectory_apply_service_content');
+    soldirectory_repair_service_catalogue();
     if (function_exists('soldirectory_apply_baseline_services')) {
         // The baseline (overview + excerpt) is marked per post, so this only touches posts it hasn't handled.
         soldirectory_apply_baseline_services();

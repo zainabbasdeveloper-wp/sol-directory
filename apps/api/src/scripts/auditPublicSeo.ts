@@ -13,6 +13,7 @@
  *   --per-type N        Audit at most N evenly-spaced pages per page type (e.g. 26,000
  *                       /ndis-providers/* pages are one template). Default: all.
  *   --limit N           Stop after N URLs in total.
+ *   --path-prefix P     Audit only URLs whose path starts with P (for example /funding/).
  *   --urls FILE         Audit the URLs listed in FILE (one per line) instead of the sitemap.
  *   --out DIR           Where to write pages.csv / report.json / report.html. Default: seo-report
  *   --min-score N       Pages below N are listed as "low". Default: 80
@@ -56,7 +57,7 @@ const numArg = (name: string): number | null => {
 
 const rawBase = argValue('--base') || process.env.SITE_URL || '';
 if (!rawBase && !argValue('--urls')) {
-  console.error('Usage: npm run audit:seo -- --base https://www.example.com [--per-type 40] [--out seo-report] [--min-score 80]');
+  console.error('Usage: npm run audit:seo -- --base https://www.example.com [--path-prefix /funding/] [--concurrency 6] [--limit 100]');
   process.exit(1);
 }
 const options = {
@@ -64,6 +65,7 @@ const options = {
   concurrency: Math.max(1, Math.min(20, Number(argValue('--concurrency')) || 6)),
   limit: numArg('--limit'),
   perType: numArg('--per-type'),
+  pathPrefix: argValue('--path-prefix') || null,
   urlsFile: argValue('--urls'),
   outDir: argValue('--out') || 'seo-report',
   minScore: Number(argValue('--min-score')) || 80,
@@ -73,7 +75,7 @@ const options = {
 };
 
 // Same list as the nginx rule in deploy/nginx-soldirectory.conf — the paths served by the SEO shell.
-const SHELL_PATH = /^\/((ndis-providers|aged-care-providers)(\/|$)|directory\/[^/]+\/?$|directory\/in\/[^/]+\/?$|condition(\/[^/]+)?\/?$|services\/[^/]+\/?$|services\/[^/]+\/[^/]+\/[^/]+\/?$|independent-workers\/[^/]+\/?$)/;
+const SHELL_PATH = /^\/((ndis-providers|aged-care-providers)(\/|$)|find-a-provider\/?$|locations\/?$|providers\/?$|support-coordinators\/?$|directory\/[^/]+\/?$|directory\/in\/[^/]+\/?$|condition(\/[^/]+)?\/?$|funding(\/[^/]+)?\/?$|guides(\/[^/]+)?\/?$|language(\/[^/]+)?\/?$|services\/[^/]+\/?$|services\/[^/]+\/[^/]+\/?$|services\/[^/]+\/[^/]+\/[^/]+\/?$|independent-workers(\/[^/]+)?\/?$)/;
 
 const decode = (value: string) => value
   .replace(/&amp;/g, '&')
@@ -142,7 +144,8 @@ async function discoverUrls(): Promise<string[]> {
     if (!result.response.ok) throw new Error(`${child} returned ${result.response.status}`);
     pageUrls.push(...sitemapLocations(result.body));
   }
-  const unique = [...new Set(pageUrls.map(onBase))];
+  const unique = [...new Set(pageUrls.map(onBase))]
+    .filter((url) => !options.pathPrefix || new URL(url).pathname.startsWith(options.pathPrefix));
   if (unique.length === 0) throw new Error('Sitemap discovery returned no page URLs');
   return unique;
 }
@@ -171,8 +174,8 @@ function sample(urls: string[], perType: number | null): string[] {
 function wordTarget(pathname: string): { target: number; severity: Severity } {
   if (/^\/services\/[^/]+\/[^/]+\/[^/]+\/?$/.test(pathname)) return { target: 1000, severity: 'error' };
   if (/^\/services\/[^/]+\/?$/.test(pathname)) return { target: 600, severity: 'warn' };
-  if (/^\/(condition|funding)\/[^/]+\/?$/.test(pathname)) return { target: 500, severity: 'warn' };
-  if (/^\/guides\/[^/]+\/?$/.test(pathname)) return { target: 500, severity: 'warn' };
+  if (/^\/(funding|guides)\/[^/]+\/?$/.test(pathname)) return { target: 1000, severity: 'error' };
+  if (/^\/(condition|language)\/[^/]+\/?$/.test(pathname)) return { target: 500, severity: 'warn' };
   if (/^\/(ndis-providers|aged-care-providers)\/[^/]+\/[^/]+\/?$/.test(pathname)) return { target: 120, severity: 'warn' };
   if (/^\/(ndis-providers|aged-care-providers)\/[^/]+\/?$/.test(pathname)) return { target: 120, severity: 'warn' };
   if (/^\/directory\/[^/]+\/?$/.test(pathname)) return { target: 120, severity: 'warn' };
@@ -206,13 +209,17 @@ function auditHtml(url: string, response: Response, html: string, ms: number): P
   words = text(mainHtml).split(/\s+/).filter(Boolean).length;
   const h1Count = (html.match(/<h1\b/gi) ?? []).length;
   const h2Count = (html.match(/<h2\b/gi) ?? []).length;
-  const jsonLdCount = (html.match(/type=["']application\/ld\+json["']/gi) ?? []).length;
+  const jsonLdBlocks = [...html.matchAll(/<script\s+[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
+  const jsonLdCount = jsonLdBlocks.length;
 
   // The app shell with nothing server-rendered into it: crawlers that don't run JavaScript see no content at all.
   const emptyShell = /<div id="root">\s*<\/div>/i.test(html) && h1Count === 0;
   if (emptyShell) {
     add('empty-shell', 'error', 55, 'raw HTML is an empty app shell — no heading, text or links until JavaScript runs');
   }
+
+  if (response.redirected) add('redirect', 'error', 8, `sitemap URL redirects to ${response.url}`);
+  if (/^\/services\/[^/]+\/[^/]+\/?$/.test(pathname)) add('legacy-service-url', 'error', 15, 'legacy two-segment service URL is present in sitemap');
 
   if (!title) add('title-missing', 'error', 25, 'missing <title>');
   else if (title.length > 65) add('title-long', 'warn', 5, `title is ${title.length} characters (aim for 30-65)`);
@@ -238,6 +245,9 @@ function auditHtml(url: string, response: Response, html: string, ms: number): P
   if (words > 400 && h2Count === 0) add('no-subheadings', 'warn', 3, 'long page with no <h2> subheadings');
 
   if (jsonLdCount === 0) add('jsonld-missing', 'error', 6, 'no structured data (JSON-LD)');
+  for (const block of jsonLdBlocks) {
+    try { JSON.parse(block[1]); } catch { add('jsonld-invalid', 'error', 8, 'invalid JSON-LD'); break; }
+  }
 
   const { target, severity } = wordTarget(pathname);
   if (words < target) add('thin-content', severity, Math.round(20 * (1 - words / target)), `thin content: ${words} words (target ${target})`);

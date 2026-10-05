@@ -70,7 +70,9 @@ export default function RegisterHubPage({ kind }: { kind: RegisterKind }) {
     return () => { alive = false; };
   }, [kind.type, query, page]);
 
-  const title = `${kind.label} providers in Australia: browse the public register | SolDirectory`;
+  const title = kind.type === 'ndis'
+    ? 'NDIS provider register Australia | SolDirectory'
+    : 'Aged care provider register Australia | SolDirectory';
   useEffect(() => {
     const total = hub ? formatCount(hub.total) : null;
     applySeoTags({

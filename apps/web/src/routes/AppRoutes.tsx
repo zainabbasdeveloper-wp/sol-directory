@@ -41,6 +41,8 @@ import MyWorkerProfilePage from '../pages/workers/MyWorkerProfile';
 import MyListingPage from '../pages/providers/MyListing';
 import ProviderListingPage, { ConditionsHubPage } from '../pages/public/ProviderListingPage';
 import FundingTopicPage, { FundingHubPage } from '../pages/public/FundingTopicPage';
+import LanguageTopicPage, { LanguageHubPage } from '../pages/public/LanguageTopicPage';
+import SupportCoordinators from '../pages/public/SupportCoordinators';
 import ProviderDirectory from '../pages/providers/ProviderDirectory';
 import ProviderProfilePage from '../pages/providers/ProviderProfilePage';
 import SavedProviders from '../pages/providers/SavedProviders';
@@ -153,6 +155,9 @@ export default function AppRoutes() {
       <Route path="/directory/for/:condition" element={<RedirectToCondition />} />
       <Route path="/funding" element={<FundingHubPage />} />
       <Route path="/funding/:slug" element={<FundingTopicPage />} />
+      <Route path="/language" element={<LanguageHubPage />} />
+      <Route path="/language/:slug" element={<LanguageTopicPage />} />
+      <Route path="/support-coordinators" element={<SupportCoordinators />} />
       <Route path="/directory/:slug" element={<ProviderPublicPage />} />
       {/* Real, register-backed pages: one per (service, suburb) with genuine
           register demand (see computeServiceSuburbs / sitemap-services-N.xml).

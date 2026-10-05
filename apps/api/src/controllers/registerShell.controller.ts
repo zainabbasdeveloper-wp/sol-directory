@@ -10,6 +10,10 @@ import { categoryListings, computeCategoryOverview, computeHub, computeServiceSu
 import { workersForService, workersInArea } from './workersPublic.controller.js';
 import { MIN_INDEXABLE_PROVIDERS, VISIBLE_PROVIDER, areaRows, conditionRows, publicLogoUrl } from './providersPublic.controller.js';
 import { serviceEditorialFor } from '@soldirectory/service-content';
+import {
+  CONDITION_TOPICS, FUNDING_TOPICS, GUIDE_DOCS, LANGUAGE_TOPICS, conditionShellEditorial, fundingShellEditorial, languageShellEditorial,
+  type Topic, type ShellEditorial,
+} from '@soldirectory/topic-content';
 
 /**
  * Crawler-readable HTML for the public-register pages.
@@ -127,7 +131,9 @@ async function hubPage(site: string, kindPath: KindPath): Promise<Page> {
   const base = `/${kindPath}`;
   return {
     status: 200,
-    title: `${kind.label} providers in Australia: browse the public register | SolDirectory`,
+    title: kind.type === 'ndis'
+      ? 'NDIS provider register Australia | SolDirectory'
+      : 'Aged care provider register Australia | SolDirectory',
     description: trimTo(`Browse ${fmt(hub.total)} ${kind.label} providers listed on the public register, by state and suburb. See the supports listed, then get matched for free.`, 158),
     canonical: base,
     noindex: hub.total === 0,
@@ -135,6 +141,8 @@ async function hubPage(site: string, kindPath: KindPath): Promise<Page> {
     body:
       `<h1>${esc(kind.label)} providers in Australia</h1>` +
       `<p>${fmt(hub.total)} ${esc(kind.label)} providers are listed on the ${esc(kind.register)}. Browse by state or suburb.</p>` +
+      `<h2>How to use public register information</h2><p>Check that the organisation name and identifier match the provider you intend to contact. Review the source status and recorded locations, but confirm the exact legal entity that will deliver and invoice for support. Similar trading names can belong to different organisations, and national registration does not mean every service is offered in every suburb.</p>` +
+      `<h2>Checks to make before choosing support</h2><p>Ask about the specific service, worker qualifications, safeguards, complete rates, travel, cancellations and earliest realistic start date. Verify current status with the official source where registration is required. Keep quotes, service agreements and important answers in writing so options can be compared consistently. A public record does not prove current capacity, funding acceptance or personal fit.</p>` +
       `<h2>Browse by state</h2><ul>${STATE_CODES.filter((c) => hub.states[c]).map((c) => li(`${base}/${c.toLowerCase()}`, `${kind.label} providers in ${STATE_NAMES[c]}`, `(${fmt(hub.states[c])})`)).join('')}</ul>` +
       `<h2>Popular suburbs</h2><ul>${hub.suburbs.slice(0, 40).map((s) => li(`${base}/${s.state.toLowerCase()}/${s.slug}`, `${s.suburb}, ${s.state}`, `(${fmt(s.count)})`)).join('')}</ul>`,
   };
@@ -202,6 +210,9 @@ async function listPage(site: string, kindPath: KindPath, stateSlug: string, sub
       `<nav aria-label="Breadcrumb">${crumbs.map((c, i) => (i < crumbs.length - 1 ? `<a href="${esc(c.path)}">${esc(c.name)}</a>` : esc(c.name))).join(' / ')}</nav>` +
       `<h1>${esc(kind.label)} providers in ${esc(areaName)}</h1>` +
       `<p>${fmt(total)} ${esc(kind.label)} ${total === 1 ? 'provider is' : 'providers are'} listed on the ${esc(kind.register)} for ${esc(areaName)}.</p>` +
+      `<h2>Using this local register list</h2><p>Location information can reflect a registered address, an office or an area associated with a public record. It does not necessarily show where a provider currently sends workers or has vacancies. Open each record to check the organisation and identifier, then confirm that the provider delivers the required support in ${esc(areaName)}.</p>` +
+      `<h2>Questions for shortlisted providers</h2><p>Ask about the exact service, worker qualifications, registration requirements, earliest start date and continuity when a regular worker is unavailable. Request all rates and terms in writing, including travel, reports, cancellations and administration. Also ask how the provider handles consent, privacy, incidents, complaints and ending or changing services.</p>` +
+      `<h2>Verify before making an arrangement</h2><p>Match the provider's legal name and identifier to the official source, especially where trading names are similar. Public registration is one check, not a guarantee of service quality, funding approval or personal fit. Compare more than one option where practical and keep the source record, quote and service agreement.</p>` +
       `<ul>${docs.map((d) => li(`/${kindPath}/${d.slug}`, registerName(d), d.supportCategories.length ? `– ${d.supportCategories.slice(0, 3).join(', ')}` : '')).join('')}</ul>` +
       `<p>${pager}</p>${workersHtml}${extra}`,
   };
@@ -246,7 +257,11 @@ async function providerPage(site: string, kindPath: KindPath, slug: string): Pro
       `<h1>${esc(registerName(doc))}</h1>` +
       `<p>${esc(registerName(doc))} is ${esc(kind.listedAs)} in ${esc(doc.states.map((s) => STATE_NAMES[s] ?? s).join(', '))}. This listing comes from the ${esc(kind.register)} — check the official register for its current status.</p>` +
       (doc.services.length ? `<h2>Supports listed</h2><ul>${doc.services.map((s) => `<li>${esc(s)}</li>`).join('')}</ul>` : '') +
-      (doc.areas.length ? `<h2>Areas listed</h2><ul>${doc.areas.slice(0, 60).map((a) => li(`/${kindPath}/${a.state.toLowerCase()}/${a.suburbSlug}`, `${a.suburb}, ${a.state}`)).join('')}</ul>` : ''),
+      (doc.areas.length ? `<h2>Areas listed</h2><ul>${doc.areas.slice(0, 60).map((a) => li(`/${kindPath}/${a.state.toLowerCase()}/${a.suburbSlug}`, `${a.suburb}, ${a.state}`)).join('')}</ul>` : '') +
+      `<h2>What this register record means</h2><p>This page summarises public-source information linked to the named organisation. It is a verification starting point, not an endorsement. A registration or public record does not by itself confirm service quality, current capacity, service-area coverage, funding acceptance or whether a particular worker is suitable for one person's needs.</p>` +
+      `<h2>Verify the details before engaging the provider</h2><p>Confirm the legal entity, identifier and current status against the official source. Ask which services are delivered at the relevant location, who will provide them, what qualifications or screening apply and when support can realistically start. Request complete rates for sessions, travel, reports, cancellations and administration, plus the process for incidents, complaints and ending an agreement.</p>` +
+      `<h2>Compare the service arrangement</h2><p>Registration requirements vary by program and support type. Check whether registration is required for the intended service and funding arrangement rather than assuming every listed provider can deliver it. Keep the source check, quote, service agreement and important answers in writing. SolDirectory does not claim that this record shows live capacity.</p>` +
+      `<p><a href="/${kindPath}">Browse the full register</a> · <a href="/find-a-provider">Compare provider profiles</a> · <a href="/locations">Browse by location</a></p>`,
   };
 }
 
@@ -408,7 +423,8 @@ async function workerListPage(site: string, page: number, filtered: boolean): Pr
 // ---------------------------------------------------------------
 async function providerFilterPage(site: string, mode: 'area' | 'condition', slug: string, page: number): Promise<Page> {
   const rows = mode === 'area' ? await areaRows() : await conditionRows();
-  const row = rows.find((r) => r.slug === slug);
+  const topic = mode === 'condition' ? CONDITION_TOPICS.find((item) => item.slug === slug) : undefined;
+  const row = rows.find((r) => r.slug === slug) ?? (topic ? { slug: topic.slug, name: topic.name, count: 0 } : undefined);
   if (!row) return notFound();
 
   const field = mode === 'area' ? 'serviceSuburbs' : 'conditionExperience';
@@ -428,36 +444,334 @@ async function providerFilterPage(site: string, mode: 'area' | 'condition', slug
   const pager =
     (page > 1 ? `<a rel="prev" href="${esc(page === 2 ? base : `${base}?page=${page - 1}`)}">Previous page</a> ` : '') +
     (page < totalPages ? `<a rel="next" href="${esc(`${base}?page=${page + 1}`)}">Next page</a>` : '');
+  const editorial = topic ? conditionShellEditorial(topic) : null;
+  const editorialBody = topic && editorial
+    ? topicBody(topic, editorial, 'Planning and checking support', 'Questions to ask before choosing support')
+    : '';
 
   return {
     status: 200,
     title: `${heading}${page > 1 ? ` (page ${page})` : ''} | SolDirectory`,
     description: trimTo(`${fmt(total)} ${total === 1 ? 'provider lists' : 'providers list'} ${mode === 'area' ? `${row.name} as an area they support` : `experience supporting ${row.name}`} on SolDirectory. See their supports and service areas, then get matched for free.`, 158),
     canonical: page > 1 ? `${base}?page=${page}` : base,
-    noindex: total < MIN_INDEXABLE_PROVIDERS,
+    noindex: mode === 'area' && total < MIN_INDEXABLE_PROVIDERS,
     jsonLd: [{ id: 'directory-breadcrumbs', data: { '@type': 'BreadcrumbList', itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Home', item: `${site}/` },
       { '@type': 'ListItem', position: 2, name: parent.name, item: `${site}${parent.href}` },
       { '@type': 'ListItem', position: 3, name: row.name, item: `${site}${base}` },
-    ] } }],
+    ] } },
+    ...(editorial ? topicJsonLd(site, base, heading, editorial) : [])],
     body:
       `<nav aria-label="Breadcrumb"><a href="/">Home</a> / <a href="${parent.href}">${esc(parent.name)}</a> / ${esc(row.name)}</nav><h1>${esc(heading)}</h1>` +
       `<p>${fmt(total)} ${total === 1 ? 'provider' : 'providers'} on SolDirectory.</p>` +
-      `<ul>${(docs as any[]).map((p) => li(`/directory/${p.slug}`, p.tradingName || p.legalEntityName, (p.registrationGroups ?? []).length ? `– ${(p.registrationGroups as string[]).slice(0, 3).join(', ')}` : '')).join('')}</ul><p>${pager}</p>`,
+      `<ul>${(docs as any[]).map((p) => li(`/directory/${p.slug}`, p.tradingName || p.legalEntityName, (p.registrationGroups ?? []).length ? `– ${(p.registrationGroups as string[]).slice(0, 3).join(', ')}` : '')).join('')}</ul><p>${pager}</p>` + editorialBody,
   };
 }
 
 async function conditionsHubPage(site: string): Promise<Page> {
   const rows = await conditionRows();
+  const counts = new Map(rows.map((row) => [row.slug, row.count]));
   return {
     status: 200,
     title: 'Providers by experience supporting a condition or need | SolDirectory',
     description: 'Browse providers by the conditions and needs they say they have experience supporting. Providers write their own profiles.',
     canonical: '/condition',
-    noindex: rows.length === 0,
-    jsonLd: [],
-    body: `<h1>Find providers by experience</h1><ul>${rows.map((r) => li(`/condition/${r.slug}`, r.name, `(${fmt(r.count)})`)).join('')}</ul>`,
+    noindex: false,
+    jsonLd: [breadcrumbLd(site, [{ name: 'Home', path: '/' }, { name: 'Condition', path: '/condition' }])],
+    body: `<h1>Find providers by condition or support need</h1><p>Browse general information and providers who say they have relevant experience. A provider writes its own profile, so confirm experience, staff, availability and fit directly.</p><ul>${CONDITION_TOPICS.map((topic) => li(`/condition/${topic.slug}`, topic.name, counts.has(topic.slug) ? `(${fmt(counts.get(topic.slug)!)})` : '')).join('')}</ul>`,
   };
+}
+
+function topicJsonLd(site: string, canonical: string, name: string, editorial: ShellEditorial): Page['jsonLd'] {
+  return [
+    { id: 'topic-page', data: { '@type': 'WebPage', name, url: `${site}${canonical}`, isPartOf: { '@type': 'WebSite', name: 'SolDirectory', url: site } } },
+    { id: 'topic-faq', data: { '@type': 'FAQPage', mainEntity: editorial.faq.map((faq) => ({
+      '@type': 'Question', name: faq.question, acceptedAnswer: { '@type': 'Answer', text: faq.answer },
+    })) } },
+  ];
+}
+
+function topicBody(topic: Topic, editorial: ShellEditorial, overviewHeading: string, checksHeading: string): string {
+  return `<h2>${esc(overviewHeading)}</h2><p>${esc(editorial.overview)}</p>` +
+    `<p>Every person’s circumstances, goals and existing supports are different. Use this information as a starting point, check current official requirements and obtain advice from the responsible funding or health body where needed.</p>` +
+    `<h2>${esc(checksHeading)}</h2><ol>${editorial.checks.map((item) => `<li>${esc(item)}</li>`).join('')}</ol>` +
+    `<h2>Frequently asked questions about ${esc(topic.name)}</h2>` +
+    editorial.faq.map((faq) => `<h3>${esc(faq.question)}</h3><p>${esc(faq.answer)}</p>`).join('');
+}
+
+function fundingTopicPage(site: string, slug: string): Page {
+  const topic = FUNDING_TOPICS.find((item) => item.slug === slug);
+  if (!topic) return notFound();
+  const base = `/funding/${topic.slug}`;
+  const editorial = fundingShellEditorial(topic);
+  const siblings = FUNDING_TOPICS.filter((item) => item.categoryGroup === topic.categoryGroup && item.slug !== topic.slug);
+  const fundingDetails =
+    `<h2>How to prepare before arranging support</h2><p>Start with the current approval, plan, policy or program guidance rather than relying on a provider’s general description. The same support may be paid differently depending on management, registration, referral, evidence and prior-approval requirements. Confirm who can make a binding decision and keep that decision with the service records.</p>` +
+    `<ol>${(editorial.steps ?? []).map((item) => `<li>${esc(item)}</li>`).join('')}</ol>` +
+    `<h2>What this page can and cannot confirm</h2><p>This guide explains the usual questions, records and safeguards connected with ${esc(topic.name.toLowerCase())}, but it cannot confirm an individual approval, available budget, current provider capacity or payment outcome. Check the current arrangement with the responsible funding body and ask the provider to put its role, complete fees, service scope and approval dependencies in writing before support begins.</p>` +
+    `<h2>Information and records to have ready</h2><p>Organised records help a funding body or provider answer the right question, prepare an accurate quote and resolve billing issues before they interrupt support. Share sensitive information only with consent and only where it is needed.</p>` +
+    `<ul>${(editorial.records ?? []).map((item) => `<li>${esc(item)}</li>`).join('')}</ul>` +
+    `<h2>Questions to ask providers</h2><p>A provider should explain its role, eligibility or approval dependencies, complete fees and billing process without implying that a directory listing guarantees funding. Compare answers in writing rather than relying on a headline rate.</p>` +
+    `<ul>${(editorial.providerQuestions ?? []).map((item) => `<li>${esc(item)}</li>`).join('')}</ul>` +
+    `<h2>Common mistakes to avoid</h2><ul>${(editorial.pitfalls ?? []).map((item) => `<li>${esc(item)}</li>`).join('')}</ul>` +
+    `<h2>How to make and review the funding arrangement</h2>${(editorial.deepDive ?? []).map((paragraph) => `<p>${esc(paragraph)}</p>`).join('')}` +
+    `<h2>Review checklist</h2><p>Recheck the arrangement at regular intervals and whenever services, circumstances, rates or program rules change. Record who confirmed each important decision and the date it was made. Before relying on an older approval or agreement, confirm that it remains current and still covers the service, provider and dates involved.</p>` +
+    `<ul>${(editorial.reviewChecklist ?? []).map((item) => `<li>${esc(item)}</li>`).join('')}</ul>` +
+    `<h2>Official sources</h2><ul>${(editorial.sources ?? []).map((source) => li(source.href, source.label)).join('')}</ul>` +
+    `<h2>Other ${esc(topic.categoryGroup)} topics</h2><ul>${siblings.map((item) => li(`/funding/${item.slug}`, item.name)).join('')}</ul>`;
+  return {
+    status: 200,
+    title: `${topic.name} | Funding | SolDirectory`,
+    description: trimTo(`Understand ${topic.name}, what to confirm with the responsible funding body, records to prepare and questions to ask providers before support begins.`, 158),
+    canonical: `${base}/`,
+    noindex: false,
+    jsonLd: [
+      breadcrumbLd(site, [{ name: 'Home', path: '/' }, { name: 'Funding', path: '/funding' }, { name: topic.name, path: base }]),
+      ...topicJsonLd(site, `${base}/`, topic.name, editorial),
+    ],
+    body: `<nav aria-label="Breadcrumb"><a href="/">Home</a> / <a href="/funding">Funding</a> / ${esc(topic.name)}</nav>` +
+      `<h1>${esc(topic.name)}</h1><p>This page provides general information about ${esc(topic.name)}. Program names, eligibility, amounts and payment rules can change, so confirm current details with the responsible official body.</p>` +
+      topicBody(topic, editorial, `How to understand ${topic.name}`, 'What to confirm before arranging support') +
+      fundingDetails +
+      `<h2>Compare provider arrangements</h2><p>Ask for eligibility or approval requirements, the provider’s role, service rates, travel, cancellations, reports, administration, possible gaps and payment timing in writing. A public-register or directory listing does not prove that a provider accepts this funding arrangement or currently has capacity.</p>` +
+      `<p><a href="/find-a-provider">Browse providers</a> or <a href="/funding">explore other funding topics</a>.</p>`,
+  };
+}
+
+function fundingHubPage(site: string): Page {
+  return {
+    status: 200,
+    title: 'NDIS, aged care and other funding | SolDirectory',
+    description: 'Understand NDIS plan management, aged care, DVA, Medicare and private funding, with practical checks, records and provider questions.',
+    canonical: '/funding',
+    noindex: false,
+    jsonLd: [breadcrumbLd(site, [{ name: 'Home', path: '/' }, { name: 'Funding', path: '/funding' }])],
+    body: `<h1>NDIS, aged care and other funding explained</h1><p>Understand common funding terms, prepare questions and confirm current rules with the responsible official body before comparing providers.</p>` +
+      `<h2>Start with the funding arrangement</h2><p>Identify the program, plan, insurance policy, claim or private-payment arrangement that applies. Then check who controls approval, whether a referral or assessment is required, the dates covered and any provider eligibility rules. A provider can explain its services and billing process, but only the responsible funding body can make a binding eligibility or payment decision.</p>` +
+      `<h2>Compare the complete cost</h2><p>Ask for service rates and every possible additional charge, including travel, reports, cancellations, administration, equipment and personal contributions. Confirm whether the provider bills the funder directly or expects payment before a claim. A rebate or capped benefit may leave a gap, while an available budget does not automatically make every proposed service eligible.</p>` +
+      `<h2>Keep useful records</h2><p>Have the current plan or approval, relevant assessment or referral, written quote, service agreement and recent budget or claim information ready. Keep invoices, payment decisions and important provider answers together. Good records make it easier to monitor spending, correct errors and explain changed circumstances before support or funding is interrupted.</p>` +
+      `<h2>Use directory information carefully</h2><p>A directory profile or public-register record can support a provider search, but it does not prove current capacity, funding acceptance or personal suitability. Confirm the legal entity, registration where required, service area, worker qualifications, safeguards and start date directly. Use each topic below to prepare questions, then <a href="/find-a-provider">compare provider profiles</a> or <a href="/locations">browse support by location</a>.</p>` +
+      [...new Set(FUNDING_TOPICS.map((topic) => topic.categoryGroup))].map((group) => `<h2>${esc(group)}</h2><ul>${FUNDING_TOPICS.filter((topic) => topic.categoryGroup === group).map((topic) => li(`/funding/${topic.slug}`, topic.name)).join('')}</ul>`).join(''),
+  };
+}
+
+function guidesHubPage(site: string): Page {
+  const guides = Object.values(GUIDE_DOCS);
+  return {
+    status: 200,
+    title: 'NDIS and aged care guides | SolDirectory',
+    description: 'Practical guides to NDIS pricing, plan management, choosing a provider and finding aged care support, with current official sources.',
+    canonical: '/guides',
+    noindex: false,
+    jsonLd: [breadcrumbLd(site, [{ name: 'Home', path: '/' }, { name: 'Guides', path: '/guides' }])],
+    body:
+      `<h1>NDIS and aged care guides</h1><p>Use these practical guides to understand common funding, pricing, provider and aged care terms before comparing support options. Each guide explains the decisions to prepare for, the records or questions that may help and where to confirm current rules with the responsible government body.</p>` +
+      `<h2>Choose the guide for your next decision</h2><ul>${guides.map((guide) => li(`/guides/${guide.slug}`, guide.title, guide.summary)).join('')}</ul>` +
+      `<h2>How to use these guides</h2><p>Start with the issue in front of you, then open the official source linked from the guide. Funding rules, program names, price limits and assessment pathways can change. General information can help you prepare questions, but it cannot determine a person's eligibility, budget, clinical needs or legal rights.</p>` +
+      `<p>When comparing providers, confirm registration or approval requirements, worker qualifications, service areas, current capacity, complete rates, travel, cancellations and complaint processes directly. Keep significant answers, quotes and service terms in writing. Public-register records are useful for checking an organisation, but they do not prove live availability or personal fit.</p>` +
+      `<h2>Move from information to options</h2><p>After identifying the relevant support and funding arrangement, <a href="/find-a-provider">compare provider profiles</a>, <a href="/locations">browse support by location</a>, check the <a href="/ndis-providers">NDIS provider register</a> or review <a href="/aged-care-providers">aged care listings</a>. SolDirectory is a directory and referral service and does not provide personal funding, medical, financial or legal advice.</p>`,
+  };
+}
+
+function guidePage(site: string, slug: string): Page {
+  const guide = GUIDE_DOCS[slug];
+  if (!guide) return notFound();
+  const path = `/guides/${guide.slug}`;
+  const body = guide.sections.map((section) =>
+    `<h2>${esc(section.heading)}</h2>` +
+    section.body.map((paragraph) => `<p>${esc(paragraph)}</p>`).join('') +
+    (section.list?.length ? `<ul>${section.list.map((item) => `<li>${esc(item)}</li>`).join('')}</ul>` : '')
+  ).join('');
+  return {
+    status: 200,
+    title: `${guide.title} | SolDirectory`,
+    description: guide.summary,
+    canonical: path,
+    noindex: false,
+    jsonLd: [
+      breadcrumbLd(site, [{ name: 'Home', path: '/' }, { name: 'Guides', path: '/guides' }, { name: guide.title, path }]),
+      { id: 'guide-page', data: { '@type': 'WebPage', name: guide.title, description: guide.summary, url: `${site}${path}`, isPartOf: { '@type': 'WebSite', name: 'SolDirectory', url: site } } },
+    ],
+    body:
+      `<nav aria-label="Breadcrumb"><a href="/">Home</a> / <a href="/guides">Guides</a> / ${esc(guide.title)}</nav>` +
+      `<h1>${esc(guide.title)}</h1><p>${esc(guide.summary)}</p>` +
+      `<p>This guide provides general information, not personal advice. Program names, prices, eligibility and service rules can change. Confirm the details that apply today with the official source and relevant funding body before making a decision.</p>` +
+      body +
+      `<h2>Continue your search</h2><ul>${guide.internalLinks.map((item) => li(item.href, item.label)).join('')}</ul>` +
+      `<h2>Official source</h2><p><a href="${esc(guide.officialLink.href)}" rel="noopener nofollow">${esc(guide.officialLink.label)}</a></p>` +
+      `<h2>Other guides</h2><ul>${Object.values(GUIDE_DOCS).filter((item) => item.slug !== guide.slug).map((item) => li(`/guides/${item.slug}`, item.title)).join('')}</ul>`,
+  };
+}
+
+async function languageTopicPage(site: string, slug: string, page: number): Promise<Page> {
+  const topic = LANGUAGE_TOPICS.find((item) => item.slug === slug);
+  if (!topic) return notFound();
+  const base = `/language/${topic.slug}`;
+  const editorial = languageShellEditorial(topic);
+  const filter = {
+    ...VISIBLE_PROVIDER,
+    slug: { $exists: true, $ne: null },
+    languages: new RegExp(`^\\s*${topic.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'i'),
+  };
+  const [docs, total] = await Promise.all([
+    Provider.find(filter).select('legalEntityName tradingName slug registrationGroups').sort({ tradingName: 1, legalEntityName: 1, _id: 1 }).skip((page - 1) * LEVEL_PAGE).limit(LEVEL_PAGE).lean(),
+    Provider.countDocuments(filter),
+  ]);
+  const totalPages = Math.max(1, Math.ceil(total / LEVEL_PAGE));
+  const pager =
+    (page > 1 ? `<a rel="prev" href="${esc(page === 2 ? base : `${base}?page=${page - 1}`)}">Previous page</a> ` : '') +
+    (page < totalPages ? `<a rel="next" href="${esc(`${base}?page=${page + 1}`)}">Next page</a>` : '');
+  const heading = `${topic.name} speaking support providers`;
+
+  return {
+    status: 200,
+    title: `${topic.name} speaking support providers and communication guide | SolDirectory`,
+    description: trimTo(`Find providers that list ${topic.name} and learn what to confirm about fluency, interpreters, cultural safety, privacy, funding and communication before support begins.`, 158),
+    canonical: page > 1 ? `${base}?page=${page}` : `${base}/`,
+    noindex: false,
+    jsonLd: [
+      breadcrumbLd(site, [{ name: 'Home', path: '/' }, { name: 'Language', path: '/language' }, { name: topic.name, path: base }]),
+      ...topicJsonLd(site, `${base}/`, heading, editorial),
+    ],
+    body:
+      `<nav aria-label="Breadcrumb"><a href="/">Home</a> / <a href="/language">Language</a> / ${esc(topic.name)}</nav>` +
+      `<h1>${esc(heading)}</h1><p>${esc(editorial.overview)}</p>` +
+      `<h2>Providers that list ${esc(topic.name)}</h2><p>${fmt(total)} ${total === 1 ? 'provider lists' : 'providers list'} ${esc(topic.name)}. Providers supply their own language information, so confirm the specific worker, fluency, dialect, communication method and availability directly.</p>` +
+      `<ul>${(docs as any[]).map((provider) => li(`/directory/${provider.slug}`, provider.tradingName || provider.legalEntityName, (provider.registrationGroups ?? []).slice(0, 3).join(', '))).join('')}</ul><p>${pager}</p>` +
+      topicBody(topic, editorial, 'Planning clear communication', 'Questions to ask before support begins') +
+      `<h2>Bilingual support and qualified interpreters</h2><p>A bilingual support worker and an interpreter have different roles. Direct language-matched support may help everyday communication and relationships. A qualified independent interpreter may still be important for assessment, consent, complaints, complex decisions or technical information.</p>` +
+      `<h2>Privacy, consent and cultural safety</h2><p>Do not assume a family member should interpret, receive private information or make decisions. Confirm consent and decision-making arrangements directly. Cultural safety cannot be inferred from shared language alone; ask how the provider responds to community connections, gender preferences, faith, food, family roles and experiences of discrimination without stereotyping the person.</p>` +
+      `<h2>Funding and written service terms</h2><p>Interpreter and translation costs depend on the program, purpose and current rules. Confirm approval, booking responsibility and fees before support begins. Request important terms in an accessible format and check rates, travel, cancellations, reports, interpreter arrangements and exit terms.</p>` +
+      `<h2>Official sources</h2><ul>` +
+      li('https://www.ndis.gov.au/contact/ndis-translations-and-interpreting', 'NDIS translations and interpreting') +
+      li('https://www.tisnational.gov.au/', 'TIS National') +
+      li('https://www.naati.com.au/online-directory/', 'NAATI practitioner directory') +
+      li('https://www.ndiscommission.gov.au/participants', 'NDIS Quality and Safeguards Commission') +
+      `</ul><p><a href="/language">Browse other language and communication guides</a></p>`,
+  };
+}
+
+function languageHubPage(site: string): Page {
+  const groups = [...new Set(LANGUAGE_TOPICS.map((topic) => topic.categoryGroup))];
+  return {
+    status: 200,
+    title: 'Find support by language and communication preference | SolDirectory',
+    description: 'Browse providers by languages they list and learn how to check fluency, interpreting, accessible communication, privacy and cultural safety.',
+    canonical: '/language',
+    noindex: false,
+    jsonLd: [breadcrumbLd(site, [{ name: 'Home', path: '/' }, { name: 'Language', path: '/language' }])],
+    body: `<h1>Find support by language</h1><p>Browse provider-supplied language information, then confirm the worker, fluency, dialect and communication method directly. A shared language does not prove interpreting credentials, cultural safety, specialist experience or current availability.</p>` +
+      groups.map((group) => `<h2>${esc(group)}</h2><ul>${LANGUAGE_TOPICS.filter((topic) => topic.categoryGroup === group).map((topic) => li(`/language/${topic.slug}`, topic.name)).join('')}</ul>`).join(''),
+  };
+}
+
+function supportCoordinatorsPage(site: string): Page {
+  const path = '/support-coordinators';
+  const faq = [
+    ['Does SolDirectory recommend or rank providers?', 'No. Directory listings are not recommendations. Confirm suitability, registration, screening, insurance, capacity, pricing and service terms directly.'],
+    ['Can a coordinator submit an enquiry for a participant?', 'Yes, where the coordinator has authority and consent to share the information. Include only what providers need to assess the request.'],
+    ['Does a directory listing prove current capacity?', 'No. Availability can change and public-register listings do not indicate capacity. Confirm the proposed start date and roster directly.'],
+    ['What should I do for an immediate safety emergency?', 'Do not use a directory enquiry as an emergency response. Call 000 where there is immediate danger and use the participant’s crisis, clinical or safeguarding pathways.'],
+  ];
+  return {
+    status: 200,
+    title: 'Provider referrals for support coordinators | SolDirectory',
+    description: 'A practical guide for preparing referrals, comparing disability and aged care providers, checking capacity, consent, safeguards, fees and service agreements.',
+    canonical: path,
+    noindex: false,
+    jsonLd: [
+      breadcrumbLd(site, [{ name: 'Home', path: '/' }, { name: 'Support coordinators', path }]),
+      { id: 'coordinator-page', data: { '@type': 'WebPage', name: 'Provider referrals for support coordinators', url: `${site}${path}`, isPartOf: { '@type': 'WebSite', name: 'SolDirectory', url: site } } },
+      { id: 'coordinator-faq', data: { '@type': 'FAQPage', mainEntity: faq.map(([question, answer]) => ({ '@type': 'Question', name: question, acceptedAnswer: { '@type': 'Answer', text: answer } })) } },
+    ],
+    body:
+      `<nav aria-label="Breadcrumb"><a href="/">Home</a> / Support coordinators</nav><h1>Provider referrals for support coordinators</h1>` +
+      `<p>Prepare a clear request, compare providers consistently and keep the participant in control of each decision. SolDirectory is a directory and referral service; it does not deliver supports, choose a provider or replace due diligence.</p>` +
+      `<h2>Prepare a referral providers can assess</h2><p>Confirm authority and consent before sharing information. Describe the requested tasks, goals, schedule, location, start date, funding arrangement, communication preferences and person-specific risks. Include only what a provider needs to decide whether it can safely meet the request.</p>` +
+      `<ol><li>Describe tasks, frequency, preferred days, shift length and proposed start date.</li><li>Record service locations and travel expectations.</li><li>State funding and management arrangements, while checking budget and registration rules separately.</li><li>Include communication, access, cultural and worker preferences.</li><li>Describe required competencies, plans and equipment.</li><li>Name the decision-maker, contact pathway and any genuine deadline.</li></ol>` +
+      `<h2>Urgent and complex referrals</h2><p>Urgency should change escalation and planning, not lower the quality bar. A directory response is not guaranteed and is not an emergency service. For urgent non-emergency requests, explain the real deadline, interim supports, minimum safe staffing, required competencies, clinical responsibilities, equipment and environmental risks.</p>` +
+      `<h2>Compare providers consistently</h2><p>Confirm who will deliver support, relevant experience, qualifications, supervision, continuity, realistic start date, offered roster, backup arrangements, registration, worker screening, insurance, incident and complaint processes and required person-specific training.</p>` +
+      `<p>A directory or public-register listing is not an endorsement and does not prove suitability or availability. Check the relevant official register and current evidence directly.</p>` +
+      `<h2>Pricing, funding and service agreements</h2><p>Ask for complete proposed costs in writing, including rates, travel, non-face-to-face work, reports, minimum shifts, cancellations and exit terms. Review the service agreement with the participant in an accessible format before services begin.</p>` +
+      `<h2>Consent, privacy and records</h2><p>Share the minimum necessary information through secure channels. Record authority or consent, what was shared, providers contacted, responses, evidence checked, options considered, the participant’s decision and follow-up actions.</p>` +
+      `<h2>After a provider responds</h2><p>A fast response is not proof of fit. Arrange a conversation in the participant’s preferred format, verify outstanding evidence and agree how progress, incidents, missed shifts, complaints and changes in need will be communicated.</p>` +
+      `<h2>Frequently asked questions</h2>${faq.map(([question, answer]) => `<h3>${esc(question)}</h3><p>${esc(answer)}</p>`).join('')}` +
+      `<h2>Official checks and guidance</h2><ul>` +
+      li('https://www.ndiscommission.gov.au/providers/provider-registers', 'NDIS Commission provider registers') +
+      li('https://www.ndiscommission.gov.au/workers/worker-screening', 'NDIS worker screening') +
+      li('https://www.ndis.gov.au/participants/working-providers', 'NDIS guidance on working with providers') +
+      li('https://www.myagedcare.gov.au/find-a-provider', 'My Aged Care provider search') +
+      `</ul><p><a href="/find-a-provider">Find providers</a> or submit a provider enquiry through SolDirectory.</p>`,
+  };
+}
+
+function publicMarketingPage(site: string, key: 'home' | 'find' | 'locations' | 'providers' | 'workers'): Page {
+  const pages: Record<typeof key, Omit<Page, 'status' | 'noindex'>> = {
+    home: {
+      title: 'SolDirectory | Find NDIS and aged care providers',
+      description: 'Search NDIS and aged care provider profiles by support and location, compare public-register listings, or submit one free provider enquiry.',
+      canonical: '/',
+      jsonLd: [{ id: 'home-page', data: { '@type': 'WebPage', name: 'SolDirectory provider directory', url: `${site}/`, isPartOf: { '@type': 'WebSite', name: 'SolDirectory', url: `${site}/` } } }],
+      body: `<h1>Find NDIS and aged care providers near you</h1>` +
+        `<p>SolDirectory helps participants, families and support coordinators search provider profiles by support and location. You can browse directly or submit one free enquiry so relevant member providers can assess the support, funding arrangement, area and preferred timeframe.</p>` +
+        `<h2>Search in the way that suits you</h2><p>Start with the <a href="/find-a-provider">provider directory</a> when you know the support or suburb. Browse the <a href="/services">service guides</a> to understand common options and questions, use <a href="/locations">location pages</a> to search nearby areas, or explore providers by <a href="/condition">condition and support need</a>. Funding guides explain common <a href="/funding">NDIS, aged care, DVA and private arrangements</a>.</p>` +
+        `<h2>Member profiles and public registers are different</h2><p>SolDirectory member providers maintain profiles with their supports, service areas, funding arrangements and intake status. They are asked to reconfirm capacity regularly. The separate <a href="/ndis-providers">NDIS provider register</a> and <a href="/aged-care-providers">aged care provider register</a> pages reproduce public register information for reference. A register record does not show present capacity and is not an endorsement.</p>` +
+        `<h2>Compare before choosing</h2><p>Ask who will deliver the support, what relevant experience and qualifications they hold, when services can begin and how continuity is managed. Confirm registration, worker screening, insurance and any person-specific training directly. Request complete rates, travel, cancellation, reporting and exit terms in writing before support begins.</p>` +
+        `<h2>How provider enquiries work</h2><p>One enquiry records the requested support, location, funding and timing. Matching identifies member providers whose profile appears relevant; it does not rank quality or guarantee a response. Providers may contact the person who submitted the request, and that person decides whether to continue, compare alternatives or decline. SolDirectory does not deliver care or choose a provider.</p>` +
+        `<p>For more preparation help, read the <a href="/guides/choosing-a-provider">provider selection guide</a>, learn about <a href="/guides/plan-management-basics">NDIS plan management</a>, or review the <a href="/support-coordinators">support coordinator referral guide</a>.</p>`,
+    },
+    find: {
+      title: 'Find NDIS and aged care providers | SolDirectory',
+      description: 'Search provider profiles and public-register listings by support, suburb or business name, then compare availability, credentials and service terms.',
+      canonical: '/find-a-provider',
+      jsonLd: [breadcrumbLd(site, [{ name: 'Home', path: '/' }, { name: 'Find a provider', path: '/find-a-provider' }])],
+      body: `<nav aria-label="Breadcrumb"><a href="/">Home</a> / Find a provider</nav><h1>Find a provider</h1>` +
+        `<p>Search SolDirectory member profiles and public NDIS or aged care register records by support, suburb or provider name. These sources are shown separately because they answer different questions: a member profile can describe current services and intake status, while a public-register record shows information imported from the responsible register.</p>` +
+        `<h2>Start with the support and location</h2><p>Choose the support needed and the suburb where it will happen. A nearby office does not necessarily mean a provider serves that address, and a provider based elsewhere may operate a mobile team in the area. Confirm the exact service location, travel arrangements, schedule and proposed start date directly.</p>` +
+        `<h2>Read each result carefully</h2><p>Provider profiles are written by providers. Check the supports offered, service areas, accepted funding, relevant experience, languages and intake status, then verify anything important before relying on it. Public-register listings can broaden the search but do not indicate vacancies, waiting times or whether the organisation accepts a particular referral.</p>` +
+        `<h2>Questions to ask before engaging a provider</h2><ul><li>Who will actually deliver the support, and what qualifications, screening and experience apply?</li><li>When can support begin, and what happens when a regular worker is unavailable?</li><li>What are the complete rates, travel, cancellation, report and administration charges?</li><li>How are preferences, consent, privacy, incidents, complaints and changes in need handled?</li><li>Which funding arrangements are accepted, and is provider registration required for this support?</li></ul>` +
+        `<h2>Use the wider directory</h2><p>Browse all <a href="/services">service guides</a>, search by <a href="/locations">location</a>, review <a href="/condition">condition-related guidance</a>, compare <a href="/funding">funding topics</a>, or read <a href="/guides/choosing-a-provider">how to choose a provider</a>. SolDirectory does not recommend providers or guarantee availability; the final choice and service agreement remain with the person arranging support.</p>`,
+    },
+    locations: {
+      title: 'Find providers by location | SolDirectory',
+      description: 'Browse NDIS and aged care providers by Australian state, city and suburb, then confirm service areas, travel, availability and local delivery.',
+      canonical: '/locations',
+      jsonLd: [breadcrumbLd(site, [{ name: 'Home', path: '/' }, { name: 'Locations', path: '/locations' }])],
+      body: `<nav aria-label="Breadcrumb"><a href="/">Home</a> / Locations</nav><h1>Find providers near you</h1>` +
+        `<p>Start with the suburb where support will be delivered, not only the provider's office address. Providers may travel across several service areas, operate mobile teams or offer suitable remote appointments. Search the exact suburb first and broaden to nearby areas when you need more options.</p>` +
+        `<h2>What a location result means</h2><p>A SolDirectory location page is based on service areas entered by current member providers. A public-register location page is based on areas recorded in the imported NDIS Commission or My Aged Care data. Neither source guarantees that a provider has capacity, offers every service at that location or can meet a requested schedule.</p>` +
+        `<h2>Confirm practical travel arrangements</h2><p>Ask whether the provider serves the precise address, how workers are allocated and whether travel time or kilometres are charged. Check minimum shift lengths, appointment windows, parking, transport responsibilities and what happens when a worker is delayed or unavailable. For regional and remote areas, discuss outreach schedules, telehealth and backup arrangements.</p>` +
+        `<h2>Search Australia by register</h2><p>Browse the <a href="/ndis-providers">NDIS register by state and suburb</a> or the <a href="/aged-care-providers">aged care register by state and suburb</a>. These pages are useful for discovering organisations recorded in an area, while the <a href="/find-a-provider">member directory</a> is the place to review SolDirectory profiles and submit an enquiry.</p>` +
+        `<h2>Location is only one part of fit</h2><p>Also compare the requested support, worker qualifications, relevant experience, communication preferences, cultural safety, funding, current availability and full written fees. Review the <a href="/services">service guides</a> and <a href="/guides/choosing-a-provider">provider checklist</a> before making a decision. Confirm registration, insurance and screening directly rather than assuming proximity proves suitability.</p>`,
+    },
+    providers: {
+      title: 'List your provider business | SolDirectory',
+      description: 'Create or claim a provider profile, maintain services and capacity, and review relevant NDIS and aged care enquiries in your service areas.',
+      canonical: '/providers',
+      jsonLd: [breadcrumbLd(site, [{ name: 'Home', path: '/' }, { name: 'For providers', path: '/providers' }])],
+      body: `<nav aria-label="Breadcrumb"><a href="/">Home</a> / For providers</nav><h1>List your provider business on SolDirectory</h1>` +
+        `<p>Create or claim a profile that explains your supports, service areas, accepted funding and current intake status. SolDirectory compares those details with enquiries submitted by participants, families and support coordinators so your team can assess relevant requests.</p>` +
+        `<h2>Understand what an enquiry means</h2><p>An enquiry is a request for information, not an exclusive referral, confirmed client or booking. More than one relevant provider may be notified, and the person decides whether to respond or proceed. Enquiry volume depends on local demand, profile accuracy, services, funding compatibility and confirmed capacity; no plan guarantees leads or work.</p>` +
+        `<h2>Keep profile information accurate</h2><p>List only services your organisation actually delivers and areas it genuinely covers. Keep the intake email, funding arrangements, languages and condition experience current. Providers are asked to reconfirm capacity regularly, and stale profiles may be paused until availability is confirmed again.</p>` +
+        `<h2>Assess every request independently</h2><p>Before accepting work, confirm the person's support requirements, location, schedule, risks, communication preferences, funding and decision-making arrangements. Check whether registration or specialist qualifications are required. Agree scope, rates, travel, cancellations, privacy, incidents, complaints and exit terms in a written service agreement.</p>` +
+        `<h2>Directory position and subscriptions</h2><p>Profiles are not ranked by payment. A free listing provides directory visibility and limited enquiry information; paid features can provide additional contact access and account tools according to the current plan terms. SolDirectory does not take a percentage of fees agreed between a provider and participant.</p>` +
+        `<p>People searching for support can use the <a href="/find-a-provider">provider directory</a>, browse <a href="/services">service guides</a> and review public <a href="/ndis-providers">NDIS</a> or <a href="/aged-care-providers">aged care</a> register records. Providers should describe their own status accurately and never imply that a listing is an endorsement.</p>`,
+    },
+    workers: {
+      title: 'Independent support workers | SolDirectory',
+      description: 'Create an independent worker profile with services, experience, location and availability so eligible organisations can assess suitable opportunities.',
+      canonical: '/independent-workers',
+      jsonLd: [breadcrumbLd(site, [{ name: 'Home', path: '/' }, { name: 'Independent workers', path: '/independent-workers' }])],
+      body: `<nav aria-label="Breadcrumb"><a href="/">Home</a> / Independent workers</nav><h1>Create an independent support worker profile</h1>` +
+        `<p>Independent support workers, nurses and allied health assistants can publish a structured professional profile describing services, experience, location, languages and availability. Eligible organisations can browse public profiles and request contact about suitable opportunities.</p>` +
+        `<h2>Information to include</h2><p>Describe the supports you deliver, participant groups and relevant experience in practical terms. Add your suburb, travel area, preferred schedule, languages, transport arrangements and indicative rate. Keep availability and professional evidence current so an organisation can decide whether a conversation is worthwhile.</p>` +
+        `<h2>Checks and professional responsibilities</h2><p>Depending on the role, you may need an NDIS Worker Screening Check, Working with Children Check, aged care screening, professional registration, first aid training, qualifications or insurance. A profile does not replace verification. Organisations must check evidence directly and decide whether a worker is suitable for a particular role.</p>` +
+        `<h2>Clarify the engagement</h2><p>Before accepting work, confirm the tasks, goals, location, schedule, supervision, reporting, rate, travel, cancellations, privacy, incidents and complaints. Make clear whether the arrangement is employment or independent contracting and obtain professional advice where needed. SolDirectory does not employ workers, set conditions, supervise services or guarantee work.</p>` +
+        `<h2>How contact works</h2><p>Contact details are not displayed publicly. Authorised organisations can search the <a href="/independent-workers/find">worker directory</a> and request contact after considering the profile. Workers decide whether an opportunity fits their availability and professional scope. Participants and representatives looking for provider services should use the <a href="/find-a-provider">public provider directory</a> or submit an enquiry.</p>` +
+        `<p>Workers can create an account to maintain their profile. Provider organisations looking to list services should instead review the <a href="/providers">provider listing information</a>. Publishing a profile is not an endorsement and does not guarantee an engagement.</p>`,
+    },
+  };
+  return { status: 200, noindex: false, ...pages[key] };
 }
 
 // ---------------------------------------------------------------
@@ -788,7 +1102,10 @@ async function serviceLocationPage(site: string, serviceSlug: string, stateSlug:
 
   return {
     status: 200,
-    title: `${service} providers in ${suburbName}, ${code} | SolDirectory`,
+    title: (() => {
+      const fullTitle = `${service} providers in ${suburbName}, ${code} | SolDirectory`;
+      return fullTitle.length <= 65 ? fullTitle : `${service} in ${suburbName}, ${code} | SolDirectory`;
+    })(),
     description: trimTo(description, 158),
     canonical: path,
     noindex: false,
@@ -812,6 +1129,14 @@ async function serviceLocationPage(site: string, serviceSlug: string, stateSlug:
   };
 }
 
+async function canonicalServiceLocationPath(serviceSlug: string, suburbSlug: string): Promise<string | null> {
+  const service = REAL_SERVICES.find((item) => slugifyService(item) === serviceSlug);
+  if (!service || !SLUG_RE.test(suburbSlug)) return null;
+  const matches = (await computeServiceSuburbs(service)).filter((row) => row.slug === suburbSlug);
+  if (matches.length !== 1) return null;
+  return `/services/${serviceSlug}/${matches[0].state.toLowerCase()}/${suburbSlug}`;
+}
+
 /** GET /seo-shell/<original path>?<original query> — see the file comment. */
 export async function registerShell(req: Request, res: Response) {
   const url = new URL(req.originalUrl, 'http://x');
@@ -821,7 +1146,17 @@ export async function registerShell(req: Request, res: Response) {
 
   let page: Page;
   const root = parts[0];
-  if (root === 'services' && parts.length === 2) {
+  if (!root && parts.length === 0) {
+    page = publicMarketingPage(site, 'home');
+  } else if (root === 'find-a-provider' && parts.length === 1) {
+    page = publicMarketingPage(site, 'find');
+  } else if (root === 'locations' && parts.length === 1) {
+    page = publicMarketingPage(site, 'locations');
+  } else if (root === 'providers' && parts.length === 1) {
+    page = publicMarketingPage(site, 'providers');
+  } else if (root === 'independent-workers' && parts.length === 1) {
+    page = publicMarketingPage(site, 'workers');
+  } else if (root === 'services' && parts.length === 2) {
     try {
       page = await servicePage(site, parts[1]);
     } catch (e) {
@@ -831,12 +1166,30 @@ export async function registerShell(req: Request, res: Response) {
     }
   } else if (root === 'services' && parts.length === 4) {
     page = await serviceLocationPage(site, parts[1], parts[2], parts[3]);
+  } else if (root === 'services' && parts.length === 3) {
+    const canonical = await canonicalServiceLocationPath(parts[1], parts[2]);
+    if (!canonical) return res.status(404).send('Not found');
+    return res.redirect(301, `${site}${canonical}`);
   } else if (root === 'condition' && parts.length === 2) {
     // Permalink-style: /condition/:slug/ (its own top-level category
     // prefix, not nested under /directory — see AppRoutes.tsx).
     page = await providerFilterPage(site, 'condition', parts[1], pageNum);
   } else if (root === 'condition' && parts.length === 1) {
     page = await conditionsHubPage(site);
+  } else if (root === 'funding' && parts.length === 2) {
+    page = fundingTopicPage(site, parts[1]);
+  } else if (root === 'funding' && parts.length === 1) {
+    page = fundingHubPage(site);
+  } else if (root === 'guides' && parts.length === 2) {
+    page = guidePage(site, parts[1]);
+  } else if (root === 'guides' && parts.length === 1) {
+    page = guidesHubPage(site);
+  } else if (root === 'language' && parts.length === 2) {
+    page = await languageTopicPage(site, parts[1], pageNum);
+  } else if (root === 'language' && parts.length === 1) {
+    page = languageHubPage(site);
+  } else if (root === 'support-coordinators' && parts.length === 1) {
+    page = supportCoordinatorsPage(site);
   } else if (root === 'directory' && parts.length === 3 && parts[1] === 'in') {
     page = await providerFilterPage(site, 'area', parts[2], pageNum);
   } else if (root === 'directory' && parts.length === 2) {

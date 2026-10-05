@@ -32,8 +32,14 @@ export default function MegaMenu() {
         // both keep the static fallback already in state — only a
         // real, non-empty response replaces it.
         if (wpTabs && wpTabs.length > 0) {
-          setTabs(wpTabs);
-          setTab(wpTabs[0].key);
+          const managedKeys = new Set(['coordinator', 'language']);
+          const normalized = wpTabs.map((wpTab) =>
+            managedKeys.has(wpTab.key)
+              ? STATIC_MEGA_MENU_FALLBACK.find((fallback) => fallback.key === wpTab.key) ?? wpTab
+              : wpTab
+          );
+          setTabs(normalized);
+          setTab(normalized[0].key);
         }
       })
       .catch(() => {});

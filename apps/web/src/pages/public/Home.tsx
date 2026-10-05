@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PublicHeader, PublicFooter } from './PublicLayout';
-import { setJsonLd } from '../../lib/seo';
+import { applySeoTags, setJsonLd } from '../../lib/seo';
 import Counter from '../../components/Counter';
 import PhotoSlot from '../../components/PhotoSlot';
 import { useSiteStats } from '../../hooks/useSiteStats';
@@ -94,6 +94,12 @@ export default function Home() {
   // never invented. Fields siteConfig leaves blank (no address on file,
   // no social links) are simply left out, not padded with placeholders.
   useEffect(() => {
+    applySeoTags({
+      title: 'SolDirectory | Find NDIS and aged care providers',
+      description: 'Search NDIS and aged care provider profiles by support and location, compare public-register listings, or submit one free provider enquiry.',
+      canonicalUrl: `${window.location.origin}/`,
+      ogImage: `${window.location.origin}/images/front-view-smiley-girl-woman-indoors-hero.jpg`,
+    });
     setJsonLd('organization', {
       '@type': 'Organization',
       name: siteConfig.legalEntity || 'SolDirectory',
