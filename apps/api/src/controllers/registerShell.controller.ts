@@ -1137,6 +1137,10 @@ async function canonicalServiceLocationPath(serviceSlug: string, suburbSlug: str
   return `/services/${serviceSlug}/${matches[0].state.toLowerCase()}/${suburbSlug}`;
 }
 
+const LEGACY_SERVICE_REDIRECTS: Record<string, string> = {
+  'response-time-data': '/support-coordinators#provider-checks',
+};
+
 /** GET /seo-shell/<original path>?<original query> — see the file comment. */
 export async function registerShell(req: Request, res: Response) {
   const url = new URL(req.originalUrl, 'http://x');
@@ -1167,6 +1171,8 @@ export async function registerShell(req: Request, res: Response) {
   } else if (root === 'services' && parts.length === 4) {
     page = await serviceLocationPage(site, parts[1], parts[2], parts[3]);
   } else if (root === 'services' && parts.length === 3) {
+    const legacyRedirect = LEGACY_SERVICE_REDIRECTS[parts[1]];
+    if (legacyRedirect) return res.redirect(301, `${site}${legacyRedirect}`);
     const canonical = await canonicalServiceLocationPath(parts[1], parts[2]);
     if (!canonical) return res.status(404).send('Not found');
     return res.redirect(301, `${site}${canonical}`);

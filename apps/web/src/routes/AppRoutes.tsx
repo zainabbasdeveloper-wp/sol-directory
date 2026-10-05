@@ -67,6 +67,14 @@ function RedirectToFindAProvider() {
   return <Navigate to={`/find-a-provider${location.search}`} replace />;
 }
 
+function LegacyServiceLocationRoute() {
+  const { serviceSlug = '' } = useParams<{ serviceSlug: string }>();
+  if (serviceSlug === 'response-time-data') {
+    return <Navigate to="/support-coordinators#provider-checks" replace />;
+  }
+  return <ServiceLocationPage />;
+}
+
 function RequireAuth({ children }: { children: ReactElement }) {
   const { user, loading } = useAuth();
   // Prevents a flash of protected content before we know whether a
@@ -168,7 +176,7 @@ export default function AppRoutes() {
           links (coordinator/language tabs) that don't have real content of
           their own yet — kept working as-is, not part of the real page set
           above and not indexed. */}
-      <Route path="/services/:serviceSlug/:suburb" element={<ServiceLocationPage />} />
+        <Route path="/services/:serviceSlug/:suburb" element={<LegacyServiceLocationRoute />} />
       {/* Public-register pages (data from the NDIS Commission / My Aged Care registers). */}
       <Route path="/ndis-providers" element={<RegisterHubRoute path="ndis-providers" />} />
       <Route path="/ndis-providers/:first" element={<RegisterSingleRoute path="ndis-providers" />} />
