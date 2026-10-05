@@ -1,3 +1,4 @@
+import { bannerFor } from '../../data/bannerImages';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { PublicHeader, PublicFooter } from './PublicLayout';
@@ -243,7 +244,7 @@ export default function ProviderListingPage({ mode }: { mode: Mode }) {
       eyebrow={mode === 'area' ? 'Local providers' : conditionMeta?.categoryGroup ?? 'Provider experience'}
       title={heading}
       description={description}
-      image={mode === 'area' ? '/images/front-view-smiley-girl-woman-indoors-hero.jpg' : '/images/reviews.jpg'}
+      image={mode === 'area' ? bannerFor({ section: 'locations' }) : bannerFor({ text: `${knownName ?? ''} ${conditionMeta?.categoryGroup ?? ''}`, section: 'conditions' })}
       toc={toc}
     >
       {conditionMeta && (

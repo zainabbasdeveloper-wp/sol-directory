@@ -1,3 +1,4 @@
+import { bannerFor } from '../../data/bannerImages';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { LANGUAGE_TOPICS, languageShellEditorial, type Topic } from '@soldirectory/topic-content';
@@ -93,7 +94,7 @@ export default function LanguageTopicPage() {
       eyebrow={topic.categoryGroup}
       title={`${topic.name} speaking support providers`}
       description={heroExcerpt(editorial.overview)}
-      image="/images/reviews.jpg"
+      image={bannerFor({ text: 'multicultural language', section: 'conditions' })}
       toc={toc}
     >
       <section id="about" className="wp-cpt-short">

@@ -1,3 +1,4 @@
+import { bannerFor } from '../../data/bannerImages';
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getCPTItem, type WPCPTItem } from '../../api/wordpressApi';
@@ -116,12 +117,7 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
   const heroEyebrow = decodeHtmlEntities(str(meta.hero_eyebrow));
   const heroHeadline = decodeHtmlEntities(str(meta.hero_headline) || content?.title || '');
   const heroDescription = decodeHtmlEntities(str(meta.hero_description) || content?.excerpt || '');
-  const fallbackHeroImages: Record<string, string> = {
-    services: '/images/six-checks-on-every-provider.jpg',
-    locations: '/images/front-view-smiley-girl-woman-indoors-hero.jpg',
-    guides: '/images/reviews.jpg',
-  };
-  const heroBgImage = str(meta.hero_background_image) || content?.featuredImage?.url || fallbackHeroImages[config.pathPrefix] || '/images/providers.jpg';
+  const heroBgImage = str(meta.hero_background_image) || content?.featuredImage?.url || bannerFor({ text: content?.title ?? '', section: config.pathPrefix });
   const heroCtaLabel = str(meta.hero_cta_label);
   const heroCtaUrl = str(meta.hero_cta_url);
   const heroStats = safeParseJson<HeroStat[]>(meta.hero_stats_json, []);

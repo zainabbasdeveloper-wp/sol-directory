@@ -1,3 +1,4 @@
+import { bannerFor } from '../../data/bannerImages';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { PublicHeader, PublicFooter } from './PublicLayout';
@@ -142,7 +143,7 @@ export default function FundingTopicPage() {
       eyebrow={meta.categoryGroup}
       title={meta.name}
       description={heroExcerpt(meta.summary)}
-      image="/images/providers.jpg"
+      image={bannerFor({ text: meta.name, section: 'funding' })}
       toc={toc}
     >
       <section id="overview" className="wp-cpt-short" ref={topRef}>

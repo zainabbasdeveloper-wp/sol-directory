@@ -1,3 +1,4 @@
+import { bannerFor } from '../../data/bannerImages';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import DOMPurify from 'dompurify';
@@ -291,7 +292,7 @@ export default function ServiceLocationPage() {
       {/* Hero */}
       <PageHero
         crumbs={[{ label: 'Home', to: '/' }, { label: 'Services', to: '/services' }, { label: serviceName }, { label: stateName }, { label: suburbName }]}
-        image="/images/front-view-smiley-girl-woman-indoors-hero.jpg"
+        image={bannerFor({ text: serviceName, section: 'locations' })}
         imageAlt={`Support at home for people seeking ${serviceLower}`}
         eyebrow={<>{serviceName} · {stateName}</>}
         title={`Home ${serviceLower} providers in ${suburbName}, ${stateName}`}
