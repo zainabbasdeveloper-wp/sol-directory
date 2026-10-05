@@ -13,6 +13,8 @@ interface Props {
   type: RegisterType;
   /** Omit to list every provider on the register (no support-category filter). */
   category?: string;
+  /** Only listings whose own website states this language (see api languageDiscovery.ts). */
+  language?: string;
   states: Record<string, number>;
   total: number;
   heading?: string;
@@ -25,7 +27,7 @@ interface Props {
  * condition / funding pages (TopicRegisterProviders) so a provider card
  * looks and behaves the same everywhere.
  */
-export default function RegisterProviderList({ type, category, states, total, heading }: Props) {
+export default function RegisterProviderList({ type, category, language, states, total, heading }: Props) {
   const kind = KIND_BY_TYPE[type];
   const [state, setState] = useState('');
   const [items, setItems] = useState<RegisterListItem[]>([]);
@@ -39,12 +41,12 @@ export default function RegisterProviderList({ type, category, states, total, he
     let alive = true;
     setLoading(true);
     setFailed(false);
-    searchRegister({ type, category, state: state || undefined, page, limit: PAGE })
+    searchRegister({ type, category, language, state: state || undefined, page, limit: PAGE })
       .then((r) => { if (!alive) return; setCount(r.total); setItems((prev) => (page === 1 ? r.items : [...prev, ...r.items])); })
       .catch(() => { if (alive) setFailed(true); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, [type, category, state, page]);
+  }, [type, category, language, state, page]);
 
   const pick = (code: string) => { setItems([]); setPage(1); setState(code); };
   const stateName = STATES.find((s) => s.code === state)?.name;
@@ -52,7 +54,7 @@ export default function RegisterProviderList({ type, category, states, total, he
 
   return (
     <div className="wp-cpt-plist">
-      <h3 className="wp-cpt-h3">{heading ?? (category ? `Providers listing ${category.toLowerCase()}` : `Providers on the ${kind.label} register`)}</h3>
+      <h3 className="wp-cpt-h3">{heading ?? (language ? `Providers that mention ${language}` : category ? `Providers listing ${category.toLowerCase()}` : `Providers on the ${kind.label} register`)}</h3>
       <div className="wp-cpt-chips" role="group" aria-label="Filter by state or territory">
         <button type="button" className={`wp-cpt-chip${state === '' ? ' is-on' : ''}`} aria-pressed={state === ''} onClick={() => pick('')}>All ({fmt(total)})</button>
         {stateRows.map((s) => (
@@ -78,9 +80,9 @@ export default function RegisterProviderList({ type, category, states, total, he
       {!loading && !failed && items.length === 0 && <p className="wp-cpt-table-note">No listings{stateName ? ` in ${stateName}` : ''} yet.</p>}
       <div className="wp-cpt-plist-foot">
         {items.length < count && <button type="button" className="btn-tint" disabled={loading} onClick={() => setPage((n) => n + 1)}>{loading ? 'Loading…' : `Show more (${fmt(count - items.length)} left)`}</button>}
-        <Link className="wp-cpt-card-link" to={`${registerPath(kind, state ? STATES.find((s) => s.code === state)?.slug : undefined)}${category ? `?category=${encodeURIComponent(category)}` : ''}`}>
+        {!language && <Link className="wp-cpt-card-link" to={`${registerPath(kind, state ? STATES.find((s) => s.code === state)?.slug : undefined)}${category ? `?category=${encodeURIComponent(category)}` : ''}`}>
           Search all {stateName ? `${stateName} ` : ''}{label} providers with filters →
-        </Link>
+        </Link>}
       </div>
       <p className="wp-cpt-table-note">Listed A–Z, not ranked. A register listing shows what the public register says, not who has capacity or the quality of their service.</p>
     </div>

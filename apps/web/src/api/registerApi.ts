@@ -41,12 +41,13 @@ export interface RegisterSearchResult {
 }
 
 export function searchRegister(params: {
-  type: RegisterType; state?: string; suburb?: string; category?: string; q?: string; page?: number; limit?: number; facets?: boolean;
+  type: RegisterType; state?: string; suburb?: string; category?: string; language?: string; q?: string; page?: number; limit?: number; facets?: boolean;
 }): Promise<RegisterSearchResult> {
   const qs = new URLSearchParams({ type: params.type });
   if (params.state) qs.set('state', params.state);
   if (params.suburb) qs.set('suburb', params.suburb);
   if (params.category) qs.set('category', params.category);
+  if (params.language) qs.set('language', params.language);
   if (params.q) qs.set('q', params.q);
   if (params.page && params.page > 1) qs.set('page', String(params.page));
   if (params.limit) qs.set('limit', String(params.limit));
@@ -84,6 +85,10 @@ export interface CategoryCounts { total: number; states: Record<string, number> 
 /** How many register listings list a support category, per state. */
 export const getCategoryCounts = (type: RegisterType, category: string): Promise<CategoryCounts> =>
   request(`/category-counts?type=${type}&category=${encodeURIComponent(category)}`);
+
+/** How many register listings state a language on their own website, per state. */
+export const getLanguageCounts = (type: RegisterType, language: string): Promise<CategoryCounts> =>
+  request(`/language-counts?type=${type}&language=${encodeURIComponent(language)}`);
 
 export interface RegisterListing {
   type: RegisterType;

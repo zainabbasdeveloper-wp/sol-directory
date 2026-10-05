@@ -6,6 +6,7 @@ import Provider from '../models/Provider.js';
 import SuburbGeo from '../models/SuburbGeo.js';
 import { VISIBLE_PROVIDER, publicLogoUrl } from './providersPublic.controller.js';
 import { EmailService } from '../services/email.service.js';
+import { LANGUAGE_TOPICS } from '@soldirectory/topic-content';
 import {
   MIN_SUBURB_LISTINGS, REGISTER_SUPPORT_CATEGORIES, REGISTER_TYPES, STATE_CODES, safeRegisterName,
   type RegisterType, type StateCode,
@@ -141,6 +142,12 @@ export async function searchRegister(req: Request, res: Response) {
     filter.supportCategories = category;
   }
 
+  const language = str(req.query.language);
+  if (language) {
+    if (!LANGUAGE_NAMES.has(language)) return res.status(400).json({ error: 'Unknown language.' });
+    filter.languages = language;
+  }
+
   const q = str(req.query.q).toLowerCase().slice(0, 80);
   if (q) filter.nameLower = new RegExp(escapeRegex(q));
 
@@ -175,6 +182,27 @@ export async function searchRegister(req: Request, res: Response) {
     minIndexable: MIN_SUBURB_LISTINGS,
     ...(facets ? { categories: (facets as { _id: string; n: number }[]).map((f) => ({ category: f._id, count: f.n })) } : {}),
   });
+}
+
+// ---------------------------------------------------------------
+// GET /api/register/language-counts?type=&language=
+// How many register listings state this language on their own website, per state.
+// Feeds the "public-register providers that mention this language" block on /language pages.
+// ---------------------------------------------------------------
+const LANGUAGE_NAMES = new Set<string>(LANGUAGE_TOPICS.map((t) => t.name));
+
+export async function languageCounts(req: Request, res: Response) {
+  const type = parseType(req.query.type);
+  if (!type) return res.status(400).json({ error: 'type must be "ndis" or "aged_care".' });
+  const language = str(req.query.language);
+  if (!LANGUAGE_NAMES.has(language)) return res.status(400).json({ error: 'Unknown language.' });
+
+  const [byState, total] = await Promise.all([
+    RegisterListing.aggregate([{ $match: { type, languages: language } }, { $unwind: '$states' }, { $group: { _id: '$states', n: { $sum: 1 } } }]),
+    RegisterListing.countDocuments({ type, languages: language }),
+  ]);
+  res.set('Cache-Control', 'public, max-age=600');
+  res.json({ total, states: Object.fromEntries((byState as { _id: string; n: number }[]).map((s) => [s._id, s.n])) });
 }
 
 // ---------------------------------------------------------------

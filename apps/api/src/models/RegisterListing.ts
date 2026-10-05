@@ -83,6 +83,14 @@ export interface RegisterListingDoc extends Document {
    * first sync so re-syncs PUT the same post instead of duplicating it.
    */
   wpPostId?: number;
+  /**
+   * Languages the business's OWN website says it supports (see services/languageDiscovery.ts) — only
+   * explicit statements such as "we speak Arabic", never a translation menu or a stray mention. Canonical
+   * names from the language topic list. Shown publicly as "mentions", never as a verified claim.
+   */
+  languages?: string[];
+  /** When the website was last read for languages (whether or not any were found) — skip re-checking too often. */
+  languagesCheckedAt?: Date;
 }
 
 const areaSchema = new Schema<RegisterArea>(
@@ -115,6 +123,8 @@ const registerListingSchema = new Schema<RegisterListingDoc>(
     logoUrl: String,
     logoCheckedAt: Date,
     wpPostId: Number,
+    languages: [String],
+    languagesCheckedAt: Date,
   },
   { timestamps: true }
 );
@@ -126,5 +136,6 @@ registerListingSchema.index({ type: 1, states: 1 });
 registerListingSchema.index({ type: 1, supportCategories: 1 });
 registerListingSchema.index({ type: 1, 'areas.state': 1, 'areas.suburbSlug': 1 });
 registerListingSchema.index({ type: 1, nameLower: 1 });
+registerListingSchema.index({ type: 1, languages: 1 });
 
 export default mongoose.model<RegisterListingDoc>('RegisterListing', registerListingSchema);

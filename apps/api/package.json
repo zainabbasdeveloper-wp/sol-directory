@@ -16,6 +16,7 @@
     "fetch:register-logos": "tsx src/scripts/fetchRegisterLogos.ts",
     "fetch:register-emails": "tsx src/scripts/fetchRegisterEmails.ts",
     "fetch:register-contact-info": "tsx src/scripts/fetchRegisterContactInfo.ts",
+    "fetch:register-languages": "tsx src/scripts/fetchRegisterLanguages.ts",
     "sync:register-wp": "tsx src/scripts/syncRegisterListingsToWordPress.ts",
     "audit:seo": "tsx src/scripts/auditPublicSeo.ts",
     "email:test": "tsx src/scripts/testEmail.ts",

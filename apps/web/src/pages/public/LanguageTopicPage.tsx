@@ -5,6 +5,7 @@ import { LANGUAGE_TOPICS, languageShellEditorial, type Topic } from '@soldirecto
 import { PublicFooter, PublicHeader } from './PublicLayout';
 import { ProviderCardItem } from './ProviderListingPage';
 import Pagination from '../../components/ui/Pagination';
+import LanguageRegisterProviders from '../../components/topic/LanguageRegisterProviders';
 import TopicLayout, { heroExcerpt, type TopicTocItem } from '../../components/topic/TopicLayout';
 import { Breadcrumbs } from './register/RegisterParts';
 import { listProvidersBy, type PublicProviderCard } from '../../api/profilesApi';
@@ -36,6 +37,7 @@ export default function LanguageTopicPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [registerTotal, setRegisterTotal] = useState(0);
   const topRef = useRef<HTMLParagraphElement>(null);
   const { openMatchModal } = useMatchModal();
 
@@ -82,6 +84,7 @@ export default function LanguageTopicPage() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const toc: TopicTocItem[] = [
     { id: 'about', label: 'Overview' }, { id: 'providers', label: 'Providers' },
+    ...(registerTotal > 0 ? [{ id: 'register-providers', label: 'On the register' }] : []),
     { id: 'communication', label: 'Communication planning' }, { id: 'interpreters', label: 'Interpreters' },
     { id: 'questions', label: 'Questions to ask' }, { id: 'privacy', label: 'Privacy and consent' },
     { id: 'funding', label: 'Funding and fees' }, { id: 'related-languages', label: 'Related options' },
@@ -112,6 +115,8 @@ export default function LanguageTopicPage() {
         ) : <ul className="dir-grid" aria-busy={loading}>{items.map((provider) => <ProviderCardItem key={provider.id} p={provider} />)}</ul>}
         <Pagination page={page} totalPages={totalPages} disabled={loading} onChange={(next) => { setParams(next > 1 ? { page: String(next) } : {}); topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }} />
       </section>
+
+      <LanguageRegisterProviders key={topic.slug} language={topic.name} onLoaded={setRegisterTotal} />
 
       <section id="communication" className="wp-cpt-section">
         <h2>Plan communication before support begins</h2>
