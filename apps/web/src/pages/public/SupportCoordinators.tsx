@@ -1,3 +1,4 @@
+import { hubHeaderStyle } from '../../data/bannerImages';
 import { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { PublicFooter, PublicHeader } from './PublicLayout';
@@ -39,7 +40,7 @@ export default function SupportCoordinators() {
   }, [hash]);
 
   return <><PublicHeader />
-    <div className="directory-page-header"><div className="directory-page-header-inner"><span className="eyebrow eyebrow-light"><span className="eyebrow-rule" />Referral practice</span><h1 className="section-heading section-heading-light">Provider referrals for support coordinators</h1><p className="directory-page-subtitle">Prepare a clear request, compare providers consistently and keep the participant in control of each decision.</p></div></div>
+    <div className="directory-page-header" style={hubHeaderStyle('support-coordination')}><div className="directory-page-header-inner"><span className="eyebrow eyebrow-light"><span className="eyebrow-rule" />Referral practice</span><h1 className="section-heading section-heading-light">Provider referrals for support coordinators</h1><p className="directory-page-subtitle">Prepare a clear request, compare providers consistently and keep the participant in control of each decision.</p></div></div>
     <main className="reg-page category-hub-page">
       <Breadcrumbs items={[{ label: 'Home', to: '/' }, { label: 'Support coordinators' }]} />
       <section className="directory-intro"><span className="directory-section-label">What SolDirectory does</span><h2>Search directly or send one provider enquiry</h2><p>SolDirectory is a directory and referral service. You can browse provider profiles and public-register records, or submit one enquiry so relevant member providers can review the support, area, funding and timeframe. SolDirectory does not deliver supports, choose a provider for the participant or replace due diligence.</p><div className="dir-empty-actions"><Link className="btn-secondary" to="/find-a-provider">Find providers</Link><button type="button" className="btn-gradient" onClick={() => openMatchModal()}>Submit an enquiry</button></div></section>

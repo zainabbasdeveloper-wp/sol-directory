@@ -1,4 +1,4 @@
-import { bannerFor } from '../../data/bannerImages';
+import { bannerFor, hubHeaderStyle } from '../../data/bannerImages';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { PublicHeader, PublicFooter } from './PublicLayout';
@@ -143,7 +143,7 @@ export default function FundingTopicPage() {
       eyebrow={meta.categoryGroup}
       title={meta.name}
       description={heroExcerpt(meta.summary)}
-      image={bannerFor({ text: meta.name, section: 'funding' })}
+      image={bannerFor({ text: `${meta.name} ${meta.categoryGroup}`, section: 'funding' })}
       toc={toc}
     >
       <section id="overview" className="wp-cpt-short" ref={topRef}>
@@ -294,7 +294,7 @@ export function FundingHubPage() {
   return (
     <>
       <PublicHeader />
-      <div className="directory-page-header directory-page-header--funding">
+      <div className="directory-page-header directory-page-header--funding" style={hubHeaderStyle('plan-management')}>
         <div className="directory-page-header-inner">
           <span className="eyebrow eyebrow-light"><span className="eyebrow-rule" />Understand your options</span>
           <h1 className="section-heading section-heading-light">NDIS, aged care and other funding explained</h1>

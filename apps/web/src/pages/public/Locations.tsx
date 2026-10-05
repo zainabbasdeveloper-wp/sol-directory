@@ -1,3 +1,4 @@
+import { hubHeaderStyle } from '../../data/bannerImages';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PublicHeader, PublicFooter } from './PublicLayout';
@@ -31,7 +32,7 @@ export default function Locations() {
     <>
       <PublicHeader />
 
-      <div className="directory-page-header directory-page-header--locations">
+      <div className="directory-page-header directory-page-header--locations" style={hubHeaderStyle('locations')}>
         <div className="directory-page-header-inner">
           <span className="eyebrow eyebrow-light">
             <span className="eyebrow-rule" />

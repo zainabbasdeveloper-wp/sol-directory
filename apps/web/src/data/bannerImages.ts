@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import manifest from './bannerManifest.json';
 
 /**
@@ -15,19 +16,20 @@ interface Topic {
 }
 
 export const BANNER_TOPICS: Topic[] = [
-  { id: 'personal-care', keywords: ['personal care', 'personal-care', 'daily living', 'daily-living', 'in-home', 'in home', 'home care', 'domestic', 'nursing', 'showering', 'meal'] },
-  { id: 'community', keywords: ['community', 'social', 'recreation', 'participation', 'activities', 'sport'] },
-  { id: 'therapy', keywords: ['therapy', 'therapies', 'occupational', 'physio', 'speech', 'allied health', 'psycholog', 'behaviour', 'dietitian', 'podiatr', 'exercise'] },
-  { id: 'support-coordination', keywords: ['support coordination', 'support-coordination', 'coordinator', 'plan review', 'plan-review', 'getting started', 'navigating'] },
-  { id: 'plan-management', keywords: ['plan management', 'plan-management', 'plan manager', 'self-managed', 'self managed', 'funding', 'budget', 'invoice', 'core supports', 'capacity building', 'capital supports', 'participant'] },
-  { id: 'transport', keywords: ['transport', 'travel', 'vehicle', 'driving'] },
-  { id: 'housing', keywords: ['accommodation', 'housing', 'sda', 'independent living', 'respite', 'home modification', 'supported independent'] },
+  // Funding and service pages for older people come first so "Home Care Packages" is not read as personal care.
+  { id: 'older-people', keywords: ['aged care', 'home care package', 'commonwealth home', 'support at home', 'residential', 'transition care', 'aged', 'older', 'senior', 'elderly', 'dementia', 'memory', 'cognitive', 'veteran', 'dva', 'open arms'] },
+  { id: 'support-coordination', keywords: ['support coordination', 'coordinator', 'referral', 'plan review', 'change of circumstances', 'first plan', 'getting started', 'navigating', 'waitlist', 'shortlist'] },
+  { id: 'plan-management', keywords: ['plan management', 'plan manager', 'plan managed', 'self managed', 'agency managed', 'ndis plans', 'funding', 'budget', 'bookkeeping', 'invoice', 'price guide', 'eligibility', 'core supports', 'capacity building', 'capital supports', 'participant', 'self management', 'financial', 'private fee', 'private health', 'medicare', 'workers compensation', 'icare', 'state funded', 'other funding'] },
+  { id: 'housing', keywords: ['accommodation', 'housing', 'sda', 'independent living', 'respite', 'home modification', 'home maintenance', 'supported independent', 'camps', 'overnight', 'shared living', 'living options', 'tenancy'] },
+  { id: 'transport', keywords: ['transport', 'travel', 'vehicle', 'driving', 'driver', 'outings'] },
+  { id: 'assistive-technology', keywords: ['assistive', 'at assessment', 'technology', 'equipment', 'wheelchair', 'mobility', 'aids', 'assistance dog', 'physical', 'spinal', 'amputation', 'limb', 'muscular', 'sclerosis', 'spina', 'arthritis', 'chronic pain', 'hearing', 'vision', 'sensory', 'deaf', 'blind', 'auslan', 'rehabilitation appliances', 'prosthetic', 'orthotic', 'assistance animal', 'communication and information'] },
+  { id: 'mental-health', keywords: ['mental health', 'psychosocial', 'anxiety', 'depression', 'wellbeing', 'schizophrenia', 'bipolar', 'ptsd', 'eating disorder', 'personality', 'dual diagnosis', 'counselling'] },
+  { id: 'autism-children', keywords: ['autism', 'child', 'early intervention', 'kids', 'adhd', 'developmental', 'intellectual', 'down syndrome', 'fragile', 'cerebral palsy', 'delay'] },
+  { id: 'therapy', keywords: ['therapy', 'therapies', 'occupational', 'physio', 'speech', 'allied health', 'psycholog', 'behaviour', 'dietitian', 'dietetics', 'podiatr', 'exercise', 'rehabilitation', 'neuro', 'stroke', 'brain injury', 'brain', 'epilepsy', 'diabetes', 'renal', 'cystic', 'cancer', 'motor neurone', 'parkinson', 'huntington', 'chronic', 'social work', 'personal training'] },
+  { id: 'personal-care', keywords: ['personal care', 'daily living', 'in home', 'home support', 'home care', 'domestic', 'nursing', 'clinical care', 'wound', 'catheter', 'peg feeding', 'palliative', 'medication', 'continence', 'showering', 'meal', 'gardening', 'shopping', 'high intensity', 'household', 'house cleaning', 'cleaning', 'enteral', 'nutrition', 'continence', 'overnight support'] },
+  { id: 'community', keywords: ['community', 'social', 'recreation', 'participation', 'activities', 'sport', 'group', 'mentoring', 'volunteer'] },
   { id: 'employment', keywords: ['employment', 'jobs', 'school leaver', 'career', 'training', 'education'] },
-  { id: 'mental-health', keywords: ['mental health', 'mental-health', 'psychosocial', 'anxiety', 'depression', 'wellbeing'] },
-  { id: 'autism-children', keywords: ['autism', 'child', 'early intervention', 'early-intervention', 'kids', 'adhd'] },
-  { id: 'assistive-technology', keywords: ['assistive', 'technology', 'equipment', 'wheelchair', 'mobility', 'aids'] },
-  { id: 'older-people', keywords: ['aged', 'older', 'senior', 'elderly', 'dementia'] },
-  { id: 'multicultural', keywords: ['language', 'multicultural', 'interpreter', 'culturally', 'cald', 'first nations', 'aboriginal'] },
+  { id: 'multicultural', keywords: ['language', 'multicultural', 'interpreter', 'translat', 'culturally', 'cald', 'first nations', 'aboriginal', 'torres strait'] },
 ];
 
 const SECTION_TOPICS: Record<string, string> = {
@@ -75,4 +77,12 @@ export function bannerFor({ text = '', section = '' }: Hint): string {
   if (section === 'guides') return GENERAL_BANNERS.guides;
   if (section === 'services') return GENERAL_BANNERS.services;
   return available.has('general') ? bannerPath('general') : GENERAL_BANNERS.default;
+}
+
+/**
+ * Inline style that swaps a hub page's header photo (the `directory-page-header` band) for a topic photo.
+ * Returns nothing until that topic has been downloaded, so the CSS default photo stays in place.
+ */
+export function hubHeaderStyle(topicId: string): CSSProperties | undefined {
+  return available.has(topicId) ? ({ '--directory-header-image': `url(${bannerPath(topicId)})` } as CSSProperties) : undefined;
 }

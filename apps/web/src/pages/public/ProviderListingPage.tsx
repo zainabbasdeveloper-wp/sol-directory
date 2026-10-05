@@ -1,4 +1,4 @@
-import { bannerFor } from '../../data/bannerImages';
+import { bannerFor, hubHeaderStyle } from '../../data/bannerImages';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { PublicHeader, PublicFooter } from './PublicLayout';
@@ -455,7 +455,7 @@ export function ConditionsHubPage() {
   return (
     <>
       <PublicHeader />
-      <div className="directory-page-header directory-page-header--conditions">
+      <div className="directory-page-header directory-page-header--conditions" style={hubHeaderStyle('assistive-technology')}>
         <div className="directory-page-header-inner">
           <span className="eyebrow eyebrow-light"><span className="eyebrow-rule" />Provider experience</span>
           <h1 className="section-heading section-heading-light">Find providers by condition or support need</h1>
