@@ -162,22 +162,46 @@
   .mega-root { width: 100%; border-bottom: 1px solid var(--color-border, #E8EEF7); }
   .mega-trigger { width: 100%; justify-content: space-between; padding: 14px 4px; border-radius: 0; font-size: 16px; }
   .mega-panel-wrap { position: static; transform: none; width: 100%; max-width: none; padding: 0 0 12px; }
+  /* The desktop panel is capped at the viewport height and clips what overflows. Inline in the hamburger
+     dropdown that clipped the long tabs (Service) with no way to reach the rest, so here the panel grows to
+     its content and the dropdown itself (.public-nav-links) does the scrolling. */
   .mega-panel {
     flex-direction: column;
-    gap: 6px;
-    border-radius: 16px;
+    gap: 10px;
+    border: 0;
+    border-radius: 0;
     box-shadow: none;
-    padding: 8px;
+    background: transparent;
+    padding: 0;
+    max-height: none;
+    overflow: visible;
     animation: none;
   }
-  .mega-rail { flex: none; flex-direction: row; gap: 6px; overflow-x: auto; padding: 8px; border-radius: 14px; -webkit-overflow-scrolling: touch; }
+  /* The tab pills stay pinned while the long link lists scroll underneath them. */
+  .mega-rail {
+    flex: none;
+    flex-direction: row;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 8px;
+    border-radius: 14px;
+    -webkit-overflow-scrolling: touch;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    scrollbar-width: none;
+  }
+  .mega-rail::-webkit-scrollbar { display: none; }
   .mega-rail-heading { display: none; }
   .mega-rail-item { flex: none; padding: 9px 14px; border-radius: 999px; background: #fff; align-items: center; white-space: nowrap; }
+  .mega-rail-item-active { background: var(--color-accent, #1769E0); }
+  .mega-rail-item-active .mega-rail-title { color: #fff; }
   .mega-rail-desc, .mega-rail-arrow { display: none; }
-  .mega-columns-wrap { padding: 8px 8px 12px; overflow: visible; }
+  .mega-columns-wrap { padding: 4px 4px 12px; overflow: visible; }
   .mega-columns { grid-template-columns: minmax(0, 1fr) !important; gap: 22px; }
   .mega-column { gap: 18px; }
-  .mega-link { padding: 3px 0; font-size: 14.5px; }
+  .mega-link { padding: 9px 0; font-size: 14.5px; }
+  .mega-link:hover { transform: none; }
 }
 @media (min-width: 601px) and (max-width: 1100px) {
   .mega-columns { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
