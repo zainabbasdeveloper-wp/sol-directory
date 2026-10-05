@@ -148,7 +148,7 @@ export interface PublicProviderCard {
   registrationGroups: string[]; serviceSuburbs: string[]; serviceSuburbCount: number;
   intakeStatus: string; logoUrl: string | null;
 }
-export const listProvidersBy = (p: { suburb?: string; condition?: string; funding?: string; page?: number; limit?: number }) =>
+export const listProvidersBy = (p: { suburb?: string; condition?: string; funding?: string; language?: string; page?: number; limit?: number }) =>
   publicGet<{ items: PublicProviderCard[]; page: number; limit: number; total: number; hasMore: boolean }>(`/providers/public${qs(p)}`);
 
 // ---------------------------------------------------------------

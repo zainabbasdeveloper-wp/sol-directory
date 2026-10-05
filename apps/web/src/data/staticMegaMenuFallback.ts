@@ -37,16 +37,6 @@ function serviceLink(title: string): { label: string; url: string } {
   return { label: title, url: `/services/${wpStyleSlugify(title)}` };
 }
 
-// Same illustrative combo-page route the menu has always used for the
-// Funding, Coordinator and Language tabs — those don't have real pages
-// of their own yet, precomputed per-link now that every link carries
-// its own real `url`. This replaces the separate static-only click
-// handler that used to exist for these tabs.
-function comboPageLink(title: string): { label: string; url: string } {
-  const suburb = title === 'Nursing' ? 'bankstown' : 'sydney';
-  return { label: title, url: `/services/${wpStyleSlugify(title)}/${suburb}` };
-}
-
 // The Condition tab has real, permalink-style pages: /condition/:slug/
 // (see data/conditionContent.ts, which ProviderListingPage.tsx reads —
 // slugify() here must match ITS slugs exactly, which is why both use
@@ -59,6 +49,10 @@ function conditionLink(title: string): { label: string; url: string } {
 // (see data/fundingContent.ts, which FundingTopicPage.tsx reads).
 function fundingLink(title: string): { label: string; url: string } {
   return { label: title, url: `/funding/${slugify(title)}/` };
+}
+
+function languageLink(title: string): { label: string; url: string } {
+  return { label: title, url: `/language/${slugify(title)}/` };
 }
 
 const SERVICE_CATEGORIES: { title: string; items: string[] }[] = [
@@ -152,11 +146,21 @@ export const STATIC_MEGA_MENU_FALLBACK: MegaMenuTab[] = [
     label: 'Support coordinator referrals',
     description: 'Referral pathways for support coordinators',
     columns: [
-      { title: 'Make a Referral', links: ['Single Provider Referral', 'Bulk Referrals', 'Urgent Placement Requests', 'Referral Templates', 'Referral Tracking'].map(comboPageLink) },
-      { title: 'Capacity & Availability', links: ['Live Vacancy Board', 'Confirmed Capacity Feed', 'Waitlist Status', 'Response Time Data', 'Service Area Coverage'].map(comboPageLink) },
-      { title: 'Tools for Coordinators', links: ['Saved Provider Lists', 'Shortlist Sharing', 'Comparison Sheets', 'Bulk Export', 'Participant Notes'].map(comboPageLink) },
-      { title: 'Compliance', links: ['Registration Checks', 'Worker Screening', 'Insurance Certificates', 'Incident History'].map(comboPageLink) },
-      { title: 'Working With Us', links: ['Coordinator Accounts', 'Team Access', 'Training & Webinars', 'Contact the Directory Team'].map(comboPageLink) },
+      { title: 'Refer and prepare', links: [
+        { label: 'Coordinator referral guide', url: '/support-coordinators#referrals' },
+        { label: 'Submit a provider enquiry', url: 'get_matched' },
+        { label: 'Urgent and complex referrals', url: '/support-coordinators#urgent-referrals' },
+      ] },
+      { title: 'Search and compare', links: [
+        { label: 'Find providers', url: '/find-a-provider' },
+        { label: 'Provider checks', url: '/support-coordinators#provider-checks' },
+        { label: 'Saved provider lists', url: '/saved-providers' },
+      ] },
+      { title: 'Accounts and support', links: [
+        { label: 'Create a coordinator account', url: '/signup' },
+        { label: 'Sign in', url: '/login' },
+        { label: 'Contact SolDirectory', url: '/support-coordinators#contact' },
+      ] },
     ],
   },
   {
@@ -164,12 +168,12 @@ export const STATIC_MEGA_MENU_FALLBACK: MegaMenuTab[] = [
     label: 'Language',
     description: 'Support in a language spoken at home',
     columns: [
-      { title: 'Most Requested', links: ['Arabic', 'Mandarin', 'Cantonese', 'Vietnamese', 'Greek', 'Italian', 'Hindi', 'Punjabi'].map(comboPageLink) },
-      { title: 'Middle East & Africa', links: ['Assyrian', 'Persian (Farsi)', 'Dari', 'Turkish', 'Somali', 'Swahili', 'Amharic'].map(comboPageLink) },
-      { title: 'First Nations', links: ['Aboriginal & Torres Strait Islander Services', 'Kriol', 'Yolngu Matha', 'Pitjantjatjara'].map(comboPageLink) },
-      { title: 'Europe', links: ['Spanish', 'Portuguese', 'Polish', 'Croatian', 'Serbian', 'Russian', 'Macedonian', 'German'].map(comboPageLink) },
-      { title: 'Asia Pacific', links: ['Tagalog', 'Indonesian', 'Korean', 'Japanese', 'Nepali', 'Tamil', 'Thai', 'Khmer'].map(comboPageLink) },
-      { title: 'Access & Interpreting', links: ['Auslan', 'Deafblind Interpreters', 'TIS National Bookings', 'Easy Read Materials', 'Translated Documents'].map(comboPageLink) },
+      { title: 'Most Requested', links: ['Arabic', 'Mandarin', 'Cantonese', 'Vietnamese', 'Greek', 'Italian', 'Hindi', 'Punjabi'].map(languageLink) },
+      { title: 'Middle East & Africa', links: ['Assyrian', 'Persian (Farsi)', 'Dari', 'Turkish', 'Somali', 'Swahili', 'Amharic'].map(languageLink) },
+      { title: 'First Nations', links: ['Aboriginal & Torres Strait Islander Services', 'Kriol', 'Yolngu Matha', 'Pitjantjatjara'].map(languageLink) },
+      { title: 'Europe', links: ['Spanish', 'Portuguese', 'Polish', 'Croatian', 'Serbian', 'Russian', 'Macedonian', 'German'].map(languageLink) },
+      { title: 'Asia Pacific', links: ['Tagalog', 'Indonesian', 'Korean', 'Japanese', 'Nepali', 'Tamil', 'Thai', 'Khmer'].map(languageLink) },
+      { title: 'Access & Interpreting', links: ['Auslan', 'Deafblind Interpreters', 'TIS National Bookings', 'Easy Read Materials', 'Translated Documents'].map(languageLink) },
     ],
   },
 ];

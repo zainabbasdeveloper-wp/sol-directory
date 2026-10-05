@@ -55,6 +55,9 @@ export function buildProviderFilter(query: Request['query']): Record<string, unk
   if (typeof query.condition === 'string' && query.condition.trim()) {
     filter.conditionExperience = new RegExp(`^\\s*${escapeRegex(query.condition.trim())}\\s*$`, 'i');
   }
+  if (typeof query.language === 'string' && query.language.trim()) {
+    filter.languages = new RegExp(`^\\s*${escapeRegex(query.language.trim())}\\s*$`, 'i');
+  }
   // Plan-management style - powers the /funding/:slug pages (only the 3
   // NDIS management-style topics actually map to this real field; other
   // funding topics like "Home Care Packages" or "DVA Home Care" aren't a

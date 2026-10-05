@@ -67,7 +67,7 @@
 .wp-cpt-card-title a { color: inherit; text-decoration: none; }
 .wp-cpt-card-title a:hover { text-decoration: underline; }
 .wp-cpt-card-meta { margin: 0; font-size: 13px; color: var(--color-text-muted, #5A6B84); overflow-wrap: anywhere; }
-.wp-cpt-card-link { font-size: 13.5px; font-weight: 600; color: var(--color-primary, #2563EB); text-decoration: none; margin-top: auto; }
+.wp-cpt-card-link { font-size: 13.5px; font-weight: 600; color: var(--color-primary, #2563EB); text-decoration: none; margin-top: 0px; }
 .wp-cpt-card-link:hover { text-decoration: underline; }
 .wp-cpt-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .wp-cpt-tag { font-size: 12px; padding: 3px 9px; border-radius: 999px; background: var(--color-primary-tint, #F2F7FF); color: var(--color-text-muted, #5A6B84); }

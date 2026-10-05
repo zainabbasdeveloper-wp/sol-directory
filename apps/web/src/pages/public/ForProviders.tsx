@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PublicHeader, PublicFooter } from './PublicLayout';
 import PhotoSlot from '../../components/PhotoSlot';
 import Counter from '../../components/Counter';
 import { useSiteStats } from '../../hooks/useSiteStats';
+import { applySeoTags } from '../../lib/seo';
 import './Home.css';
 import './ForProviders.css';
 
@@ -43,6 +44,15 @@ export default function ForProviders() {
   const navigate = useNavigate();
   const stats = useSiteStats();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  useEffect(() => {
+    applySeoTags({
+      title: 'List your provider business | SolDirectory',
+      description: 'Create or claim a provider profile, maintain services and capacity, and review relevant NDIS and aged care enquiries in your service areas.',
+      canonicalUrl: `${window.location.origin}/providers`,
+      ogImage: `${window.location.origin}/images/providers.jpg`,
+    });
+  }, []);
 
   return (
     <>

@@ -65,14 +65,8 @@ function sd_real_service_url(string $title): string {
     return '/services/' . $slug;
 }
 
-function sd_combo_url(string $title): string {
-    $suburb = ($title === 'Nursing') ? 'bankstown' : 'sydney';
-    $slug = strtolower(trim(preg_replace('/[^a-z0-9]+/i', '-', str_replace(["'", '"', '(', ')', '&'], '', $title)), '-'));
-    return "/services/$slug/$suburb";
-}
-
 // PLAIN slug — no character-stripping before hyphenating, unlike
-// sd_combo_url above. Must match apps/web/src/lib/slugify.ts exactly
+// the service URL helper above. Must match apps/web/src/lib/slugify.ts exactly
 // (and the API's utils/slugify.ts): a straight apostrophe followed by
 // a letter (Parkinson's, Huntington's) becomes its OWN hyphen
 // ("parkinson-s-disease"), not a deleted character ("parkinsons-
@@ -87,6 +81,9 @@ function sd_condition_url(string $title): string {
 }
 function sd_funding_url(string $title): string {
     return '/funding/' . sd_plain_slug($title) . '/';
+}
+function sd_language_url(string $title): string {
+    return '/language/' . sd_plain_slug($title) . '/';
 }
 
 function sd_links(array $titles, string $urlFn, array $groupByTitle = []): array {
@@ -172,15 +169,31 @@ sd_set_columns($id, sd_columns($fundingGroups, 'sd_funding_url'));
 echo "Seeded: Funding ($id)\n";
 
 // --- Coordinator ---
-$coordinatorGroups = [
-    ['Make a Referral', ['Single Provider Referral', 'Bulk Referrals', 'Urgent Placement Requests', 'Referral Templates', 'Referral Tracking']],
-    ['Capacity & Availability', ['Live Vacancy Board', 'Confirmed Capacity Feed', 'Waitlist Status', 'Response Time Data', 'Service Area Coverage']],
-    ['Tools for Coordinators', ['Saved Provider Lists', 'Shortlist Sharing', 'Comparison Sheets', 'Bulk Export', 'Participant Notes']],
-    ['Compliance', ['Registration Checks', 'Worker Screening', 'Insurance Certificates', 'Incident History']],
-    ['Working With Us', ['Coordinator Accounts', 'Team Access', 'Training & Webinars', 'Contact the Directory Team']],
+$coordinatorColumns = [
+    ['title' => 'Refer and prepare', 'links' => [
+        ['label' => 'Coordinator referral guide', 'url' => '/support-coordinators#referrals'],
+        ['label' => 'Submit a provider enquiry', 'url' => 'get_matched'],
+        ['label' => 'Urgent and complex referrals', 'url' => '/support-coordinators#urgent-referrals'],
+    ]],
+    ['title' => 'Search and compare', 'links' => [
+        ['label' => 'Find providers', 'url' => '/find-a-provider'],
+        ['label' => 'Provider checks', 'url' => '/support-coordinators#provider-checks'],
+        ['label' => 'Saved provider lists', 'url' => '/saved-providers'],
+    ]],
+    ['title' => 'Accounts and support', 'links' => [
+        ['label' => 'Create a coordinator account', 'url' => '/signup'],
+        ['label' => 'Sign in', 'url' => '/login'],
+        ['label' => 'Contact SolDirectory', 'url' => '/support-coordinators#contact'],
+    ]],
 ];
+foreach ($coordinatorColumns as &$column) {
+    foreach ($column['links'] as &$link) {
+        $link = array_merge(['group' => '', 'description' => '', 'icon' => '', 'badge' => '', 'open_in_new_tab' => false, 'active' => true], $link);
+    }
+}
+unset($column, $link);
 $id = sd_get_or_create_tab('coordinator', 'Support coordinator referrals', 'Referral pathways for support coordinators');
-sd_set_columns($id, sd_columns($coordinatorGroups, 'sd_combo_url'));
+sd_set_columns($id, $coordinatorColumns);
 echo "Seeded: Support coordinator referrals ($id)\n";
 
 // --- Language ---
@@ -193,7 +206,7 @@ $languageGroups = [
     ['Access & Interpreting', ['Auslan', 'Deafblind Interpreters', 'TIS National Bookings', 'Easy Read Materials', 'Translated Documents']],
 ];
 $id = sd_get_or_create_tab('language', 'Language', 'Support in a language spoken at home');
-sd_set_columns($id, sd_columns($languageGroups, 'sd_combo_url'));
+sd_set_columns($id, sd_columns($languageGroups, 'sd_language_url'));
 echo "Seeded: Language ($id)\n";
 
 // Set the native page-attributes menu_order to match the intended

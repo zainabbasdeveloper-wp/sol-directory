@@ -12,6 +12,7 @@
     "@soldirectory/design-tokens": "*",
     "@soldirectory/service-content": "*",
     "@soldirectory/shared-types": "*",
+    "@soldirectory/topic-content": "*",
     "chart.js": "^4.5.1",
     "dompurify": "^3.4.15",
     "mapbox-gl": "^3.30.0",

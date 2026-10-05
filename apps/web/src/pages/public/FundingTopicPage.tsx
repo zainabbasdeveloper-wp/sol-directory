@@ -11,6 +11,8 @@ import { listProvidersBy, type PublicProviderCard } from '../../api/profilesApi'
 import { applySeoTags, setJsonLd } from '../../lib/seo';
 import { useMatchModal } from '../../context/MatchModalContext';
 import { fundingBySlug, FUNDING_CATEGORY_GROUPS, FUNDING_CONTENT, type FundingContent } from '../../data/fundingContent';
+import { fundingEditorialFor } from '../../data/fundingEditorial';
+import { fundingShellEditorial } from '@soldirectory/topic-content';
 import './Home.css';
 import './Directory.css';
 import './register/register.css';
@@ -63,10 +65,6 @@ export default function FundingTopicPage() {
       title: `${meta.name} | Funding | SolDirectory`,
       description: meta.summary.slice(0, 155).replace(/\s+\S*$/, '') + '…',
       canonicalUrl: `${window.location.origin}/funding/${meta.slug}/`,
-      // Only indexable once there's either real provider data behind it,
-      // or — for the informational-only topics — always, since the
-      // content itself is the real, useful thing on those pages.
-      noindex: !!meta.fundingFilter && total === 0,
     });
     setJsonLd('funding-breadcrumbs', {
       '@type': 'BreadcrumbList',
@@ -76,7 +74,27 @@ export default function FundingTopicPage() {
         { '@type': 'ListItem', position: 3, name: meta.name, item: `${window.location.origin}/funding/${meta.slug}/` },
       ],
     });
-    return () => setJsonLd('funding-breadcrumbs', null);
+    const editorial = fundingEditorialFor(meta);
+    setJsonLd('funding-page', {
+      '@type': 'WebPage',
+      name: meta.name,
+      description: meta.summary,
+      url: `${window.location.origin}/funding/${meta.slug}/`,
+      isPartOf: { '@type': 'WebSite', name: 'SolDirectory', url: window.location.origin },
+    });
+    setJsonLd('funding-faq', {
+      '@type': 'FAQPage',
+      mainEntity: editorial.faqs.map((faq) => ({
+        '@type': 'Question',
+        name: faq.question,
+        acceptedAnswer: { '@type': 'Answer', text: faq.answer },
+      })),
+    });
+    return () => {
+      setJsonLd('funding-breadcrumbs', null);
+      setJsonLd('funding-page', null);
+      setJsonLd('funding-faq', null);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [meta, total]);
 
@@ -101,10 +119,20 @@ export default function FundingTopicPage() {
   const siblings = (group?.items ?? []).filter((f) => f.slug !== meta.slug);
   const link = fundingProviderLink(meta.slug);
   const hasMembers = !!meta.fundingFilter && !loading && items.length > 0;
+  const editorial = fundingEditorialFor(meta);
+  const longform = fundingShellEditorial(meta);
 
   const toc: TopicTocItem[] = [{ id: 'overview', label: 'Overview' }];
   if (hasMembers) toc.push({ id: 'providers', label: 'Providers on SolDirectory' });
   if (link) toc.push({ id: 'register-providers', label: 'Providers on the register' });
+  toc.push({ id: 'access', label: 'How to access or use it' });
+  toc.push({ id: 'scope', label: 'What to verify' });
+  toc.push({ id: 'records', label: 'What to have ready' });
+  toc.push({ id: 'provider-questions', label: 'Questions for providers' });
+  toc.push({ id: 'pitfalls', label: 'Common mistakes' });
+  toc.push({ id: 'funding-arrangement', label: 'Reviewing the arrangement' });
+  toc.push({ id: 'faq', label: 'FAQ' });
+  toc.push({ id: 'sources', label: 'Official sources' });
   if (siblings.length > 0) toc.push({ id: 'related-funding', label: `Other ${meta.categoryGroup} topics` });
   toc.push({ id: 'wp-cpt-cta', label: 'Get matched' });
 
@@ -161,6 +189,74 @@ export default function FundingTopicPage() {
         />
       ) : null}
 
+      <section id="access" className="wp-cpt-section">
+        <h2>{editorial.accessHeading}</h2>
+        <p>{editorial.accessIntro}</p>
+        <ol className="wp-cpt-plain-list">
+          {editorial.steps.map((step) => <li key={step}>{step}</li>)}
+        </ol>
+      </section>
+
+      <section id="scope" className="wp-cpt-section">
+        <h2>What this page can and cannot confirm</h2>
+        <p>This guide explains the usual questions, records and safeguards connected with {meta.name.toLowerCase()}, but it cannot confirm an individual approval, available budget, current provider capacity or payment outcome. Check the current arrangement with the responsible funding body and ask the provider to put its role, complete fees, service scope and approval dependencies in writing before support begins.</p>
+      </section>
+
+      <section id="records" className="wp-cpt-section">
+        <h2>Information and records to have ready</h2>
+        <p>Having the relevant records available makes it easier to confirm eligibility, obtain an accurate quote and resolve payment questions before they interrupt support.</p>
+        <ul className="wp-cpt-plain-list">
+          {editorial.records.map((record) => <li key={record}>{record}</li>)}
+        </ul>
+      </section>
+
+      <section id="provider-questions" className="wp-cpt-section">
+        <h2>Questions to ask a provider</h2>
+        <p>A provider should be able to explain its role, fees and billing process without implying that a directory listing guarantees funding approval.</p>
+        <ul className="wp-cpt-plain-list">
+          {editorial.providerQuestions.map((question) => <li key={question}>{question}</li>)}
+        </ul>
+      </section>
+
+      <section id="pitfalls" className="wp-cpt-section">
+        <h2>Common mistakes to avoid</h2>
+        <ul className="wp-cpt-plain-list">
+          {editorial.pitfalls.map((pitfall) => <li key={pitfall}>{pitfall}</li>)}
+        </ul>
+      </section>
+
+      <section id="funding-arrangement" className="wp-cpt-section">
+        <h2>How to make and review the funding arrangement</h2>
+        {(longform.deepDive ?? []).map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+        <h3>Review checklist</h3>
+        <p>Recheck the arrangement at regular intervals and whenever services, circumstances, rates or program rules change. Record who confirmed each important decision and the date it was made. Before relying on an older approval or agreement, confirm that it remains current and still covers the service, provider and dates involved.</p>
+        <ul className="wp-cpt-plain-list">
+          {(longform.reviewChecklist ?? []).map((item) => <li key={item}>{item}</li>)}
+        </ul>
+      </section>
+
+      <section id="faq" className="wp-cpt-section">
+        <h2>Frequently asked questions</h2>
+        <div className="wp-cpt-faq-list">
+          {editorial.faqs.map((faq) => (
+            <details className="wp-cpt-faq-item" key={faq.question}>
+              <summary>{faq.question}</summary>
+              <p>{faq.answer}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+
+      <section id="sources" className="wp-cpt-section">
+        <h2>Official sources and further reading</h2>
+        <ul className="wp-cpt-plain-list">
+          {editorial.sources.map((source) => (
+            <li key={source.href}><a href={source.href} target="_blank" rel="noopener noreferrer">{source.label}</a></li>
+          ))}
+        </ul>
+        <p className="wp-cpt-table-note">Programs and rules change. Check the official source before making a decision or entering a service agreement.</p>
+      </section>
+
       {siblings.length > 0 && (
         <section id="related-funding" className="wp-cpt-section">
           <h2>Other topics in {meta.categoryGroup}</h2>
@@ -188,8 +284,8 @@ export function FundingHubPage() {
   useEffect(() => {
     window.scrollTo(0, 0);
     applySeoTags({
-      title: 'NDIS, aged care, DVA and private funding explained | SolDirectory',
-      description: 'General information on NDIS plan management, aged care programs, DVA funding, Medicare and private options — and which providers accept each, where SolDirectory tracks it.',
+      title: 'NDIS, aged care and other funding | SolDirectory',
+      description: 'Understand NDIS plan management, aged care, DVA, Medicare and private funding, with practical checks, records and provider questions.',
       canonicalUrl: `${window.location.origin}/funding`,
     });
   }, []);

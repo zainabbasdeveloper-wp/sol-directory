@@ -10,6 +10,7 @@ import { listProvidersBy, listPublicAreas, listPublicConditions, type CountRow, 
 import { applySeoTags, setJsonLd } from '../../lib/seo';
 import { useMatchModal } from '../../context/MatchModalContext';
 import { conditionBySlug, CONDITION_CATEGORY_GROUPS } from '../../data/conditionContent';
+import { conditionEditorialFor } from '../../data/conditionEditorial';
 import './Home.css';
 import './Directory.css';
 import './register/register.css';
@@ -19,6 +20,32 @@ const PAGE_SIZE = 12;
 /** Mirrors MIN_INDEXABLE_PROVIDERS in the API's providersPublic.controller.ts. */
 const MIN_INDEXABLE = 3;
 const fmt = (n: number) => n.toLocaleString('en-AU');
+
+const conditionFaqs = (name: string) => {
+  const lower = name.toLowerCase();
+  return [
+    {
+      question: `Does SolDirectory verify a provider’s experience with ${lower}?`,
+      answer: 'No. Providers write their own profiles, including which conditions they have experience supporting. Confirm the details that matter to you directly with the provider.',
+    },
+    {
+      question: 'No providers are listed here yet — what can I do?',
+      answer: 'Submit a free enquiry and we’ll notify suitable providers in your area as they join and confirm their capacity — there’s no cost and no obligation.',
+    },
+    {
+      question: 'Is this page medical advice?',
+      answer: 'No. It’s general information to help with browsing providers. For anything about diagnosis, treatment or a specific person’s needs, speak with a GP or the relevant specialist.',
+    },
+    {
+      question: `Does a diagnosis of ${lower} automatically qualify someone for funding?`,
+      answer: 'No. Funding bodies apply their own current eligibility rules and usually consider functional impact, the support requested and available evidence. Confirm requirements with the responsible program.',
+    },
+    {
+      question: 'What should I ask before choosing a provider?',
+      answer: `Ask about direct experience with ${lower}, the allocated worker’s training, communication and safety planning, current availability, fees, funding, service agreements and how support will be reviewed.`,
+    },
+  ];
+};
 
 type Mode = 'area' | 'condition';
 
@@ -120,10 +147,14 @@ export default function ProviderListingPage({ mode }: { mode: Mode }) {
     }
     if (loading) return;
     applySeoTags({
-      title: `${heading}${page > 1 ? ` (page ${page})` : ''} | SolDirectory`,
-      description: trimTo(`${fmt(total)} ${total === 1 ? 'provider lists' : 'providers list'} ${mode === 'area' ? `${row.name} as an area they support` : `experience supporting ${row.name}`} on SolDirectory. See their supports and service areas, then get matched for free.`, 158),
+      title: conditionMeta
+        ? `${conditionMeta.name} support providers and guide | SolDirectory`
+        : `${heading}${page > 1 ? ` (page ${page})` : ''} | SolDirectory`,
+      description: conditionMeta
+        ? trimTo(`Understand support considerations for ${conditionMeta.name}, compare providers who list relevant experience, and prepare practical questions about funding, safety and fit.`, 158)
+        : trimTo(`${fmt(total)} ${total === 1 ? 'provider lists' : 'providers list'} ${row.name} as an area they support on SolDirectory. See their supports and service areas, then get matched for free.`, 158),
       canonicalUrl: `${window.location.origin}${page > 1 ? `${base}?page=${page}` : base}`,
-      noindex: total < MIN_INDEXABLE,
+      noindex: mode === 'area' && total < MIN_INDEXABLE,
     });
     const parent = mode === 'area' ? { name: 'Provider directory', to: '/find-a-provider' } : { name: 'Condition', to: '/condition' };
     setJsonLd('directory-breadcrumbs', {
@@ -134,8 +165,28 @@ export default function ProviderListingPage({ mode }: { mode: Mode }) {
         { '@type': 'ListItem', position: 3, name: row.name, item: `${window.location.origin}${base}` },
       ],
     });
-    return () => setJsonLd('directory-breadcrumbs', null);
-  }, [row, loading, total, page, heading, base, mode]);
+    const faqs = conditionMeta ? conditionFaqs(conditionMeta.name) : [];
+    setJsonLd('condition-page', conditionMeta ? {
+      '@type': 'WebPage',
+      name: heading,
+      description: conditionMeta.summary,
+      url: `${window.location.origin}${base}`,
+      isPartOf: { '@type': 'WebSite', name: 'SolDirectory', url: window.location.origin },
+    } : null);
+    setJsonLd('condition-faq', faqs.length ? {
+      '@type': 'FAQPage',
+      mainEntity: faqs.map((faq) => ({
+        '@type': 'Question',
+        name: faq.question,
+        acceptedAnswer: { '@type': 'Answer', text: faq.answer },
+      })),
+    } : null);
+    return () => {
+      setJsonLd('directory-breadcrumbs', null);
+      setJsonLd('condition-page', null);
+      setJsonLd('condition-faq', null);
+    };
+  }, [row, loading, total, page, heading, base, mode, conditionMeta]);
 
   useEffect(() => { window.scrollTo(0, 0); }, [slug]);
 
@@ -167,8 +218,12 @@ export default function ProviderListingPage({ mode }: { mode: Mode }) {
     if (conditionMeta.relatedCategories.length > 0) toc.push({ id: 'support-types', label: 'Related supports' });
     toc.push({ id: 'method', label: 'How providers are listed' });
     toc.push({ id: 'checking-experience', label: 'Checking experience' });
+    toc.push({ id: 'planning-support', label: 'Planning support' });
+    toc.push({ id: 'access-pathways', label: 'Funding and access' });
+    toc.push({ id: 'safety', label: 'Safety and coordination' });
     toc.push({ id: 'related-conditions', label: 'Other conditions' });
     toc.push({ id: 'faq', label: 'FAQ' });
+    toc.push({ id: 'sources', label: 'Official sources' });
   }
   toc.push({ id: 'wp-cpt-cta', label: 'Get matched' });
 
@@ -268,6 +323,8 @@ function ConditionContentSections({ meta }: { meta: NonNullable<ReturnType<typeo
   const group = CONDITION_CATEGORY_GROUPS.find((g) => g.title === meta.categoryGroup);
   const siblings = (group?.items ?? []).filter((c) => c.slug !== meta.slug);
   const lower = meta.name.toLowerCase();
+  const faqs = conditionFaqs(meta.name);
+  const editorial = conditionEditorialFor(meta);
 
   return (
     <>
@@ -310,6 +367,27 @@ function ConditionContentSections({ meta }: { meta: NonNullable<ReturnType<typeo
         </ol>
       </section>
 
+      <section id="planning-support" className="wp-cpt-section">
+        <h2>Planning support around the person</h2>
+        <p>A diagnosis or condition name does not describe a complete support plan. Useful planning starts with the person’s goals, functional needs, preferences, environment and existing relationships.</p>
+        <ol className="wp-cpt-plain-list">
+          {editorial.planning.map((item) => <li key={item}>{item}</li>)}
+        </ol>
+      </section>
+
+      <section id="access-pathways" className="wp-cpt-section">
+        <h2>Funding and access pathways</h2>
+        {editorial.access.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+        <p className="wp-cpt-table-note">Eligibility and funding decisions are made by the responsible program, not by SolDirectory or by a directory listing. Confirm current requirements with the official body.</p>
+      </section>
+
+      <section id="safety" className="wp-cpt-section">
+        <h2>Safety, consent and coordination</h2>
+        <ul className="wp-cpt-plain-list">
+          {editorial.safeguards.map((item) => <li key={item}>{item}</li>)}
+        </ul>
+      </section>
+
       {siblings.length > 0 && (
         <section id="related-conditions" className="wp-cpt-section">
           <h2>Other conditions in {meta.categoryGroup}</h2>
@@ -324,19 +402,23 @@ function ConditionContentSections({ meta }: { meta: NonNullable<ReturnType<typeo
       <section id="faq" className="wp-cpt-section">
         <h2>Frequently asked questions</h2>
         <div className="wp-cpt-faq-list">
-          <details className="wp-cpt-faq-item">
-            <summary>Does SolDirectory verify a provider’s experience with {lower}?</summary>
-            <p>No. Providers write their own profiles, including which conditions they have experience supporting. Confirm the details that matter to you directly with the provider.</p>
-          </details>
-          <details className="wp-cpt-faq-item">
-            <summary>No providers are listed here yet — what can I do?</summary>
-            <p>Submit a free enquiry and we’ll notify suitable providers in your area as they join and confirm their capacity — there’s no cost and no obligation.</p>
-          </details>
-          <details className="wp-cpt-faq-item">
-            <summary>Is this page medical advice?</summary>
-            <p>No. It’s general information to help with browsing providers. For anything about diagnosis, treatment or a specific person’s needs, speak with a GP or the relevant specialist.</p>
-          </details>
+          {faqs.map((faq) => (
+            <details className="wp-cpt-faq-item" key={faq.question}>
+              <summary>{faq.question}</summary>
+              <p>{faq.answer}</p>
+            </details>
+          ))}
         </div>
+      </section>
+
+      <section id="sources" className="wp-cpt-section">
+        <h2>Official sources and further support</h2>
+        <ul className="wp-cpt-plain-list">
+          {editorial.sources.map((source) => (
+            <li key={source.href}><a href={source.href} target="_blank" rel="noopener noreferrer">{source.label}</a></li>
+          ))}
+        </ul>
+        <p className="wp-cpt-table-note">Use these sources for current program and health information. For personal diagnosis or treatment advice, speak with an appropriately qualified health professional.</p>
       </section>
     </>
   );

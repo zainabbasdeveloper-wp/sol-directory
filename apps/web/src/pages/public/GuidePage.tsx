@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { PublicHeader, PublicFooter } from './PublicLayout';
-import { GUIDE_DOCS } from './guideContent';
+import { GUIDE_DOCS } from '@soldirectory/topic-content';
 import { applySeoTags, setJsonLd } from '../../lib/seo';
 import { useMatchModal } from '../../context/MatchModalContext';
 import './LegalPage.css';
@@ -61,6 +61,13 @@ export default function GuidePage({ slug }: { slug: keyof typeof GUIDE_DOCS | st
             )}
           </section>
         ))}
+
+        <section className="legal-section">
+          <h2>Continue your search</h2>
+          <ul className="guide-list">
+            {doc.internalLinks.map((item) => <li key={item.href}><Link to={item.href}>{item.label}</Link></li>)}
+          </ul>
+        </section>
 
         <section className="legal-section">
           <h2>Official source</h2>
@@ -155,6 +162,13 @@ export function GuidesHubPage() {
             <li><strong>Open the official source.</strong><span>Each guide links to the government body responsible for the current information.</span></li>
             <li><strong>Ask providers directly.</strong><span>Confirm fees, registration, availability and service terms before entering an agreement.</span></li>
           </ol>
+        </section>
+
+        <section className="guide-hub-intro" aria-labelledby="guide-using-heading">
+          <span>From information to a decision</span>
+          <h2 id="guide-using-heading">Use the current rule, then check the real arrangement</h2>
+          <p>Open the official source linked from each guide because program names, prices, eligibility and assessment pathways can change. General information can help you prepare questions, but it cannot determine a person’s funding, clinical needs or legal rights.</p>
+          <p>When comparing providers, confirm registration requirements, worker qualifications, service areas, current capacity, complete rates, travel, cancellations and complaint processes directly. Keep important answers, quotes and service terms in writing, and use public-register records as a verification starting point rather than proof of availability or fit.</p>
         </section>
 
         <section className="guide-hub-cta">

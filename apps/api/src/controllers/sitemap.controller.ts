@@ -2,8 +2,9 @@ import type { Request, Response } from 'express';
 import Provider from '../models/Provider.js';
 import Worker from '../models/Worker.js';
 import RegisterListing from '../models/RegisterListing.js';
+import { CONDITION_TOPICS, FUNDING_TOPICS, GUIDE_DOCS, LANGUAGE_TOPICS } from '@soldirectory/topic-content';
 import { computeHub, computeServiceSuburbs } from './register.controller.js';
-import { MIN_INDEXABLE_PROVIDERS, areaRows, conditionRows } from './providersPublic.controller.js';
+import { MIN_INDEXABLE_PROVIDERS, areaRows } from './providersPublic.controller.js';
 import { REAL_SERVICES, REGISTER_TYPES, STATE_CODES, type RegisterType } from '../services/registerNormalise.js';
 
 // Real sitemap — every URL here is either a genuinely static public
@@ -18,49 +19,16 @@ import { REAL_SERVICES, REGISTER_TYPES, STATE_CODES, type RegisterType } from '.
 // pages alone are in the tens of thousands, so they're split up front
 // rather than left to break later.
 
-// Keep these authored route slugs in step with apps/web/src/pages/public/guideContent.ts
-// and apps/web/src/data/fundingContent.ts. Unlike WordPress routes, these pages
-// exist in the web build itself and must not depend on a CMS response to enter
-// the sitemap.
-const GUIDE_ROUTES = [
-  '/guides',
-  '/guides/ndis-price-guide',
-  '/guides/choosing-a-provider',
-  '/guides/plan-management-basics',
-  '/guides/aged-care-support',
-];
-const FUNDING_ROUTES = [
-  '/funding',
-  '/funding/agency-managed',
-  '/funding/plan-managed',
-  '/funding/self-managed',
-  '/funding/plan-reviews',
-  '/funding/change-of-circumstances',
-  '/funding/first-plan-support',
-  '/funding/home-care-packages',
-  '/funding/commonwealth-home-support',
-  '/funding/support-at-home',
-  '/funding/residential-fees',
-  '/funding/dva-community-nursing',
-  '/funding/dva-home-care',
-  '/funding/veterans-home-care',
-  '/funding/rehabilitation-appliances',
-  '/funding/open-arms-referrals',
-  '/funding/private-fee-for-service',
-  '/funding/icare-workers-compensation',
-  '/funding/private-health-insurance',
-  '/funding/medicare-care-plans',
-  '/funding/state-funded-programs',
-  '/funding/plan-managers',
-  '/funding/bookkeeping-invoicing',
-  '/funding/price-guide-explained',
-  '/funding/funding-eligibility',
-  '/funding/budget-categories',
-];
+// Authored pages exist in the web build itself and must not depend on a CMS
+// response to enter the sitemap.
+const GUIDE_ROUTES = ['/guides', ...Object.values(GUIDE_DOCS).map((guide) => `/guides/${guide.slug}`)];
+const FUNDING_ROUTES = ['/funding', ...FUNDING_TOPICS.map((topic) => `/funding/${topic.slug}`)];
+const CONDITION_ROUTES = ['/condition', ...CONDITION_TOPICS.map((topic) => `/condition/${topic.slug}`)];
+const LANGUAGE_ROUTES = ['/language', ...LANGUAGE_TOPICS.map((topic) => `/language/${topic.slug}`)];
 const STATIC_PUBLIC_ROUTES = [
   '/', '/find-a-provider', '/services', '/locations', '/providers',
-  '/independent-workers', '/ndis-providers',
-  '/aged-care-providers', ...GUIDE_ROUTES, ...FUNDING_ROUTES,
+  '/independent-workers', '/independent-workers/find', '/ndis-providers',
+  '/aged-care-providers', '/support-coordinators', ...GUIDE_ROUTES, ...FUNDING_ROUTES, ...CONDITION_ROUTES, ...LANGUAGE_ROUTES,
 ];
 const REGISTER_PATH: Record<RegisterType, string> = { ndis: '/ndis-providers', aged_care: '/aged-care-providers' };
 const REGISTER_CHUNK = 10_000;
@@ -108,7 +76,7 @@ function slugify(text: string): string {
 
 /**
  * service_area_page is the service×suburb combo page
- * (ServiceLocationPage.tsx, route /services/:serviceSlug/:suburb) — by
+ * (ServiceLocationPage.tsx, route /services/:serviceSlug/:state/:suburb) — by
  * far the largest and most search-relevant page type on the site, so
  * it gets its own fetch rather than reusing fetchWpSlugs: the route
  * needs the real service_name/suburb fields, not the post's own WP
@@ -124,8 +92,11 @@ async function fetchServiceAreaPaths(base: string): Promise<string[]> {
       .filter((i: any) => !i?.meta?.seo_noindex)
       .map((i: any) => {
         const service = slugify(String(i?.meta?.service_name ?? ''));
+        const state = String(i?.meta?.state ?? '').trim().toLowerCase();
         const suburb = slugify(String(i?.meta?.suburb ?? ''));
-        return service && suburb ? `/services/${service}/${suburb}` : null;
+        return service && STATE_CODES.map((code) => code.toLowerCase()).includes(state) && suburb
+          ? `/services/${service}/${state}/${suburb}`
+          : null;
       })
       .filter((p): p is string => !!p);
   } catch {
@@ -147,13 +118,11 @@ async function buildPageUrls(): Promise<UrlEntry[]> {
   const providers = await Provider.find({ accountStatus: 'active', listingPaused: { $ne: true }, slug: { $exists: true, $ne: null } }).select('slug').lean();
   for (const p of providers) paths.push(`/directory/${(p as any).slug}`);
 
-  // Location and "experience supporting" pages - only those with enough real providers to be more than a keyword page.
-  const [areas, conditions] = await Promise.all([areaRows(), conditionRows()]);
+  // Location pages only exist when enough real providers list the area.
+  // Condition pages are substantive authored guides, so they are static
+  // routes above and do not depend on current member supply.
+  const areas = await areaRows();
   for (const a of areas) if (a.count >= MIN_INDEXABLE_PROVIDERS) paths.push(`/directory/in/${a.slug}`);
-  const goodConditions = conditions.filter((c) => c.count >= MIN_INDEXABLE_PROVIDERS);
-  // Permalink-style, its own top-level category prefix — not nested under /directory.
-  for (const c of goodConditions) paths.push(`/condition/${c.slug}`);
-  if (goodConditions.length) paths.push('/condition');
 
   // Independent workers who opted in to a public profile and were approved.
   const workers = await Worker.find({ publicProfile: true, published: true, accountStatus: 'active', publicSlug: { $exists: true, $ne: null } }).select('publicSlug').lean();

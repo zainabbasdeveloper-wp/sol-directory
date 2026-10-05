@@ -5,20 +5,24 @@ import { MatchModalProvider } from './context/MatchModalContext';
 import MatchingWizard from './components/MatchingWizard';
 import AppRoutes from './routes/AppRoutes';
 import AccessibilityToolbar from './components/AccessibilityToolbar';
+import SitePreloader from './components/SitePreloader';
 import './styles/global.css';
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <ToastProvider>
-          <MatchModalProvider>
-            <AppRoutes />
-            <MatchingWizard />
-            <AccessibilityToolbar />
-          </MatchModalProvider>
-        </ToastProvider>
-      </AuthProvider>
-    </BrowserRouter>
+    <>
+      <SitePreloader />
+      <BrowserRouter>
+        <AuthProvider>
+          <ToastProvider>
+            <MatchModalProvider>
+              <AppRoutes />
+              <MatchingWizard />
+              <AccessibilityToolbar />
+            </MatchModalProvider>
+          </ToastProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </>
   );
 }
