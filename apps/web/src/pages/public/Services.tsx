@@ -92,6 +92,15 @@ export default function Services() {
           </ol>
         </section>
 
+        <section className="directory-intro">
+          <h2>Share enough information, without oversharing</h2>
+          <p>Describe the required tasks, relevant risks, communication or accessibility needs, location, timing and funding arrangement so a provider can assess fit. An initial directory enquiry should not contain an entire medical record. Share detailed assessments, health plans and identity documents only with an appropriate provider, through a suitable channel and with the person’s consent.</p>
+          <h2>Confirm how support works day to day</h2>
+          <p>Ask about worker continuity, introductions, handovers and backup for absences. Clarify who supplies equipment, consumables or transport and whether any task requires a qualified practitioner or person-specific competency assessment. Record routines, communication, cultural requirements and escalation contacts in the agreed support information.</p>
+          <h2>Review outcomes and arrangements</h2>
+          <p>Set a review date and agree what useful progress or stable support looks like for the person. Compare invoices with attendance and written rates, and raise missed services, unexplained charges or safety concerns promptly. Update the arrangement when goals, health, equipment, living circumstances or informal supports change, and understand the complaint and exit process before support begins.</p>
+        </section>
+
         <section className="directory-source-section" aria-labelledby="service-sources-heading">
           <div className="directory-section-heading">
             <span className="directory-section-label">Understand the results</span>

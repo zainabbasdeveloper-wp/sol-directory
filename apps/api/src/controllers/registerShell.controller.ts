@@ -6,6 +6,7 @@ import Provider from '../models/Provider.js';
 import Worker from '../models/Worker.js';
 import WorkerReview from '../models/WorkerReview.js';
 import { MIN_SUBURB_LISTINGS, REAL_SERVICES, STATE_CODES, safeRegisterName, type RegisterType } from '../services/registerNormalise.js';
+import { findProvidersPaidFirst } from '../services/providerPriority.js';
 import { categoryListings, computeCategoryOverview, computeHub, computeServiceSuburbs } from './register.controller.js';
 import { workersForService, workersInArea } from './workersPublic.controller.js';
 import { MIN_INDEXABLE_PROVIDERS, VISIBLE_PROVIDER, areaRows, conditionRows, publicLogoUrl } from './providersPublic.controller.js';
@@ -430,7 +431,7 @@ async function providerFilterPage(site: string, mode: 'area' | 'condition', slug
   const field = mode === 'area' ? 'serviceSuburbs' : 'conditionExperience';
   const filter = { ...VISIBLE_PROVIDER, slug: { $exists: true, $ne: null }, [field]: new RegExp(`^\\s*${row.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'i') };
   const [docs, total] = await Promise.all([
-    Provider.find(filter).select('legalEntityName tradingName slug registrationGroups').sort({ tradingName: 1, legalEntityName: 1, _id: 1 }).skip((page - 1) * LEVEL_PAGE).limit(LEVEL_PAGE).lean(),
+    findProvidersPaidFirst<any>(filter, 'legalEntityName tradingName slug registrationGroups', { skip: (page - 1) * LEVEL_PAGE, limit: LEVEL_PAGE }),
     Provider.countDocuments(filter),
   ]);
 
@@ -445,13 +446,20 @@ async function providerFilterPage(site: string, mode: 'area' | 'condition', slug
     (page > 1 ? `<a rel="prev" href="${esc(page === 2 ? base : `${base}?page=${page - 1}`)}">Previous page</a> ` : '') +
     (page < totalPages ? `<a rel="next" href="${esc(`${base}?page=${page + 1}`)}">Next page</a>` : '');
   const editorial = topic ? conditionShellEditorial(topic) : null;
+  const siblings = topic ? CONDITION_TOPICS.filter((item) => item.categoryGroup === topic.categoryGroup && item.slug !== topic.slug) : [];
   const editorialBody = topic && editorial
-    ? topicBody(topic, editorial, 'Planning and checking support', 'Questions to ask before choosing support')
+    ? topicBody(topic, editorial, 'Planning and checking support', 'Questions to ask before choosing support') +
+      `<h2>Planning support around the person</h2>${(editorial.deepDive ?? []).map((paragraph) => `<p>${esc(paragraph)}</p>`).join('')}` +
+      `<h2>Review checklist</h2><ul>${(editorial.reviewChecklist ?? []).map((item) => `<li>${esc(item)}</li>`).join('')}</ul>` +
+      `<h2>Official sources and further support</h2><ul>${(editorial.sources ?? []).map((source) => li(source.href, source.label)).join('')}</ul>` +
+      `<h2>Other conditions in ${esc(topic.categoryGroup)}</h2><ul>${siblings.map((item) => li(`/condition/${item.slug}/`, item.name)).join('')}</ul>`
     : '';
 
   return {
     status: 200,
-    title: `${heading}${page > 1 ? ` (page ${page})` : ''} | SolDirectory`,
+    title: mode === 'condition'
+      ? `${row.name} support providers${page > 1 ? ` (page ${page})` : ''} | SolDirectory`
+      : `${heading}${page > 1 ? ` (page ${page})` : ''} | SolDirectory`,
     description: trimTo(`${fmt(total)} ${total === 1 ? 'provider lists' : 'providers list'} ${mode === 'area' ? `${row.name} as an area they support` : `experience supporting ${row.name}`} on SolDirectory. See their supports and service areas, then get matched for free.`, 158),
     canonical: page > 1 ? `${base}?page=${page}` : base,
     noindex: mode === 'area' && total < MIN_INDEXABLE_PROVIDERS,
@@ -473,12 +481,17 @@ async function conditionsHubPage(site: string): Promise<Page> {
   const counts = new Map(rows.map((row) => [row.slug, row.count]));
   return {
     status: 200,
-    title: 'Providers by experience supporting a condition or need | SolDirectory',
+    title: 'Find providers by condition or support need | SolDirectory',
     description: 'Browse providers by the conditions and needs they say they have experience supporting. Providers write their own profiles.',
     canonical: '/condition',
     noindex: false,
     jsonLd: [breadcrumbLd(site, [{ name: 'Home', path: '/' }, { name: 'Condition', path: '/condition' }])],
-    body: `<h1>Find providers by condition or support need</h1><p>Browse general information and providers who say they have relevant experience. A provider writes its own profile, so confirm experience, staff, availability and fit directly.</p><ul>${CONDITION_TOPICS.map((topic) => li(`/condition/${topic.slug}`, topic.name, counts.has(topic.slug) ? `(${fmt(counts.get(topic.slug)!)})` : '')).join('')}</ul>`,
+    body: `<h1>Find providers by condition or support need</h1><p>Browse general information and providers who say they have relevant experience. A provider writes its own profile, so confirm experience, staff, availability and fit directly.</p>` +
+      `<h2>Use condition experience as a starting point</h2><p>A condition label cannot describe a person’s complete support needs, strengths or preferences. Start with the person’s goals, daily activities, communication, culture, environment and the specific tasks where assistance is wanted. A provider may have broad experience with a condition but no experience with the particular age group, equipment, communication method or support involved. Open the relevant guide to prepare questions, then ask who would actually deliver the service and how the proposed approach would be adapted to the individual.</p>` +
+      `<h2>What provider-supplied information means</h2><p>Providers select the condition experience shown on their profiles. SolDirectory does not independently assess clinical expertise, service quality or personal suitability. Check qualifications, professional registration where relevant, worker screening, insurance, supervision and person-specific training directly. Ask for concrete examples of comparable work without requesting another person’s private information. Current availability, service area and funding acceptance must also be confirmed because a profile can be accurate in general while a suitable worker or appointment is not presently available.</p>` +
+      `<h2>Separate treatment, functional support and funding</h2><p>Diagnosis and clinical treatment usually sit with qualified health professionals. Disability, aged care, education and community services may instead support daily function, participation, independence or implementation of an established plan. Clarify which role a provider is offering and who remains responsible for clinical decisions. A diagnosis does not automatically establish eligibility for the NDIS or another program. Funding bodies apply their current rules and may require evidence of functional impact, referrals, prior approval or use of particular providers. Obtain rates, travel, cancellation, report and administration charges in writing.</p>` +
+      `<h2>Plan for consent, safety and review</h2><p>The person should be involved in choosing support and deciding what information can be shared. Record preferred communication, emergency contacts, health or behaviour plans, known risks and escalation responsibilities. Ask how the provider manages incidents, complaints, privacy, worker changes and continuity when a regular worker is unavailable. Agree on goals and review dates so the arrangement can change when health, living circumstances, equipment, informal support or preferences change. A directory search is not an emergency or clinical service; use 000 for immediate danger and the person’s established health or crisis pathways for urgent care.</p>` +
+      `<h2>Browse condition and support guides</h2><ul>${CONDITION_TOPICS.map((topic) => li(`/condition/${topic.slug}`, topic.name, counts.has(topic.slug) ? `(${fmt(counts.get(topic.slug)!)})` : '')).join('')}</ul>`,
   };
 }
 
@@ -614,7 +627,7 @@ async function languageTopicPage(site: string, slug: string, page: number): Prom
     languages: new RegExp(`^\\s*${topic.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'i'),
   };
   const [docs, total] = await Promise.all([
-    Provider.find(filter).select('legalEntityName tradingName slug registrationGroups').sort({ tradingName: 1, legalEntityName: 1, _id: 1 }).skip((page - 1) * LEVEL_PAGE).limit(LEVEL_PAGE).lean(),
+    findProvidersPaidFirst<any>(filter, 'legalEntityName tradingName slug registrationGroups', { skip: (page - 1) * LEVEL_PAGE, limit: LEVEL_PAGE }),
     Provider.countDocuments(filter),
   ]);
   const totalPages = Math.max(1, Math.ceil(total / LEVEL_PAGE));
@@ -625,7 +638,7 @@ async function languageTopicPage(site: string, slug: string, page: number): Prom
 
   return {
     status: 200,
-    title: `${topic.name} speaking support providers and communication guide | SolDirectory`,
+    title: `${topic.name} speaking providers | SolDirectory`,
     description: trimTo(`Find providers that list ${topic.name} and learn what to confirm about fluency, interpreters, cultural safety, privacy, funding and communication before support begins.`, 158),
     canonical: page > 1 ? `${base}?page=${page}` : `${base}/`,
     noindex: false,
@@ -655,12 +668,17 @@ function languageHubPage(site: string): Page {
   const groups = [...new Set(LANGUAGE_TOPICS.map((topic) => topic.categoryGroup))];
   return {
     status: 200,
-    title: 'Find support by language and communication preference | SolDirectory',
+    title: 'Find support by language | SolDirectory',
     description: 'Browse providers by languages they list and learn how to check fluency, interpreting, accessible communication, privacy and cultural safety.',
     canonical: '/language',
     noindex: false,
     jsonLd: [breadcrumbLd(site, [{ name: 'Home', path: '/' }, { name: 'Language', path: '/language' }])],
     body: `<h1>Find support by language</h1><p>Browse provider-supplied language information, then confirm the worker, fluency, dialect and communication method directly. A shared language does not prove interpreting credentials, cultural safety, specialist experience or current availability.</p>` +
+      `<h2>Start with the person’s communication preference</h2><p>Ask the person how they want to communicate, which language or dialect they use in different settings and whether they prefer spoken, signed, written, visual or augmentative communication. Do not assume that a family member should interpret or make decisions. Communication preferences can differ for everyday support, health appointments, consent, complaints and complex choices. Record the preference in the service agreement and confirm the specific worker can meet it before the first appointment rather than relying on an organisation-wide language claim.</p>` +
+      `<h2>Understand bilingual support and interpreting</h2><p>A bilingual support worker can make everyday routines and relationships easier, but being bilingual does not by itself make someone a qualified interpreter. Independent, credentialed interpreting may be important for assessments, legal or financial information, informed consent, complaints and clinical discussions. Ask who will book the interpreter, whether remote or in-person interpreting is appropriate, how confidentiality is protected and what happens if the preferred interpreter is unavailable. For Auslan, deafblind interpreting and other specialist communication, confirm the exact skill and accreditation needed.</p>` +
+      `<h2>Check cultural safety without making assumptions</h2><p>Shared language can support rapport, but people who use the same language may have different cultures, faiths, genders, family roles and migration experiences. Ask the person what matters to them instead of expecting a provider to infer preferences from language or background. Discuss name pronunciation, gender preferences, food, personal care, community connections, significant dates and any past experiences that affect trust. A culturally safe provider should listen, avoid stereotypes, respond to feedback and respect the person’s control over private information.</p>` +
+      `<h2>Confirm funding, privacy and service terms</h2><p>Interpreter, translation and accessible-information costs depend on the purpose, program and current funding rules. Confirm eligibility and prior approval with the responsible body before booking. Ask the provider for complete rates, minimum shifts, travel, cancellations, reports, interpreter charges and exit terms in writing and in an accessible format. Agree on who may receive information, what can be shared with family or coordinators and how translated records are stored. Recheck arrangements if the worker, interpreter, support needs or funding changes.</p>` +
+      `<h2>Plan accessible information and backup communication</h2><p>Ask for service agreements, schedules, consent information and complaint pathways in a format the person can understand and use. Check that translated or Easy Read material is current and that the person has enough time to ask questions. Agree on a backup method for emergencies, technology failure or an unavailable interpreter, and record how staff should confirm understanding without speaking over the person or relying on unapproved family interpretation.</p>` +
       groups.map((group) => `<h2>${esc(group)}</h2><ul>${LANGUAGE_TOPICS.filter((topic) => topic.categoryGroup === group).map((topic) => li(`/language/${topic.slug}`, topic.name)).join('')}</ul>`).join(''),
   };
 }
@@ -705,7 +723,7 @@ function supportCoordinatorsPage(site: string): Page {
   };
 }
 
-function publicMarketingPage(site: string, key: 'home' | 'find' | 'locations' | 'providers' | 'workers'): Page {
+function publicMarketingPage(site: string, key: 'home' | 'find' | 'services' | 'locations' | 'providers' | 'workers'): Page {
   const pages: Record<typeof key, Omit<Page, 'status' | 'noindex'>> = {
     home: {
       title: 'SolDirectory | Find NDIS and aged care providers',
@@ -732,6 +750,22 @@ function publicMarketingPage(site: string, key: 'home' | 'find' | 'locations' | 
         `<h2>Questions to ask before engaging a provider</h2><ul><li>Who will actually deliver the support, and what qualifications, screening and experience apply?</li><li>When can support begin, and what happens when a regular worker is unavailable?</li><li>What are the complete rates, travel, cancellation, report and administration charges?</li><li>How are preferences, consent, privacy, incidents, complaints and changes in need handled?</li><li>Which funding arrangements are accepted, and is provider registration required for this support?</li></ul>` +
         `<h2>Use the wider directory</h2><p>Browse all <a href="/services">service guides</a>, search by <a href="/locations">location</a>, review <a href="/condition">condition-related guidance</a>, compare <a href="/funding">funding topics</a>, or read <a href="/guides/choosing-a-provider">how to choose a provider</a>. SolDirectory does not recommend providers or guarantee availability; the final choice and service agreement remain with the person arranging support.</p>`,
     },
+    services: {
+      title: 'NDIS and aged care support services | SolDirectory',
+      description: 'Browse disability and aged care service guides, understand common supports, and compare providers by service, location, availability and safeguards.',
+      canonical: '/services',
+      jsonLd: [breadcrumbLd(site, [{ name: 'Home', path: '/' }, { name: 'Services', path: '/services' }])],
+      body: `<nav aria-label="Breadcrumb"><a href="/">Home</a> / Services</nav><h1>NDIS and aged care support services</h1>` +
+        `<p>Browse service guides to understand common disability, aged care, therapy, nursing, housing and community supports before contacting providers. Each guide explains what to clarify, records to prepare and practical questions to ask. A service label is a starting point, not proof that a provider is suitable, available or funded for a particular person.</p>` +
+        `<h2>Browse services</h2><ul>${REAL_SERVICES.map((service) => li(`/services/${slugifyService(service)}`, service)).join('')}</ul>` +
+        `<h2>Start with the person’s actual needs</h2><p>Describe the tasks, goals, frequency, schedule, location, communication preferences, risks and equipment involved. Similar service names can cover very different work. Ask who will deliver the support, what experience and qualifications apply, how workers are supervised and what happens when a regular worker is unavailable.</p>` +
+        `<h2>Check funding and provider requirements</h2><p>Confirm the current plan or program, available budget, management arrangement and whether registration is required. Ask for complete rates in writing, including travel, cancellations, reports, non-face-to-face work and minimum shifts. General directory information cannot confirm an individual approval or payment outcome.</p>` +
+        `<h2>Compare safeguards and service terms</h2><p>Verify registration, screening, insurance and person-specific training directly where relevant. Review consent, privacy, incident, complaint and emergency processes. Before support begins, use a written service agreement that identifies scope, schedule, rates, responsibilities, changes and how either party may end the arrangement.</p>` +
+        `<h2>Prepare information without oversharing</h2><p>Providers need enough detail to decide whether they can safely deliver the requested support, but an initial directory enquiry should not contain an entire medical record. Describe the required tasks, relevant risks, communication or accessibility needs, location, timing and funding arrangement. Share detailed assessments, health plans and identity documents only with an appropriate provider, through a suitable channel and with the person’s consent. Ask why information is needed, who can access it and how it will be stored.</p>` +
+        `<h2>Confirm how support will work day to day</h2><p>Ask whether the same workers can attend regularly, how introductions and handovers happen and what backup is available for leave or unexpected absence. Clarify who supplies equipment, consumables or transport and which tasks require a qualified practitioner or person-specific competency assessment. Record preferred routines, communication, cultural requirements and escalation contacts. For supports delivered at home, discuss entry, pets, infection control, privacy and the boundaries of the agreed work.</p>` +
+        `<h2>Review outcomes and change arrangements early</h2><p>Set a review date and identify what useful progress or stable support would look like for the person. Compare invoices with attendance and agreed rates, and raise missed services, unexplained charges or safety concerns promptly. Needs and availability can change, so update the service scope when goals, health, equipment, living arrangements or informal supports change. Keep copies of agreements and important decisions, and understand the complaint and exit process before a problem makes support difficult to change.</p>` +
+        `<h2>Find providers</h2><p>Use the <a href="/find-a-provider">provider directory</a> to filter SolDirectory member profiles and public-register listings by support and location. You can also browse by <a href="/locations">location</a>, review <a href="/condition">condition-related guidance</a> or learn about <a href="/funding">funding arrangements</a>. SolDirectory does not recommend providers or guarantee capacity.</p>`,
+    },
     locations: {
       title: 'Find providers by location | SolDirectory',
       description: 'Browse NDIS and aged care providers by Australian state, city and suburb, then confirm service areas, travel, availability and local delivery.',
@@ -754,7 +788,7 @@ function publicMarketingPage(site: string, key: 'home' | 'find' | 'locations' | 
         `<h2>Understand what an enquiry means</h2><p>An enquiry is a request for information, not an exclusive referral, confirmed client or booking. More than one relevant provider may be notified, and the person decides whether to respond or proceed. Enquiry volume depends on local demand, profile accuracy, services, funding compatibility and confirmed capacity; no plan guarantees leads or work.</p>` +
         `<h2>Keep profile information accurate</h2><p>List only services your organisation actually delivers and areas it genuinely covers. Keep the intake email, funding arrangements, languages and condition experience current. Providers are asked to reconfirm capacity regularly, and stale profiles may be paused until availability is confirmed again.</p>` +
         `<h2>Assess every request independently</h2><p>Before accepting work, confirm the person's support requirements, location, schedule, risks, communication preferences, funding and decision-making arrangements. Check whether registration or specialist qualifications are required. Agree scope, rates, travel, cancellations, privacy, incidents, complaints and exit terms in a written service agreement.</p>` +
-        `<h2>Directory position and subscriptions</h2><p>Profiles are not ranked by payment. A free listing provides directory visibility and limited enquiry information; paid features can provide additional contact access and account tools according to the current plan terms. SolDirectory does not take a percentage of fees agreed between a provider and participant.</p>` +
+        `<h2>Directory position and subscriptions</h2><p>Search filters determine which profiles qualify. Eligible Pro and Growth members are shown before Starter members, with alphabetical ordering inside each plan group. Priority placement is not an endorsement or quality rating, and no plan guarantees enquiries or work. SolDirectory does not take a percentage of fees agreed between a provider and participant.</p>` +
         `<p>People searching for support can use the <a href="/find-a-provider">provider directory</a>, browse <a href="/services">service guides</a> and review public <a href="/ndis-providers">NDIS</a> or <a href="/aged-care-providers">aged care</a> register records. Providers should describe their own status accurately and never imply that a listing is an endorsement.</p>`,
     },
     workers: {
@@ -982,7 +1016,7 @@ const SVC_CREDENTIALS: [string, string][] = [
 ];
 const SVC_FAQ: [string, string][] = [
   ['How does SolDirectory work?', 'SolDirectory is a directory and referral service. You can search for providers, or send one free request. Providers who cover your area and offer the support you need are notified and contact you directly.'],
-  ['Does it cost anything to use?', 'No. It is free for participants, families and coordinators. Providers pay a subscription, and payment does not change where a provider appears in the directory.'],
+  ['Does it cost anything to use?', 'No. It is free for participants, families and coordinators. Search filters determine which providers qualify; eligible Pro and Growth members are shown before Starter members, with alphabetical ordering inside each plan group.'],
   ['How do I know a provider is registered?', "Providers supply their own registration details. Before you engage a provider, confirm their registration with them directly or on the NDIS Commission's public provider register."],
   ['Which funding types can I use?', 'Providers list the funding types they accept, such as NDIS, aged care, private and DVA. When you send a request you choose how the supports are funded so that we can match you with providers who accept it. Confirm details with the provider.'],
   ['How quickly will a provider respond?', 'Providers are notified as soon as you send a request. Response times vary between providers, so we do not publish an estimate here. We report response times only when enough real enquiries have been answered to make the figure accurate.'],
@@ -1015,7 +1049,7 @@ async function serviceLocationPage(site: string, serviceSlug: string, stateSlug:
   };
   const [providerTotal, providerDocs, ndisListings, agedListings] = await Promise.all([
     Provider.countDocuments(providerFilter),
-    Provider.find(providerFilter).select('legalEntityName tradingName slug registrationGroups').sort({ tradingName: 1, legalEntityName: 1 }).limit(12).lean(),
+    findProvidersPaidFirst<any>(providerFilter, 'legalEntityName tradingName slug registrationGroups', { limit: 12 }),
     RegisterListing.find({ type: 'ndis', supportCategories: service, areas: { $elemMatch: { state: code, suburbSlug } } }).select('slug name supportCategories areaCount').limit(12).lean(),
     RegisterListing.find({ type: 'aged_care', supportCategories: service, areas: { $elemMatch: { state: code, suburbSlug } } }).select('slug name supportCategories areaCount').limit(12).lean(),
   ]);
@@ -1090,8 +1124,8 @@ async function serviceLocationPage(site: string, serviceSlug: string, stateSlug:
     `<h2>What to compare before choosing</h2><p>Use these ${esc(serviceLower)}-specific checks when you contact providers in ${esc(suburbName)}. Confirm each answer directly: a directory listing does not prove current capacity.</p>` +
     SVC_COMPARE.map(([t, b, ask]) => `<h3>${esc(t)}</h3><p>${esc(b)}</p><p><strong>Ask:</strong> ${esc(ask)}</p>`).join('') +
     `<h2>How providers are listed</h2>` +
-    `<p><strong>Alphabetical order.</strong> Providers are listed alphabetically. SolDirectory does not rank providers, assess the quality of any provider's supports, or recommend a provider.</p>` +
-    `<p><strong>Payment does not affect position.</strong> Providers pay a subscription to receive and respond to enquiries. Payment does not change whether or where a provider appears.</p>` +
+    `<p><strong>How ordering works.</strong> Service and location filters determine which member providers qualify. Eligible Pro and Growth members are shown before Starter members, with providers listed alphabetically inside each plan group.</p>` +
+    `<p><strong>Placement is not endorsement.</strong> Plan priority does not mean SolDirectory has assessed or recommends a provider. Compare suitability, safeguards, availability, fees and service terms directly.</p>` +
     `<p><strong>Availability.</strong> Providers confirm each week that they are taking referrals. A provider who has not confirmed recently is removed from results until they do.</p>` +
     `<p><strong>Provider-supplied details.</strong> Registration, insurance and other details are supplied by providers. Always confirm them directly with a provider before you engage them.</p>` +
     `<h2>How to check a provider's credentials</h2><p>Confirm these five things directly with any provider before booking — a directory listing alone doesn't prove current status.</p>` +
@@ -1154,6 +1188,8 @@ export async function registerShell(req: Request, res: Response) {
     page = publicMarketingPage(site, 'home');
   } else if (root === 'find-a-provider' && parts.length === 1) {
     page = publicMarketingPage(site, 'find');
+  } else if (root === 'services' && parts.length === 1) {
+    page = publicMarketingPage(site, 'services');
   } else if (root === 'locations' && parts.length === 1) {
     page = publicMarketingPage(site, 'locations');
   } else if (root === 'providers' && parts.length === 1) {

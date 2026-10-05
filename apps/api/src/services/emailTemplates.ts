@@ -105,6 +105,42 @@ export function providerResponseTemplate(input: { providerName: string; tracking
   return { subject: 'A provider has responded to your request', html };
 }
 
+function searchDescription(input: { service?: string; suburb?: string; query?: string }): string {
+  return [input.service, input.suburb, input.query ? `provider name “${input.query}”` : ''].filter(Boolean).map(escapeHtml).join(' · ');
+}
+
+export function searchAlertVerificationTemplate(input: { service?: string; suburb?: string; query?: string; verifyUrl: string; unsubscribeUrl: string }): { subject: string; html: string } {
+  const description = searchDescription(input);
+  const html = renderEmailLayout({
+    preheader: 'Confirm your SolDirectory provider alert',
+    heading: 'Confirm your provider alert',
+    bodyHtml: `<p>You asked to receive email when new SolDirectory providers match:</p><p><strong>${description}</strong></p><p>This alert will not start until you confirm it. You can unsubscribe at any time.</p><p style="font-size:12px"><a href="${escapeHtml(input.unsubscribeUrl)}">Cancel this alert</a></p>`,
+    ctaLabel: 'Confirm alert',
+    ctaUrl: input.verifyUrl,
+  });
+  return { subject: 'Confirm your SolDirectory provider alert', html };
+}
+
+export function searchAlertDigestTemplate(input: {
+  service?: string;
+  suburb?: string;
+  query?: string;
+  providers: { name: string; url: string; supports: string[] }[];
+  searchUrl: string;
+  unsubscribeUrl: string;
+}): { subject: string; html: string } {
+  const description = searchDescription(input);
+  const rows = input.providers.map((provider) => `<li style="margin-bottom:12px"><a href="${escapeHtml(provider.url)}"><strong>${escapeHtml(provider.name)}</strong></a>${provider.supports.length ? `<br />${provider.supports.map(escapeHtml).join(', ')}` : ''}</li>`).join('');
+  const html = renderEmailLayout({
+    preheader: `${input.providers.length} new or updated provider matches`,
+    heading: 'New provider matches',
+    bodyHtml: `<p>New or updated SolDirectory providers match <strong>${description}</strong>:</p><ul style="padding-left:20px">${rows}</ul><p>Confirm availability, suitability, registration, fees and service terms directly with each provider.</p><p style="font-size:12px"><a href="${escapeHtml(input.unsubscribeUrl)}">Unsubscribe from this alert</a></p>`,
+    ctaLabel: 'Review your search',
+    ctaUrl: input.searchUrl,
+  });
+  return { subject: `${input.providers.length} new provider match${input.providers.length === 1 ? '' : 'es'} on SolDirectory`, html };
+}
+
 export function capacityConfirmationTemplate(input: { providerName: string; confirmUrl: string }): { subject: string; html: string } {
   const html = renderEmailLayout({
     preheader: 'Confirm you can still take new referrals this week',

@@ -27,7 +27,7 @@ export const POLICIES = ['Statement of Rights', 'Complaints Policy', 'Privacy Po
 // times and prices, and was shown for every service and suburb.)
 export const FAQ = [
   { q: 'How does SolDirectory work?', a: 'SolDirectory is a directory and referral service. You can search for providers, or send one free request. Providers who cover your area and offer the support you need are notified and contact you directly.' },
-  { q: 'Does it cost anything to use?', a: 'No. It is free for participants, families and coordinators. Providers pay a subscription, and payment does not change where a provider appears in the directory.' },
+  { q: 'Does it cost anything to use?', a: 'No. It is free for participants, families and coordinators. Search filters determine which providers qualify; eligible Pro and Growth members are shown before Starter members, with alphabetical ordering inside each plan group.' },
   { q: 'How do I know a provider is registered?', a: 'Providers supply their own registration details. Before you engage a provider, confirm their registration with them directly or on the NDIS Commission’s public provider register.' },
   { q: 'Which funding types can I use?', a: 'Providers list the funding types they accept, such as NDIS, aged care, private and DVA. When you send a request you choose how the supports are funded so that we can match you with providers who accept it. Confirm details with the provider.' },
   { q: 'How quickly will a provider respond?', a: 'Providers are notified as soon as you send a request. Response times vary between providers, so we do not publish an estimate here. We report response times only when enough real enquiries have been answered to make the figure accurate.' },

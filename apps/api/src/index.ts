@@ -37,6 +37,7 @@ import adminLeadsRoutes from './routes/admin.leads.routes.js';
 import adminEmailLogsRoutes from './routes/admin.emailLogs.routes.js';
 import capacityRoutes from './routes/capacity.routes.js';
 import statsRoutes from './routes/stats.routes.js';
+import searchAlertsRoutes from './routes/searchAlerts.routes.js';
 
 const app = express();
 
@@ -78,6 +79,7 @@ app.use('/api/admin/register', adminRegisterRoutes);
 app.use('/api/admin/worker-reviews', adminReviewsRoutes);
 app.use('/api/capacity', capacityRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/search-alerts', searchAlertsRoutes);
 app.use('/api/register', registerRoutes);
 // Crawler-readable HTML for the register pages; nginx routes /ndis-providers/* here (deploy/nginx-soldirectory.conf).
 app.get('/seo-shell/*', (req, res, next) => { registerShell(req, res).catch(next); });

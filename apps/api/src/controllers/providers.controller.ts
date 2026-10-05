@@ -6,6 +6,7 @@ import ContactRequest from '../models/ContactRequest.js';
 import { logActivity } from '../models/AdminActivity.js';
 import { EmailService } from '../services/email.service.js';
 import { publicLogoUrl } from './providersPublic.controller.js';
+import { findProvidersPaidFirst } from '../services/providerPriority.js';
 
 const MAX_LIMIT = 50;
 
@@ -88,12 +89,7 @@ export async function listProviders(req: AuthedRequest, res: Response) {
   const filter = buildProviderFilter(req.query);
 
   const [docs, total] = await Promise.all([
-    Provider.find(filter)
-      .select(PUBLIC_PROJECTION)
-      .sort({ tradingName: 1, legalEntityName: 1, _id: 1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .lean(),
+    findProvidersPaidFirst<any>(filter, PUBLIC_PROJECTION, { skip: (page - 1) * limit, limit }),
     Provider.countDocuments(filter),
   ]);
 
@@ -195,15 +191,12 @@ export async function getProviderBySlug(req: AuthedRequest, res: Response) {
   // Real related providers — same primary registration group, not
   // the provider itself, active accounts only. Not fabricated.
   const related = provider.registrationGroups?.length
-    ? await Provider.find({
+    ? await findProvidersPaidFirst<any>({
         _id: { $ne: provider._id },
         accountStatus: 'active',
         slug: { $exists: true },
         registrationGroups: provider.registrationGroups[0],
-      })
-        .select('slug tradingName legalEntityName serviceSuburbs')
-        .limit(4)
-        .lean()
+      }, 'slug tradingName legalEntityName serviceSuburbs', { limit: 4 })
     : [];
 
   res.json({
@@ -262,12 +255,7 @@ export async function listPublicProviders(req: Request, res: Response) {
   const filter = buildProviderFilter(req.query);
 
   const [docs, total] = await Promise.all([
-    Provider.find(filter)
-      .select(PUBLIC_LIST_PROJECTION)
-      .sort({ tradingName: 1, legalEntityName: 1, _id: 1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .lean(),
+    findProvidersPaidFirst<any>(filter, PUBLIC_LIST_PROJECTION, { skip: (page - 1) * limit, limit }),
     Provider.countDocuments(filter),
   ]);
 

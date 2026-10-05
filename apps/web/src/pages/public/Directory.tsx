@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import Pagination from '../../components/ui/Pagination';
 import { Link, useSearchParams } from 'react-router-dom';
 import { PublicHeader, PublicFooter } from './PublicLayout';
@@ -10,6 +10,7 @@ import { useMatchModal } from '../../context/MatchModalContext';
 import { searchRegister, getRegisterHub, type RegisterListItem } from '../../api/registerApi';
 import { categoryForService, KIND_BY_TYPE, type RegisterType } from '../../lib/registerMeta';
 import { slugify } from '../../lib/slugify';
+import { api } from '../../api/client';
 import RegisterCard from './register/RegisterCard';
 import { formatCount } from './register/RegisterParts';
 import './Home.css';
@@ -57,6 +58,13 @@ function initials(name: string): string {
 export default function Directory() {
   const [params, setParams] = useSearchParams();
   const { openMatchModal } = useMatchModal();
+  const initialAlertResult = params.get('alert');
+  const [alertEmail, setAlertEmail] = useState('');
+  const [alertConsent, setAlertConsent] = useState(false);
+  const [alertStatus, setAlertStatus] = useState<'idle' | 'sending' | 'sent' | 'verified' | 'unsubscribed' | 'invalid' | 'error'>(
+    initialAlertResult === 'verified' || initialAlertResult === 'unsubscribed' || initialAlertResult === 'invalid' ? initialAlertResult : 'idle',
+  );
+  const [alertError, setAlertError] = useState('');
 
   // ---- Filters. "Committed" values drive the search; the *Text values are
   // just what's typed in the box while choosing. ----
@@ -65,8 +73,9 @@ export default function Directory() {
   const initialSuburb = params.get('suburb') ?? '';
   const [place, setPlace] = useState<Place | null>(initialSuburb ? { label: initialSuburb, suburb: initialSuburb, lat: null, lng: null } : null);
   const [placeText, setPlaceText] = useState(initialSuburb);
-  const [nameText, setNameText] = useState('');
-  const [nameQuery, setNameQuery] = useState('');
+  const initialNameQuery = params.get('q') ?? '';
+  const [nameText, setNameText] = useState(initialNameQuery);
+  const [nameQuery, setNameQuery] = useState(initialNameQuery);
 
   // ---- Reference data for the pickers ----
   const [services, setServices] = useState<string[]>([]);
@@ -129,10 +138,11 @@ export default function Directory() {
     const next = new URLSearchParams();
     if (service) next.set('service', service);
     if (place?.suburb) next.set('suburb', place.suburb);
+    if (nameQuery) next.set('q', nameQuery);
     if (page > 1) next.set('page', String(page));
     setParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [service, place, page]);
+  }, [service, place, nameQuery, page]);
 
   function searchArgs(pageNumber: number) {
     return {
@@ -296,6 +306,25 @@ export default function Directory() {
   }
 
   const anyFilter = !!(service || place || nameQuery);
+
+  async function createAlert(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setAlertStatus('sending');
+    setAlertError('');
+    try {
+      await api.post<{ message: string }>('/search-alerts', {
+        email: alertEmail,
+        service: service || undefined,
+        suburb: place?.suburb || undefined,
+        query: nameQuery || undefined,
+        consent: alertConsent,
+      });
+      setAlertStatus('sent');
+    } catch (alertRequestError) {
+      setAlertError(alertRequestError instanceof Error ? alertRequestError.message : 'We couldn’t create this alert. Please try again.');
+      setAlertStatus('error');
+    }
+  }
   // While there are no real providers AT ALL (not filtered to zero — zero,
   // full stop), the SolDirectory-providers block is skipped entirely
   // rather than rendering a permanently-empty grid above the register
@@ -398,6 +427,41 @@ export default function Directory() {
             A business can <Link to="/providers">set up its own SolDirectory listing</Link>.
           </p>
         </div>
+
+        {(alertStatus === 'verified' || alertStatus === 'unsubscribed' || alertStatus === 'invalid') && (
+          <p className={`dir-alert-status${alertStatus === 'invalid' ? ' is-error' : ''}`} role="status">
+            {alertStatus === 'verified' && 'Your provider alert is active.'}
+            {alertStatus === 'unsubscribed' && 'You have been unsubscribed from this provider alert.'}
+            {alertStatus === 'invalid' && 'This alert link is invalid or has already been used.'}
+          </p>
+        )}
+
+        {anyFilter && (
+          <section className="dir-alert" aria-labelledby="provider-alert-title">
+            <div>
+              <h2 id="provider-alert-title">Email me new matching providers</h2>
+              <p>Receive an email only when a new or updated SolDirectory member matches this search. Verify by email and unsubscribe at any time.</p>
+            </div>
+            {alertStatus === 'sent' ? (
+              <p className="dir-alert-confirmation" role="status">Check your inbox and confirm the alert before emails begin.</p>
+            ) : (
+              <form onSubmit={createAlert}>
+                <label htmlFor="provider-alert-email">Email address</label>
+                <div className="dir-alert-fields">
+                  <input id="provider-alert-email" type="email" value={alertEmail} onChange={(event) => setAlertEmail(event.target.value)} required autoComplete="email" />
+                  <button type="submit" className="btn-gradient" disabled={alertStatus === 'sending' || !alertConsent}>
+                    {alertStatus === 'sending' ? 'Creating alert…' : 'Create alert'}
+                  </button>
+                </div>
+                <label className="dir-alert-consent">
+                  <input type="checkbox" checked={alertConsent} onChange={(event) => setAlertConsent(event.target.checked)} />
+                  <span>I agree to receive provider-alert emails for these search filters.</span>
+                </label>
+                {alertStatus === 'error' && <p className="dir-alert-error" role="alert">{alertError}</p>}
+              </form>
+            )}
+          </section>
+        )}
 
         {showProviderResults && (
           <>

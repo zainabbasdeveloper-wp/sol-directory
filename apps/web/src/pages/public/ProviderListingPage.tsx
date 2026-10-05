@@ -149,7 +149,7 @@ export default function ProviderListingPage({ mode }: { mode: Mode }) {
     if (loading) return;
     applySeoTags({
       title: conditionMeta
-        ? `${conditionMeta.name} support providers and guide | SolDirectory`
+        ? `${conditionMeta.name} support providers | SolDirectory`
         : `${heading}${page > 1 ? ` (page ${page})` : ''} | SolDirectory`,
       description: conditionMeta
         ? trimTo(`Understand support considerations for ${conditionMeta.name}, compare providers who list relevant experience, and prepare practical questions about funding, safety and fit.`, 158)
@@ -348,8 +348,8 @@ function ConditionContentSections({ meta }: { meta: NonNullable<ReturnType<typeo
           the same way they write their supports and service areas. SolDirectory doesn’t independently verify clinical experience or assess quality.
         </p>
         <p>
-          <strong>Alphabetical, not ranked.</strong> Providers are shown alphabetically. Payment for a subscription doesn’t change
-          whether or where a provider appears.
+          <strong>How ordering works.</strong> Experience and other search filters determine which providers qualify. Eligible Pro and
+          Growth members are shown before Starter members, with providers listed alphabetically inside each plan group. Priority placement is not an endorsement.
         </p>
         <p>
           <strong>Availability.</strong> Providers confirm each week that they’re taking referrals. One that hasn’t confirmed recently
@@ -444,7 +444,7 @@ export function ConditionsHubPage() {
 
   useEffect(() => {
     applySeoTags({
-      title: 'Providers by experience supporting a condition or need | SolDirectory',
+      title: 'Find providers by condition or support need | SolDirectory',
       description: 'Browse providers by the conditions and needs they say they have experience supporting. Providers write their own profiles.',
       canonicalUrl: `${window.location.origin}/condition`,
     });
@@ -477,6 +477,15 @@ export function ConditionsHubPage() {
             <li><span>02</span><h3>Who provides the support?</h3><p>Confirm qualifications, worker screening, supervision and whether the same team members can provide continuity.</p></li>
             <li><span>03</span><h3>How is support adapted?</h3><p>Discuss the person’s goals, routines, culture, communication and sensory or accessibility needs before services begin.</p></li>
           </ol>
+        </section>
+
+        <section className="directory-intro">
+          <h2>What provider-supplied experience means</h2>
+          <p>A condition label cannot describe a person’s complete support needs, strengths or preferences. Providers select the experience shown on their profiles, and SolDirectory does not independently assess clinical expertise, quality or personal suitability. Confirm the allocated worker’s relevant experience, qualifications, screening, supervision and person-specific training. Ask about current capacity, because an organisation may have relevant experience without a suitable worker being available now.</p>
+          <h2>Separate treatment, functional support and funding</h2>
+          <p>Diagnosis and clinical treatment generally sit with qualified health professionals. Disability, aged care, education and community services may support daily function, participation or implementation of an established plan. Clarify the provider’s role and who remains responsible for clinical decisions. A diagnosis does not automatically establish funding eligibility; confirm evidence, referrals, approvals, provider requirements and complete fees with the responsible program.</p>
+          <h2>Plan for consent, safety and review</h2>
+          <p>Involve the person in choosing support and deciding what information can be shared. Record communication preferences, emergency contacts, current plans, risks and escalation responsibilities. Ask how incidents, complaints, privacy, worker changes and continuity are managed. Agree on outcomes and review dates, and revisit the arrangement when health, equipment, living circumstances, informal support or preferences change. Use emergency and clinical pathways, rather than a directory enquiry, when urgent care is needed.</p>
         </section>
 
         {CONDITION_CATEGORY_GROUPS.map((group) => (

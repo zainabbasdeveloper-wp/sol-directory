@@ -6,6 +6,7 @@ import {
   passwordResetTemplate, passwordChangedTemplate, verificationResultTemplate, welcomeTemplate,
   capacityConfirmationTemplate,
   subscriptionStartedTemplate, paymentReceivedTemplate, paymentFailedTemplate, subscriptionCancelledTemplate,
+  searchAlertVerificationTemplate, searchAlertDigestTemplate,
 } from './emailTemplates.js';
 import EmailLog from '../models/EmailLog.js';
 
@@ -163,6 +164,16 @@ export const EmailService = {
 
   async sendCapacityConfirmation(to: string, providerName: string, confirmUrl: string) {
     const { subject, html } = capacityConfirmationTemplate({ providerName, confirmUrl });
+    return sendMail(to, subject, html);
+  },
+
+  async sendSearchAlertVerification(to: string, input: Parameters<typeof searchAlertVerificationTemplate>[0]) {
+    const { subject, html } = searchAlertVerificationTemplate(input);
+    return sendMail(to, subject, html);
+  },
+
+  async sendSearchAlertDigest(to: string, input: Parameters<typeof searchAlertDigestTemplate>[0]) {
+    const { subject, html } = searchAlertDigestTemplate(input);
     return sendMail(to, subject, html);
   },
 };

@@ -27,7 +27,7 @@ const CONDITION_ROUTES = ['/condition', ...CONDITION_TOPICS.map((topic) => `/con
 const LANGUAGE_ROUTES = ['/language', ...LANGUAGE_TOPICS.map((topic) => `/language/${topic.slug}`)];
 const STATIC_PUBLIC_ROUTES = [
   '/', '/find-a-provider', '/services', '/locations', '/providers',
-  '/independent-workers', '/independent-workers/find', '/ndis-providers',
+  '/independent-workers', '/ndis-providers',
   '/aged-care-providers', '/support-coordinators', ...GUIDE_ROUTES, ...FUNDING_ROUTES, ...CONDITION_ROUTES, ...LANGUAGE_ROUTES,
 ];
 const REGISTER_PATH: Record<RegisterType, string> = { ndis: '/ndis-providers', aged_care: '/aged-care-providers' };
@@ -56,49 +56,16 @@ const siteUrlFor = (req: Request) => {
 // would just waste crawl budget on a contradiction.
 async function fetchWpSlugs(base: string, path: string): Promise<string[]> {
   try {
-    const res = await fetch(`${base}${path}?per_page=100&_fields=slug,meta.seo_noindex`);
-    if (!res.ok) return [];
-    const items = await res.json();
-    if (!Array.isArray(items)) return [];
-    return items.filter((i: any) => !i?.meta?.seo_noindex).map((i: any) => i.slug).filter(Boolean);
-  } catch {
-    return [];
-  }
-}
-
-// Matches web/src/data/slugHelpers.ts's slugify() exactly — the real
-// service_area_page's own service_name/suburb fields (not a guessed
-// split of its WP slug) are what building /services/:service/:suburb
-// correctly depends on.
-function slugify(text: string): string {
-  return text.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-}
-
-/**
- * service_area_page is the service×suburb combo page
- * (ServiceLocationPage.tsx, route /services/:serviceSlug/:state/:suburb) — by
- * far the largest and most search-relevant page type on the site, so
- * it gets its own fetch rather than reusing fetchWpSlugs: the route
- * needs the real service_name/suburb fields, not the post's own WP
- * slug (which isn't unambiguously splittable back into the two).
- */
-async function fetchServiceAreaPaths(base: string): Promise<string[]> {
-  try {
-    const res = await fetch(`${base}/wp-json/wp/v2/service-area-pages?per_page=100&_fields=meta`);
-    if (!res.ok) return [];
-    const items = await res.json();
-    if (!Array.isArray(items)) return [];
-    return items
-      .filter((i: any) => !i?.meta?.seo_noindex)
-      .map((i: any) => {
-        const service = slugify(String(i?.meta?.service_name ?? ''));
-        const state = String(i?.meta?.state ?? '').trim().toLowerCase();
-        const suburb = slugify(String(i?.meta?.suburb ?? ''));
-        return service && STATE_CODES.map((code) => code.toLowerCase()).includes(state) && suburb
-          ? `/services/${service}/${state}/${suburb}`
-          : null;
-      })
-      .filter((p): p is string => !!p);
+    const slugs: string[] = [];
+    for (let page = 1; ; page += 1) {
+      const res = await fetch(`${base}${path}?per_page=100&page=${page}&_fields=slug,meta.seo_noindex`);
+      if (!res.ok) return page === 1 ? [] : slugs;
+      const items = await res.json();
+      if (!Array.isArray(items)) return slugs;
+      slugs.push(...items.filter((i: any) => !i?.meta?.seo_noindex).map((i: any) => i.slug).filter(Boolean));
+      const totalPages = Number(res.headers.get('x-wp-totalpages')) || 1;
+      if (page >= totalPages) return slugs;
+    }
   } catch {
     return [];
   }
@@ -115,7 +82,7 @@ async function buildPageUrls(): Promise<UrlEntry[]> {
   // These are the PUBLIC profile pages (/directory/:slug); /providers/:slug
   // is login-gated, so it never belongs in a sitemap. Same visibility
   // rule as the public directory: active and not paused.
-  const providers = await Provider.find({ accountStatus: 'active', listingPaused: { $ne: true }, slug: { $exists: true, $ne: null } }).select('slug').lean();
+  const providers = await Provider.find({ accountStatus: 'active', listingPaused: { $ne: true }, slug: { $exists: true, $ne: null }, 'registrationGroups.0': { $exists: true } }).select('slug').lean();
   for (const p of providers) paths.push(`/directory/${(p as any).slug}`);
 
   // Location pages only exist when enough real providers list the area.
@@ -134,19 +101,15 @@ async function buildPageUrls(): Promise<UrlEntry[]> {
   // shouldn't take the whole sitemap down, it just means those URLs
   // are temporarily missing from it until the next regeneration.
   if (wpUrl) {
-    const [pages, services, locations, guides, serviceAreaPaths] = await Promise.all([
+    const [pages, services, locations] = await Promise.all([
       fetchWpSlugs(wpUrl, '/wp-json/wp/v2/pages'),
       fetchWpSlugs(wpUrl, '/wp-json/wp/v2/services'),
       fetchWpSlugs(wpUrl, '/wp-json/wp/v2/locations'),
-      fetchWpSlugs(wpUrl, '/wp-json/wp/v2/guides'),
-      fetchServiceAreaPaths(wpUrl),
     ]);
     // WordPress ships a placeholder "Sample Page"; it's never real content.
     pages.filter((slug) => slug !== 'sample-page').forEach((slug) => paths.push(`/${slug}`));
     services.forEach((slug) => paths.push(`/services/${slug}`));
     locations.forEach((slug) => paths.push(`/locations/${slug}`));
-    guides.forEach((slug) => paths.push(`/guides/${slug}`));
-    paths.push(...serviceAreaPaths);
   }
 
   const urls = [...new Set(paths)].map((path) => ({ path }));
@@ -184,11 +147,8 @@ async function buildRegisterUrls(): Promise<UrlEntry[]> {
  * /services/:serviceSlug/:state/:suburb) — one entry per REAL_SERVICES
  * category crossed with every suburb that actually has register demand
  * for it (computeServiceSuburbs, MIN_SUBURB_LISTINGS threshold already
- * applied there). This is the real-data-driven page set; it's separate
- * from fetchServiceAreaPaths above (which only covers WP-authored
- * content) because most combinations here have no WordPress post at
- * all — the page itself falls back to generic content per-field, same
- * as the client route.
+ * applied there). Most combinations have no WordPress post, so the page
+ * falls back to generic content per-field, same as the client route.
  */
 function slugifyService(text: string): string {
   return text.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');

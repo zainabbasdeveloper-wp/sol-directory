@@ -4,7 +4,7 @@
  *
  * IMPORTANT — these are working DRAFTS written to describe what the
  * platform actually does today (30-day draft deletion, weekly capacity
- * confirmation, unlock quotas, no paid ranking). They have NOT been
+ * confirmation, unlock quotas, and paid-plan priority). They have NOT been
  * reviewed by a lawyer. LEGAL_REVIEWED gates the on-page "draft"
  * banner; flip it to true only once counsel has signed the text off.
  * Legal-entity and contact details are injected from siteConfig, never
@@ -32,6 +32,7 @@ export const LEGAL_DOCS: Record<string, LegalDoc> = {
         heading: 'What we collect',
         body: [
           'When you use “Get matched”: your name, email address, optional phone number, the suburb where care is needed, who the care is for, your timeframe, your funding type and plan-management arrangement, the service you need, and any details you add. This can include information about a person’s disability or support needs, which is sensitive information.',
+          'When you explicitly create a provider alert: your email address and the service, suburb or provider-name filters you chose. Simply searching does not create an alert or add your email to a marketing list.',
           'When a provider or worker registers: account details, business and registration details, service areas, capacity, and any logo or documents they upload.',
           'Automatically: basic technical data such as browser type and pages visited, used to keep the service secure and working.',
         ],
@@ -39,14 +40,14 @@ export const LEGAL_DOCS: Record<string, LegalDoc> = {
       {
         heading: 'Why we collect it',
         body: [
-          'To match your enquiry with suitable providers, to let those providers contact you, to run provider accounts and billing, to keep the directory accurate, and to meet our legal obligations. We collect sensitive information only with your consent, which you give when you submit an enquiry.',
+          'To match your enquiry with suitable providers, to let those providers contact you, to send provider alerts you explicitly request and verify, to run provider accounts and billing, to keep the directory accurate, and to meet our legal obligations. We collect sensitive information only with your consent.',
         ],
       },
       {
         heading: 'Who sees your enquiry',
         body: [
           'Providers who are a genuine match can see the non-identifying parts of your enquiry (the service, suburb, who the care is for, timeframe and funding type). Your name, phone number, and free-text details are shown only to a provider who unlocks the enquiry. We limit how many providers are notified about each enquiry.',
-          'We do not sell your personal information and we do not let providers pay to appear higher in results.',
+          'We do not sell your personal information. Search filters determine which providers qualify; eligible Pro and Growth members are shown before Starter members. Priority placement is not an endorsement or quality rating.',
         ],
       },
       {
@@ -58,7 +59,7 @@ export const LEGAL_DOCS: Record<string, LegalDoc> = {
       {
         heading: 'How long we keep it',
         body: [
-          'Unfinished “Get matched” drafts are deleted automatically after 30 days. Submitted enquiries and account records are kept only as long as needed for the purposes above or as the law requires.',
+          'Unfinished “Get matched” drafts are deleted automatically after 30 days. Provider-alert details are retained while the alert is active and suppressed after you unsubscribe so further alert emails are not sent. Submitted enquiries and account records are kept only as long as needed for the purposes above or as the law requires.',
         ],
       },
       {
@@ -145,7 +146,7 @@ export const LEGAL_DOCS: Record<string, LegalDoc> = {
       },
       {
         heading: 'No paid ranking',
-        body: ['Your plan does not change where you appear in results. Matching is based on fit — service, area, funding, conditions supported and availability.'],
+        body: ['Search filters determine which providers qualify based on service, area and other selected criteria. Eligible Pro and Growth members are shown before Starter members, with alphabetical ordering inside each plan group. Priority placement is not an endorsement or quality rating.'],
       },
       {
         heading: 'Fees',

@@ -7,12 +7,12 @@ export async function listEmailLogs(req: AuthedRequest, res: Response) {
   if (req.query.status) filter.status = req.query.status;
 
   const limit = Math.min(100, Number(req.query.limit) || 50);
-  const logs = await EmailLog.find(filter).sort({ sentAt: -1 }).limit(limit).lean();
+  const logs = await EmailLog.find(filter).sort({ createdAt: -1 }).limit(limit).lean();
 
   res.json({
     items: logs.map((l: any) => ({
-      id: String(l._id), to: l.to, template: l.template, subject: l.subject,
-      status: l.status, error: l.error ?? null, sentAt: l.sentAt,
+      id: String(l._id), to: l.to, subject: l.subject,
+      status: l.status, error: l.error ?? null, sentAt: l.createdAt,
     })),
   });
 }

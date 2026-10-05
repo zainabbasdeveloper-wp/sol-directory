@@ -193,6 +193,7 @@ const FUNDING_LONGFORM = {
 };
 
 export function conditionShellEditorial(topic) {
+  const lower = topic.name.toLowerCase();
   return {
     overview: CONDITION_GUIDES[topic.categoryGroup],
     checks: [
@@ -200,6 +201,25 @@ export function conditionShellEditorial(topic) {
       'Confirm qualifications, screening, supervision, insurance and any person-specific training required for the support.',
       'Discuss communication, culture, routines, goals, risks and how the support will be reviewed when needs change.',
       'Confirm rates, travel, cancellations, reports, funding and the written service agreement before support starts.',
+    ],
+    deepDive: [
+      `A condition name such as ${topic.name} does not describe one standard set of support needs. Begin with the person’s own goals, strengths, communication, daily routines, relationships, environment and the activities where assistance is wanted. Ask what a good day looks like, what currently works and what creates avoidable barriers. Support should respond to the individual person rather than assumptions about ${lower}, and should preserve choice, dignity, privacy and participation in ordinary life.`,
+      `Separate diagnosis and clinical treatment from functional support. Health professionals may assess, diagnose or treat health needs, while disability, aged care, education, employment or community providers may help with daily activities and participation. Record who is responsible for each task, what consent allows information to be shared and which instructions workers must follow. Evidence for funding or service planning should explain practical functional impact and the support requested, not rely on the diagnosis label alone.`,
+      `When comparing providers, ask about direct experience with ${lower} and with the particular tasks involved. Confirm which worker would deliver support, their training, supervision and access to specialist advice. Discuss communication, cultural safety, continuity, backup staffing, incidents, complaints and how changing needs are escalated. Registration or a directory profile can support a check, but neither proves personal fit, current capacity or the competence of the worker assigned to this person.`,
+      `Agree outcomes and review points before support begins. Useful reviews consider whether the person feels heard, whether agreed activities are happening safely, whether support is building or maintaining participation and whether fees match the service delivered. Revisit the arrangement when health, communication, living arrangements, informal support, equipment, goals or risks change. Keep current plans, assessments, service agreements, progress information and important decisions together so a new worker or provider does not have to guess.`,
+    ],
+    reviewChecklist: [
+      'Describe the person’s goals, preferences and functional support needs in their own terms.',
+      'Clarify clinical, funding, provider and family responsibilities.',
+      'Confirm the allocated worker’s relevant experience, training and supervision.',
+      'Record communication, consent, safety and emergency arrangements.',
+      'Obtain complete fees, schedules, cancellation and exit terms in writing.',
+      'Set review dates and update plans when needs or circumstances change.',
+    ],
+    sources: [
+      { label: 'NDIS access and eligibility', href: 'https://www.ndis.gov.au/applying-access-ndis' },
+      { label: 'NDIS supports and services', href: 'https://www.ndis.gov.au/participants/using-your-plan/managing-your-plan/supports-funded-ndis' },
+      { label: 'Healthdirect health information', href: 'https://www.healthdirect.gov.au/' },
     ],
     faq: [
       { question: `Does SolDirectory verify experience with ${topic.name.toLowerCase()}?`, answer: 'No. Providers write their own profiles. Ask the provider directly about relevant experience, staff and training.' },

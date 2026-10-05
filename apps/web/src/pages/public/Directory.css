@@ -92,6 +92,21 @@
 .dir-search-grid { display: grid; grid-template-columns: 1.3fr 1fr 0.8fr; gap: 16px; align-items: end; }
 .dir-optional { font-weight: 500; color: color-mix(in srgb, var(--color-text, #10233F) 55%, transparent); }
 
+.dir-alert { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 520px); gap: 28px; align-items: center; margin: 28px 2px 6px; padding: 22px 0; border-top: 2px solid #0B2D5C; border-bottom: 1px solid var(--color-border-strong); }
+.dir-alert h2 { margin: 0 0 6px; font-size: 21px; }
+.dir-alert p { margin: 0; font-size: 15px; line-height: 1.6; }
+.dir-alert form > label:first-child { display: block; margin-bottom: 6px; font-size: 14px; font-weight: 700; }
+.dir-alert-fields { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
+.dir-alert-fields input { min-width: 0; min-height: 48px; padding: 10px 12px; border: 1px solid var(--color-border-strong); border-radius: 8px; font: inherit; color: #000; background: #fff; }
+.dir-alert-fields .btn-gradient { min-height: 48px; white-space: nowrap; }
+.dir-alert-consent { display: flex; gap: 9px; align-items: flex-start; margin-top: 10px; font-size: 13.5px; line-height: 1.45; cursor: pointer; }
+.dir-alert-consent input { width: 18px; height: 18px; margin: 1px 0 0; flex: none; }
+.dir-alert-confirmation, .dir-alert-status { font-weight: 700; color: #146A40; }
+.dir-alert-status { margin: 22px 2px 0; padding: 12px 14px; background: #E4F5EC; border-left: 4px solid #177C4B; }
+.dir-alert-status.is-error, .dir-alert-error { color: #8C2F1E; }
+.dir-alert-status.is-error { background: #FDF3F1; border-left-color: #C2472C; }
+.dir-alert-error { margin-top: 8px !important; font-size: 14px !important; }
+
 .dir-active { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--color-border, #E8EEF7); }
 .dir-active-label { font-size: 13px; font-weight: 600; color: color-mix(in srgb, var(--color-text, #10233F) 65%, transparent); }
 .dir-chip {
@@ -147,6 +162,8 @@
 @media (max-width: 860px) {
   .dir-search { margin-top: -28px; }
   .dir-search-grid { grid-template-columns: 1fr; gap: 14px; }
+  .dir-alert { grid-template-columns: 1fr; gap: 16px; }
+  .dir-alert-fields { grid-template-columns: 1fr; }
   .dir-help { flex-direction: column; align-items: flex-start; }
   .dir-help .btn-gradient { width: 100%; }
 }

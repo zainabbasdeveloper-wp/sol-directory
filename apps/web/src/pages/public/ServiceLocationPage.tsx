@@ -528,8 +528,8 @@ export default function ServiceLocationPage() {
           <section id="method">
             <h2 className="svc-h2-sm">How providers are listed</h2>
             <div className="svc-method-list">
-              <p className="svc-p"><strong>Alphabetical order.</strong> Providers are listed alphabetically. SolDirectory does not rank providers, assess the quality of any provider’s supports, or recommend a provider.</p>
-              <p className="svc-p"><strong>Payment does not affect position.</strong> Providers pay a subscription to receive and respond to enquiries. Payment does not change whether or where a provider appears.</p>
+              <p className="svc-p"><strong>How ordering works.</strong> Service and location filters determine which member providers qualify. Eligible Pro and Growth members are shown before Starter members, with providers listed alphabetically inside each plan group.</p>
+              <p className="svc-p"><strong>Placement is not endorsement.</strong> Plan priority does not mean SolDirectory has assessed or recommends a provider. Compare suitability, safeguards, availability, fees and service terms directly.</p>
               <p className="svc-p"><strong>Availability.</strong> Providers confirm each week that they are taking referrals. A provider who has not confirmed recently is removed from results until they do.</p>
               <p className="svc-p"><strong>Provider-supplied details.</strong> Registration, insurance and other details are supplied by providers. Always confirm them directly with a provider before you engage them.</p>
             </div>
