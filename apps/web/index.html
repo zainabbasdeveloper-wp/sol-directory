@@ -7,9 +7,24 @@
     <link rel="icon" type="image/png" href="/favicon.png" />
     <title>SolDirectory — Find NDIS and aged care providers</title>
     <meta name="description" content="Find disability and aged care providers who have capacity, matched to your suburb, funding and support needs. Free for families, participants and coordinators." />
+    <style>
+      #initial-preloader{position:fixed;inset:0;z-index:10001;display:grid;place-items:center;min-height:100vh;min-height:100dvh;background:repeating-linear-gradient(135deg,transparent 0 24px,rgba(18,42,62,.025) 24px 25px),linear-gradient(145deg,#fff 0%,#f4f7fa 58%,#eef7f4 100%)}
+      #initial-preloader>div{display:grid;justify-items:center;width:min(72vw,300px)}
+      #initial-preloader img{display:block;width:min(100%,260px);height:auto}
+      #initial-preloader span{position:relative;width:min(100%,210px);height:3px;margin-top:24px;overflow:hidden;background:rgba(18,42,62,.14)}
+      #initial-preloader span::after{content:"";position:absolute;inset:0 auto 0 0;width:42%;background:#167c6b;animation:initial-preloader-progress 900ms cubic-bezier(.65,0,.35,1) infinite}
+      @keyframes initial-preloader-progress{from{transform:translateX(-110%)}to{transform:translateX(345%)}}
+      @media (prefers-reduced-motion:reduce){#initial-preloader span::after{width:100%;animation:none}}
+    </style>
   </head>
 
   <body>
+    <div id="initial-preloader" role="status" aria-label="Loading SolDirectory">
+      <div>
+        <img src="/images/sol-directory-logo-black-transparent-v2.png" alt="" aria-hidden="true" />
+        <span aria-hidden="true"></span>
+      </div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

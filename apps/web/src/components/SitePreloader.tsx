@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import './SitePreloader.css';
 
 const MINIMUM_VISIBLE_MS = 450;
@@ -7,6 +7,10 @@ const EXIT_DURATION_MS = 280;
 
 export default function SitePreloader() {
   const [phase, setPhase] = useState<'visible' | 'leaving' | 'hidden'>('visible');
+
+  useLayoutEffect(() => {
+    document.getElementById('initial-preloader')?.remove();
+  }, []);
 
   useEffect(() => {
     const startedAt = performance.now();
