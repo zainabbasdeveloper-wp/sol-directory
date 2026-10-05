@@ -15,8 +15,8 @@
   --color-primary-tint: #F2F7FF;
   --color-page-bg: #F5F8FC;
   --color-surface: #FFFFFF;
-  --color-text: #10233F;
-  --color-text-muted: #5A6B84; /* AA-critical — do not lighten, see CLAUDE.md */
+  --color-text: #000000;
+  --color-text-muted: #1F2933;
   --color-border: #E8EEF7;
   --color-border-strong: #DDE4EF;
   --color-border-card: #E4EAF3;
