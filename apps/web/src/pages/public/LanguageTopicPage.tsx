@@ -18,6 +18,7 @@ import './ProfilePages.css';
 
 const PAGE_SIZE = 12;
 const fmt = (value: number) => value.toLocaleString('en-AU');
+const seoTitle = (text: string) => `${text.length <= 50 ? text : `${text.slice(0, 49).replace(/\s+\S*$/, '')}…`} | SolDirectory`;
 const topicFor = (slug: string) => LANGUAGE_TOPICS.find((topic) => topic.slug === slug);
 const groups = [...new Set(LANGUAGE_TOPICS.map((topic) => topic.categoryGroup))];
 
@@ -61,7 +62,7 @@ export default function LanguageTopicPage() {
     const canonical = `${window.location.origin}/language/${topic.slug}/`;
     const editorial = languageShellEditorial(topic);
     applySeoTags({
-      title: `${topic.name} speaking providers | SolDirectory`,
+      title: seoTitle(`${topic.name} language support providers`),
       description: `Find providers that list ${topic.name} and learn what to confirm about fluency, interpreters, cultural safety, privacy, funding and communication before support begins.`,
       canonicalUrl: page > 1 ? `${canonical}?page=${page}` : canonical,
     });

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { PublicHeader, PublicFooter } from './PublicLayout';
 import { LEGAL_DOCS, LEGAL_REVIEWED } from './legalContent';
 import { siteConfig } from '../../config/siteConfig';
+import { applySeoTags, setJsonLd } from '../../lib/seo';
 import './LegalPage.css';
 
 /** One template for all four legal pages — pass the doc's slug. */
@@ -10,8 +11,23 @@ export default function LegalPage({ slug }: { slug: keyof typeof LEGAL_DOCS | st
   const doc = LEGAL_DOCS[slug];
 
   useEffect(() => {
-    if (doc) document.title = `${doc.title} — SolDirectory`;
+    if (doc) {
+      const canonicalUrl = `${window.location.origin}/${doc.slug}`;
+      applySeoTags({
+        title: `${doc.title} | SolDirectory`,
+        description: doc.summary,
+        canonicalUrl,
+        noindex: !LEGAL_REVIEWED,
+      });
+      setJsonLd('legal-page', LEGAL_REVIEWED ? {
+        '@type': 'WebPage',
+        name: doc.title,
+        description: doc.summary,
+        url: canonicalUrl,
+      } : null);
+    }
     window.scrollTo(0, 0);
+    return () => setJsonLd('legal-page', null);
   }, [doc]);
 
   if (!doc) return null;

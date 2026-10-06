@@ -65,6 +65,7 @@ const SLUG_RE = /^[a-z0-9][a-z0-9-]{0,200}$/;
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
 const fmt = (n: number) => n.toLocaleString('en-AU');
 const trimTo = (s: string, n: number) => (s.length <= n ? s : `${s.slice(0, n - 1).replace(/\s+\S*$/, '')}…`);
+const seoTitle = (text: string) => `${trimTo(text, 50)} | SolDirectory`;
 
 function siteUrl(req: Request): string {
   if (process.env.SITE_URL) return process.env.SITE_URL.replace(/\/$/, '');
@@ -638,7 +639,7 @@ async function languageTopicPage(site: string, slug: string, page: number): Prom
 
   return {
     status: 200,
-    title: `${topic.name} speaking providers | SolDirectory`,
+    title: seoTitle(`${topic.name} language support providers`),
     description: trimTo(`Find providers that list ${topic.name} and learn what to confirm about fluency, interpreters, cultural safety, privacy, funding and communication before support begins.`, 158),
     canonical: page > 1 ? `${base}?page=${page}` : `${base}/`,
     noindex: false,
@@ -713,6 +714,7 @@ function supportCoordinatorsPage(site: string): Page {
       `<h2>Pricing, funding and service agreements</h2><p>Ask for complete proposed costs in writing, including rates, travel, non-face-to-face work, reports, minimum shifts, cancellations and exit terms. Review the service agreement with the participant in an accessible format before services begin.</p>` +
       `<h2>Consent, privacy and records</h2><p>Share the minimum necessary information through secure channels. Record authority or consent, what was shared, providers contacted, responses, evidence checked, options considered, the participant’s decision and follow-up actions.</p>` +
       `<h2>After a provider responds</h2><p>A fast response is not proof of fit. Arrange a conversation in the participant’s preferred format, verify outstanding evidence and agree how progress, incidents, missed shifts, complaints and changes in need will be communicated.</p>` +
+      `<h2>Related planning resources</h2><p>Use the <a href="/services">service guides</a> to clarify the requested support, review <a href="/funding">funding and plan-management topics</a>, and browse guidance by <a href="/condition">condition or support need</a>. The <a href="/guides/choosing-a-provider">provider selection guide</a> provides a reusable comparison checklist, while the <a href="/locations">location hub</a> helps identify nearby service areas.</p>` +
       `<h2>Frequently asked questions</h2>${faq.map(([question, answer]) => `<h3>${esc(question)}</h3><p>${esc(answer)}</p>`).join('')}` +
       `<h2>Official checks and guidance</h2><ul>` +
       li('https://www.ndiscommission.gov.au/providers/provider-registers', 'NDIS Commission provider registers') +
@@ -815,7 +817,7 @@ function publicMarketingPage(site: string, key: 'home' | 'find' | 'services' | '
 class WordPressUnavailable extends Error {}
 
 const WP_TTL_MS = 5 * 60 * 1000;
-const serviceCache = new Map<string, { at: number; item: any | null }>();
+const wpItemCache = new Map<string, { at: number; item: any | null }>();
 
 /** WordPress returns titles with HTML entities ("&amp;", "&#8217;"). */
 function decodeEntities(s: string): string {
@@ -826,20 +828,21 @@ function decodeEntities(s: string): string {
 }
 const plain = (html: string) => decodeEntities(String(html ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim());
 
-async function fetchWpService(slug: string): Promise<any | null> {
-  const hit = serviceCache.get(slug);
+async function fetchWpItem(restBase: 'pages' | 'services' | 'locations', slug: string): Promise<any | null> {
+  const cacheKey = `${restBase}:${slug}`;
+  const hit = wpItemCache.get(cacheKey);
   if (hit && Date.now() - hit.at < WP_TTL_MS) return hit.item;
   const base = process.env.WORDPRESS_URL;
   if (!base) throw new WordPressUnavailable('WORDPRESS_URL is not set');
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 6000);
   try {
-    const res = await fetch(`${base.replace(/\/$/, '')}/wp-json/wp/v2/services?slug=${encodeURIComponent(slug)}`, { signal: ctrl.signal });
+    const res = await fetch(`${base.replace(/\/$/, '')}/wp-json/wp/v2/${restBase}?slug=${encodeURIComponent(slug)}`, { signal: ctrl.signal });
     if (!res.ok) throw new WordPressUnavailable(`WordPress responded ${res.status}`);
     const list = await res.json();
     if (!Array.isArray(list)) throw new WordPressUnavailable('Unexpected WordPress response');
     const item = list[0] ?? null;
-    serviceCache.set(slug, { at: Date.now(), item }); // failures are never cached
+    wpItemCache.set(cacheKey, { at: Date.now(), item }); // failures are never cached
     return item;
   } catch (e) {
     throw e instanceof WordPressUnavailable ? e : new WordPressUnavailable(String((e as Error).message));
@@ -868,7 +871,7 @@ const jsonArr = (v: unknown): any[] => {
 
 async function servicePage(site: string, slug: string): Promise<Page> {
   if (!SLUG_RE.test(slug)) return notFound();
-  const item = await fetchWpService(slug);
+  const item = await fetchWpItem('services', slug);
   if (!item) return { ...notFound(), title: 'Service not found | SolDirectory', body: '<h1>Page not found</h1><p><a href="/services">Browse services</a></p>' };
 
   const meta = item.meta ?? {};
@@ -968,6 +971,52 @@ async function servicePage(site: string, slug: string): Promise<Page> {
         : []),
     ],
     body,
+  };
+}
+
+async function genericWpPage(site: string, restBase: 'pages' | 'locations', slug: string): Promise<Page> {
+  if (!SLUG_RE.test(slug)) return notFound();
+  const item = await fetchWpItem(restBase, slug);
+  if (!item) return notFound();
+
+  const meta = item.meta ?? {};
+  const value = (key: string) => (typeof meta[key] === 'string' ? plain(meta[key]) : '');
+  const title = plain(item.title?.rendered ?? '');
+  if (!title) return notFound();
+  const prefix = restBase === 'locations' ? '/locations' : '';
+  const path = `${prefix}/${item.slug}`;
+  const excerpt = plain(item.excerpt?.rendered ?? '');
+  const authored = [
+    plain(item.content?.rendered ?? ''), value('hero_description'), value('short_answer'),
+    value('overview_content'), value('who_for'), value('eligibility'), value('funding_info'),
+    value('plan_management_info'), value('cost_info'), value('typical_session'),
+  ].filter((text, index, all) => text && all.indexOf(text) === index);
+  const description = trimTo(value('seo_description') || excerpt || authored[0] || `${title} on SolDirectory.`, 160);
+  const noindex = meta.seo_noindex === true || meta.seo_noindex === '1';
+  const parentName = restBase === 'locations' ? 'Locations' : null;
+  const crumbs = [
+    { name: 'Home', path: '/' },
+    ...(parentName ? [{ name: parentName, path: '/locations' }] : []),
+    { name: title, path },
+  ];
+
+  return {
+    status: 200,
+    title: value('seo_title') || seoTitle(title),
+    description,
+    canonical: path,
+    noindex,
+    ogImage: typeof meta.seo_og_image === 'string' && meta.seo_og_image ? meta.seo_og_image : undefined,
+    jsonLd: [
+      breadcrumbLd(site, crumbs),
+      { id: 'wp-page', data: { '@type': 'WebPage', name: title, description, url: `${site}${path}`, isPartOf: { '@type': 'WebSite', name: 'SolDirectory', url: site } } },
+    ],
+    body:
+      `<nav aria-label="Breadcrumb">${crumbs.map((crumb, index) => index < crumbs.length - 1 ? `<a href="${esc(crumb.path)}">${esc(crumb.name)}</a>` : esc(crumb.name)).join(' / ')}</nav>` +
+      `<h1>${esc(value('hero_headline') || title)}</h1>` +
+      (excerpt ? `<p>${esc(excerpt)}</p>` : '') +
+      authored.map((paragraph, index) => `${index === 0 ? '<h2>Overview</h2>' : ''}<p>${esc(paragraph)}</p>`).join('') +
+      `<h2>Continue your search</h2><p><a href="/find-a-provider">Find providers</a>, <a href="/services">browse support services</a>, or <a href="/locations">explore provider locations</a>.</p>`,
   };
 }
 
@@ -1137,8 +1186,9 @@ async function serviceLocationPage(site: string, serviceSlug: string, stateSlug:
   return {
     status: 200,
     title: (() => {
-      const fullTitle = `${service} providers in ${suburbName}, ${code} | SolDirectory`;
-      return fullTitle.length <= 65 ? fullTitle : `${service} in ${suburbName}, ${code} | SolDirectory`;
+      const fullTitle = `${service} providers in ${suburbName}, ${code}`;
+      const compactTitle = `${service} in ${suburbName}, ${code}`;
+      return seoTitle(fullTitle.length <= 50 ? fullTitle : compactTitle);
     })(),
     description: trimTo(description, 158),
     canonical: path,
@@ -1192,6 +1242,13 @@ export async function registerShell(req: Request, res: Response) {
     page = publicMarketingPage(site, 'services');
   } else if (root === 'locations' && parts.length === 1) {
     page = publicMarketingPage(site, 'locations');
+  } else if (root === 'locations' && parts.length === 2) {
+    try {
+      page = await genericWpPage(site, 'locations', parts[1]);
+    } catch (e) {
+      if (e instanceof WordPressUnavailable) return res.status(502).send('Content service unavailable');
+      throw e;
+    }
   } else if (root === 'providers' && parts.length === 1) {
     page = publicMarketingPage(site, 'providers');
   } else if (root === 'independent-workers' && parts.length === 1) {
@@ -1246,6 +1303,13 @@ export async function registerShell(req: Request, res: Response) {
     if (parts.length === 1) page = await hubPage(site, kindPath);
     else if (parts.length === 3 || STATE_CODES.includes(parts[1].toUpperCase() as never)) page = await listPage(site, kindPath, parts[1], parts[2] ?? null, pageNum, filtered);
     else page = await providerPage(site, kindPath, parts[1]);
+  } else if (parts.length === 1) {
+    try {
+      page = await genericWpPage(site, 'pages', parts[0]);
+    } catch (e) {
+      if (e instanceof WordPressUnavailable) return res.status(502).send('Content service unavailable');
+      throw e;
+    }
   } else {
     return res.status(404).send('Not found');
   }

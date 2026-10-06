@@ -11,6 +11,7 @@ import { searchRegister, getRegisterHub, type RegisterListItem } from '../../api
 import { categoryForService, KIND_BY_TYPE, type RegisterType } from '../../lib/registerMeta';
 import { slugify } from '../../lib/slugify';
 import { api } from '../../api/client';
+import { applySeoTags } from '../../lib/seo';
 import RegisterCard from './register/RegisterCard';
 import { formatCount } from './register/RegisterParts';
 import './Home.css';
@@ -102,7 +103,11 @@ export default function Directory() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   useEffect(() => {
-    document.title = 'Find a provider — SolDirectory';
+    applySeoTags({
+      title: 'Find NDIS and aged care providers | SolDirectory',
+      description: 'Search provider profiles and public-register listings by support, suburb or business name, then compare availability, credentials and service terms.',
+      canonicalUrl: `${window.location.origin}/find-a-provider`,
+    });
     listActiveServices().then((r) => setServices(r.items.map((s) => s.name))).catch(() => {});
   }, []);
 

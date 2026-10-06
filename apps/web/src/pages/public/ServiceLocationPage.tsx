@@ -52,6 +52,7 @@ import './ServiceLocationPage.css';
 //    anything that's actually broken.
 
 const CORE_SERVICES = SERVICES.filter((service) => service !== 'All services');
+const seoTitle = (text: string) => `${text.length <= 50 ? text : `${text.slice(0, 49).replace(/\s+\S*$/, '')}…`} | SolDirectory`;
 
 const SERVICE_GROUPS = [
   {
@@ -229,9 +230,10 @@ export default function ServiceLocationPage() {
   // (null on "nothing authored", which still yields a real fallback).
   useEffect(() => {
     if (wpLoading) return;
-    const fullTitle = `${serviceName} providers in ${suburbName}, ${stateAbbr} | SolDirectory`;
+    const fullTitle = `${serviceName} providers in ${suburbName}, ${stateAbbr}`;
+    const compactTitle = `${serviceName} in ${suburbName}, ${stateAbbr}`;
     applySeoTags({
-      title: wp?.seo.title || (fullTitle.length <= 65 ? fullTitle : `${serviceName} in ${suburbName}, ${stateAbbr} | SolDirectory`),
+      title: wp?.seo.title || seoTitle(fullTitle.length <= 50 ? fullTitle : compactTitle),
       description: wp?.seo.description || introParagraph,
       ogImage: wp?.seo.ogImage,
       canonicalUrl: `${window.location.origin}${stateSlug
