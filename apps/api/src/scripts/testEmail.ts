@@ -45,7 +45,12 @@ async function main() {
       subject: 'SolDirectory test email',
       html: '<p>If you can read this, SolDirectory email sending works.</p>',
     });
-    console.log(`2/2 Sent OK (message id ${info.messageId}). Check the inbox, and the spam folder too.`);
+    console.log(`2/2 Brevo/SMTP server accepted the message.`);
+    console.log(`    Server reply:  ${info.response}`);
+    console.log(`    Accepted for:  ${JSON.stringify(info.accepted)}`);
+    console.log(`    Rejected for:  ${JSON.stringify(info.rejected)}`);
+    console.log(`    Message id:    ${info.messageId}`);
+    console.log("\nAccepted means the provider took it, not that the inbox got it. Check the provider's log, then the inbox and spam folder.");
   } catch (err) {
     console.error('FAILED:', (err as Error).message);
     console.error('\nCommon causes: wrong SMTP_USER/SMTP_PASSWORD, EMAIL_FROM not a verified sender or domain at the provider, or port blocked (try 587 or 2525).');
