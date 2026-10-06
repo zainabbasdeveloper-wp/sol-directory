@@ -106,11 +106,6 @@ export default function ServiceLocationPage() {
   const realState = stateSlug ? stateBySlug(stateSlug) : undefined;
   const stateName = realState?.name ?? stateForSuburb(suburbSlug);
   const stateAbbr = realState?.code ?? (STATE_ABBR[stateName] ?? stateName);
-  // Links to sibling pages (other states, related services) only carry a
-  // :state segment when this page itself is on the real route — the
-  // illustrative two-segment links stay two-segment, unchanged.
-  const locationPath = (svcSlug: string, suburb: string) => (stateSlug ? `/services/${svcSlug}/${stateSlug}/${suburb}` : `/services/${svcSlug}/${suburb}`);
-
   // Real WordPress content for this exact combination, if an editor
   // has written it. null means "nothing authored yet" — every usage
   // below falls back to the original fixture content per-field, not
@@ -147,7 +142,7 @@ export default function ServiceLocationPage() {
     ? wp.regulations.cards.map((c) => ({ name: c.title, phone: c.phone, site: c.website, description: c.description }))
     : REGULATORS.map((r) => ({ name: r.name, phone: r.phone, site: r.site, description: '' }));
   const responseTimeItems = (wp?.responseTimes ?? []).map((r) => ({ abbr: r.state, minutes: r.minutes }));
-  const relatedLinks = (wp?.relatedServices ?? []).map((r) => ({ name: r.title, to: locationPath(r.slug, suburbSlug) }));
+  const relatedLinks = (wp?.relatedServices ?? []).map((r) => ({ name: r.title, to: `/services/${r.slug}` }));
   const serviceDirectoryGroups = SERVICE_GROUPS.map((group) => ({
     ...group,
     links: group.services
@@ -155,7 +150,7 @@ export default function ServiceLocationPage() {
       .map((name) => ({
         name,
         to: CORE_SERVICES.includes(name)
-          ? locationPath(slugify(name), suburbSlug)
+          ? `/services/${slugify(name)}`
           : `/find-a-provider?service=${encodeURIComponent(name)}`,
       })),
   }));
@@ -542,7 +537,7 @@ export default function ServiceLocationPage() {
             <p className="svc-p svc-p-tight">Browse {serviceLower} by state — pick one to see providers in that state's capital.</p>
             <div className="svc-state-grid">
               {STATE_COVERAGE.map((s) => (
-                <Link key={s.abbr} to={`/services/${serviceSlug}/${s.abbr.toLowerCase()}/${s.citySlug}`} className="svc-state-card">
+                <Link key={s.abbr} to={`/find-a-provider?service=${encodeURIComponent(serviceName)}&suburb=${encodeURIComponent(unslugify(s.citySlug))}`} className="svc-state-card">
                   <span className="svc-state-abbr">{s.abbr}</span>
                   {providerCountLabel(stateGroupCount(stats, [s.abbr])) && (
                     <span className="svc-state-count">{providerCountLabel(stateGroupCount(stats, [s.abbr]))}</span>
@@ -738,7 +733,7 @@ export default function ServiceLocationPage() {
           <section id="find-near-you" className="svc-finder">
             <h2 className="svc-h2-sm">{wp?.finder?.heading || `Find ${serviceLower} providers near you`}</h2>
             {wp?.finder?.description && <p className="svc-p svc-p-tight">{wp.finder.description}</p>}
-            <form className="svc-finder-form" onSubmit={(e) => { e.preventDefault(); navigate(`/services/${slugify(finderServiceInput)}/${slugify(finderLocationInput)}`); }}>
+            <form className="svc-finder-form" onSubmit={(e) => { e.preventDefault(); navigate(`/find-a-provider?service=${encodeURIComponent(finderServiceInput)}&suburb=${encodeURIComponent(finderLocationInput.trim())}`); }}>
               <label className="svc-finder-field">
                 <span>Location</span>
                 <input value={finderLocationInput} onChange={(e) => setFinderLocationInput(e.target.value)} placeholder="Suburb or postcode" />

@@ -199,7 +199,7 @@ export const GUIDE_DOCS = {
       },
     ],
     internalLinks: [
-      { label: 'Explore plan management funding topics', href: '/funding/plan-management' },
+      { label: 'Explore funding and plan management topics', href: '/funding' },
       { label: 'Compare NDIS providers', href: '/find-a-provider' },
       { label: 'Check current pricing concepts', href: '/guides/ndis-price-guide' },
     ],

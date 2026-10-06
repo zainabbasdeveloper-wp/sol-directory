@@ -19,6 +19,7 @@
     "fetch:register-languages": "tsx src/scripts/fetchRegisterLanguages.ts",
     "sync:register-wp": "tsx src/scripts/syncRegisterListingsToWordPress.ts",
     "audit:seo": "tsx src/scripts/auditPublicSeo.ts",
+    "audit:links": "tsx src/scripts/auditInternalLinks.ts",
     "email:test": "tsx src/scripts/testEmail.ts",
     "remove:demo-providers": "tsx src/scripts/removeDemoProviders.ts",
     "seed:conditions": "tsx src/scripts/seedConditionCatalogue.ts",

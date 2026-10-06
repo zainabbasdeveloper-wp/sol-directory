@@ -872,7 +872,34 @@ const jsonArr = (v: unknown): any[] => {
 async function servicePage(site: string, slug: string): Promise<Page> {
   if (!SLUG_RE.test(slug)) return notFound();
   const item = await fetchWpItem('services', slug);
-  if (!item) return { ...notFound(), title: 'Service not found | SolDirectory', body: '<h1>Page not found</h1><p><a href="/services">Browse services</a></p>' };
+  if (!item) {
+    const name = REAL_SERVICES.find((service) => slugifyService(service) === slug);
+    const editorial = name ? serviceEditorialFor(name) : undefined;
+    if (!name || !editorial) return { ...notFound(), title: 'Service not found | SolDirectory', body: '<h1>Page not found</h1><p><a href="/services">Browse services</a></p>' };
+    const path = `/services/${slug}`;
+    return {
+      status: 200,
+      title: `${name} guide | SolDirectory`,
+      description: trimTo(editorial.shortAnswer, 158),
+      canonical: path,
+      noindex: false,
+      jsonLd: [
+        breadcrumbLd(site, [{ name: 'Home', path: '/' }, { name: 'Services', path: '/services' }, { name, path }]),
+        { id: 'service-guide', data: { '@type': 'Service', name, serviceType: name, url: `${site}${path}`, provider: { '@type': 'Organization', name: 'SolDirectory', url: `${site}/` } } },
+      ],
+      body:
+        `<nav aria-label="Breadcrumb"><a href="/">Home</a> / <a href="/services">Services</a> / ${esc(name)}</nav>` +
+        `<h1>${esc(name)}</h1><p>${esc(editorial.shortAnswer)}</p>` +
+        `<h2>Understanding ${esc(name.toLowerCase())}</h2>${editorial.overview.map((paragraph) => `<p>${esc(paragraph)}</p>`).join('')}` +
+        `<h2>What support may include</h2><ul>${editorial.includes.map((item) => `<li>${esc(item)}</li>`).join('')}</ul>` +
+        `<h2>Plan the support</h2><ul>${editorial.planning.map((item) => `<li>${esc(item)}</li>`).join('')}</ul>` +
+        `<h2>Questions to ask providers</h2><ul>${editorial.providerQuestions.map((item) => `<li>${esc(item)}</li>`).join('')}</ul>` +
+        `<h2>Funding considerations</h2>${editorial.funding.map((paragraph) => `<p>${esc(paragraph)}</p>`).join('')}` +
+        `<h2>Safeguards and records</h2><ul>${editorial.safeguards.map((item) => `<li>${esc(item)}</li>`).join('')}</ul>` +
+        `<h2>Official information</h2><ul>${editorial.sources.map((source) => li(source.href, source.label)).join('')}</ul>` +
+        `<p><a href="/find-a-provider?service=${encodeURIComponent(name)}">Find ${esc(name.toLowerCase())} providers</a> or <a href="/services">browse all service guides</a>.</p>`,
+    };
+  }
 
   const meta = item.meta ?? {};
   const s = (k: string) => (typeof meta[k] === 'string' ? plain(meta[k]) : '');

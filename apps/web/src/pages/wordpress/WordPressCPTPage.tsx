@@ -16,6 +16,7 @@ import NotFound from './NotFound';
 import type { CPTRouteConfig } from '../../lib/cptRouteConfig';
 import { runAction } from '../../lib/runAction';
 import { decodeHtmlEntities } from '../../lib/decodeHtmlEntities';
+import CoreServiceGuidePage from '../public/CoreServiceGuidePage';
 import './WordPressCPTPage.css';
 
 interface FAQItem { question: string; answer: string }
@@ -109,7 +110,10 @@ export default function WordPressCPTPage({ config }: { config: CPTRouteConfig })
     return () => { setJsonLd('cpt-breadcrumbs', null); setJsonLd('cpt-faq', null); };
   }, [content, config.pathPrefix]);
 
-  if (!loading && !error && notFound) return (<><PublicHeader /><NotFound /><PublicFooter /></>);
+  if (!loading && !error && notFound) {
+    if (config.pathPrefix === 'services') return <CoreServiceGuidePage slug={slug} />;
+    return (<><PublicHeader /><NotFound /><PublicFooter /></>);
+  }
 
   const meta = content?.meta ?? {};
 
