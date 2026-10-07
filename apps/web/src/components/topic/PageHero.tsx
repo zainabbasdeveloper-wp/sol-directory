@@ -11,7 +11,7 @@ export interface HeroPanel {
   checks: string[];
   ctaLabel: string;
   onCta: () => void;
-  note?: string;
+  note?: ReactNode;
 }
 
 interface Props {

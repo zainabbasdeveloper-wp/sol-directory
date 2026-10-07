@@ -1,16 +1,30 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import PhotoSlot from '../../components/PhotoSlot';
+import { Link, useNavigate } from 'react-router-dom';
+import PageHero from '../../components/topic/PageHero';
+import { bannerFor } from '../../data/bannerImages';
 import { applySeoTags } from '../../lib/seo';
 import { PublicFooter, PublicHeader } from './PublicLayout';
 import './Home.css';
 import './IndependentWorkers.css';
 
 const PROFILE_DETAILS = [
-  ['Services and experience', 'Describe the supports you deliver, relevant experience and the participant groups you work with.'],
-  ['Location and availability', 'List your suburb, service area, preferred schedule and current availability.'],
-  ['Languages and transport', 'Record languages spoken and whether you can travel or provide transport where appropriate.'],
-  ['Rates and contact preferences', 'Publish an indicative hourly rate and manage how eligible organisations contact you.'],
+  ['Services and experience', 'The supports you deliver, relevant experience and the participant groups you work with.'],
+  ['Location and availability', 'Your suburb, service area, preferred schedule and current availability.'],
+  ['Languages and transport', 'Languages spoken, and whether you can travel or provide transport where appropriate.'],
+  ['Rates and contact preferences', 'An indicative hourly rate, and how eligible organisations can contact you.'],
+];
+
+const STEPS = [
+  ['Create your account', 'Register as an Independent Worker with your name, email address and mobile number.'],
+  ['Complete your profile', 'Add your services, experience, location, languages, availability and indicative rate.'],
+  ['Keep it current', 'Update availability and professional details whenever your circumstances change.'],
+  ['Assess each opportunity', 'Discuss requirements directly and complete your own suitability, safety and contractual checks.'],
+];
+
+const HERO_CHECKS = [
+  'One profile for your services and availability',
+  'Eligible organisations search and contact you',
+  'No guarantee of work: you choose what to accept',
 ];
 
 const FAQS = [
@@ -38,7 +52,7 @@ const FAQS = [
 
 export default function IndependentWorkers() {
   const navigate = useNavigate();
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   useEffect(() => {
     applySeoTags({
@@ -52,42 +66,35 @@ export default function IndependentWorkers() {
     <>
       <PublicHeader />
       <main>
-        <section className="iw-hero">
-          <div className="iw-hero-copy">
-            <span className="eyebrow eyebrow-light"><span className="eyebrow-rule" />Independent workers</span>
-            <h1>Create a professional profile for independent support work</h1>
-            <p>
-              Present your services, experience, location and availability in one profile.
-              Eligible provider organisations can search the worker directory and contact you about suitable opportunities.
-            </p>
-            <div className="iw-actions">
-              <button className="btn-gradient btn-lg" onClick={() => navigate('/signup?type=worker')}>Create a worker profile</button>
-              <button className="btn-outline-light btn-lg" onClick={() => navigate('/login')}>Worker login</button>
-              <button className="btn-outline-light btn-lg" onClick={() => navigate('/independent-workers/find')}>Browse worker profiles</button>
-            </div>
-            <p className="iw-hero-note">Creating an account does not guarantee work or an engagement.</p>
-          </div>
-          <div className="iw-hero-image">
-            <PhotoSlot src="/images/providers.jpg" alt="An independent support worker assisting a person" variant="care" />
-          </div>
-        </section>
+        <PageHero
+          crumbs={[{ label: 'Home', to: '/' }, { label: 'Independent workers' }]}
+          eyebrow="Independent workers"
+          title="Create a professional profile for independent support work"
+          description="Present your services, experience, location and availability in one profile. Eligible provider organisations can search the worker directory and contact you."
+          image={bannerFor({ text: 'support worker personal care', section: 'services' })}
+          imageAlt="An independent support worker with a person they support"
+          panel={{
+            title: 'Join the worker directory',
+            checks: HERO_CHECKS,
+            ctaLabel: 'Create a worker profile →',
+            onCta: () => navigate('/signup?type=worker'),
+            note: (
+              <>
+                Already registered? <Link to="/login">Worker login</Link> · <Link to="/independent-workers/find">Browse worker profiles</Link>
+              </>
+            ),
+          }}
+        />
 
-        <section className="iw-intro">
-          <div>
-            <span className="eyebrow"><span className="eyebrow-rule" />A clear professional profile</span>
-            <h2 className="section-heading">Help organisations understand how you can contribute</h2>
-          </div>
-          <p className="section-copy">
-            Independent workers can maintain structured information about their work preferences and professional background.
-            Organisations remain responsible for their own recruitment, screening and engagement decisions.
-          </p>
-        </section>
-
-        <section className="iw-profile-section">
-          <div className="iw-profile-inner">
-            <div className="iw-section-heading">
+        <div className="iw-wrap">
+          <section className="iw-profile" aria-labelledby="iw-profile-heading">
+            <div className="iw-profile-intro">
               <span className="eyebrow"><span className="eyebrow-rule" />Your profile</span>
-              <h2 className="section-heading">Information organisations can review</h2>
+              <h2 id="iw-profile-heading" className="iw-h2">Help organisations understand how you can contribute</h2>
+              <p>
+                Keep structured information about your work preferences and professional background. Organisations remain
+                responsible for their own recruitment, screening and engagement decisions.
+              </p>
             </div>
             <div className="iw-detail-grid">
               {PROFILE_DETAILS.map(([title, body], index) => (
@@ -98,63 +105,70 @@ export default function IndependentWorkers() {
                 </article>
               ))}
             </div>
-          </div>
-        </section>
+          </section>
 
-        <section className="iw-process" id="how-it-works">
-          <div className="iw-process-copy">
-            <span className="eyebrow"><span className="eyebrow-rule" />How it works</span>
-            <h2 className="section-heading">From registration to professional contact</h2>
-            <p className="section-copy">
-              SolDirectory provides the profile and search tools. Any engagement is arranged directly between you and the organisation contacting you.
-            </p>
-          </div>
-          <ol className="iw-steps">
-            <li><span>1</span><div><h3>Create your account</h3><p>Register as an Independent Worker using your name, email address and mobile number.</p></div></li>
-            <li><span>2</span><div><h3>Complete your profile</h3><p>Add your services, experience, location, languages, availability and indicative rate.</p></div></li>
-            <li><span>3</span><div><h3>Keep information current</h3><p>Update availability and professional details whenever your circumstances change.</p></div></li>
-            <li><span>4</span><div><h3>Assess each opportunity</h3><p>Discuss requirements directly and complete your own suitability, safety and contractual checks before accepting work.</p></div></li>
-          </ol>
-        </section>
+          <section className="iw-process" id="how-it-works" aria-labelledby="iw-process-heading">
+            <div className="iw-process-head">
+              <span className="eyebrow"><span className="eyebrow-rule" />How it works</span>
+              <h2 id="iw-process-heading" className="iw-h2">From registration to professional contact</h2>
+              <p>SolDirectory provides the profile and search tools. Any engagement is arranged directly between you and the organisation contacting you.</p>
+            </div>
+            <ol className="iw-steps">
+              {STEPS.map(([title, body], index) => (
+                <li key={title}>
+                  <span className="iw-step-num">{index + 1}</span>
+                  <h3>{title}</h3>
+                  <p>{body}</p>
+                </li>
+              ))}
+            </ol>
+          </section>
+        </div>
 
-        <section className="iw-safeguards">
+        <section className="iw-safeguards" aria-labelledby="iw-safeguards-heading">
           <div className="iw-safeguards-inner">
             <div>
-              <span className="eyebrow"><span className="eyebrow-rule" />Professional responsibilities</span>
-              <h2 className="section-heading">Checks and arrangements remain important</h2>
+              <span className="eyebrow eyebrow-light"><span className="eyebrow-rule" />Professional responsibilities</span>
+              <h2 id="iw-safeguards-heading" className="iw-h2">Checks and arrangements remain important</h2>
             </div>
-            <div className="iw-safeguard-copy">
-              <p>Depending on the role and supports delivered, you may need an NDIS Worker Screening Check, Working with Children Check, professional registration, first aid training, insurance or other evidence.</p>
-              <p>Your profile does not replace verification. Organisations should confirm credentials directly, and both parties should document the scope of work, rates, cancellations, privacy, incidents and complaints before support begins.</p>
-              <p>SolDirectory does not endorse individual workers or determine whether a worker is suitable for a particular person or role.</p>
-            </div>
+            <ul className="iw-safeguard-list">
+              <li>Depending on the role and supports delivered, you may need an NDIS Worker Screening Check, Working with Children Check, professional registration, first aid training, insurance or other evidence.</li>
+              <li>Your profile does not replace verification. Organisations should confirm credentials directly, and both parties should document the scope of work, rates, cancellations, privacy, incidents and complaints before support begins.</li>
+              <li>SolDirectory does not endorse individual workers or determine whether a worker is suitable for a particular person or role.</li>
+            </ul>
           </div>
         </section>
 
-        <section className="iw-faq">
-          <h2 className="section-heading">Independent worker questions</h2>
-          <div className="iw-faq-list">
-            {FAQS.map((item, index) => {
-              const open = openFaq === index;
-              return (
-                <div className="iw-faq-item" key={item.question}>
-                  <button type="button" aria-expanded={open} onClick={() => setOpenFaq(open ? null : index)}>
-                    {item.question}<span aria-hidden="true">{open ? '−' : '+'}</span>
-                  </button>
-                  {open && <p>{item.answer}</p>}
-                </div>
-              );
-            })}
-          </div>
-        </section>
+        <div className="iw-wrap">
+          <section className="iw-faq" aria-labelledby="iw-faq-heading">
+            <div className="iw-faq-head">
+              <span className="eyebrow"><span className="eyebrow-rule" />Questions</span>
+              <h2 id="iw-faq-heading" className="iw-h2">Independent worker questions</h2>
+              <p>Not sure whether a profile suits you? Start with the basics here.</p>
+            </div>
+            <div className="iw-faq-list">
+              {FAQS.map((item, index) => {
+                const open = openFaq === index;
+                return (
+                  <div className={`iw-faq-item${open ? ' is-open' : ''}`} key={item.question}>
+                    <button type="button" aria-expanded={open} onClick={() => setOpenFaq(open ? null : index)}>
+                      {item.question}<span aria-hidden="true">{open ? '−' : '+'}</span>
+                    </button>
+                    {open && <p>{item.answer}</p>}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
 
-        <section className="iw-cta">
-          <div>
-            <h2>Create your Independent Worker profile</h2>
-            <p>Register your professional details and make your profile available in the worker directory.</p>
-          </div>
-          <button className="btn-gradient btn-lg" onClick={() => navigate('/signup?type=worker')}>Register as an Independent Worker</button>
-        </section>
+          <section className="iw-cta">
+            <div>
+              <h2>Create your Independent Worker profile</h2>
+              <p>Register your professional details and make your profile available in the worker directory.</p>
+            </div>
+            <button className="btn-gradient btn-lg" onClick={() => navigate('/signup?type=worker')}>Register as an Independent Worker</button>
+          </section>
+        </div>
       </main>
       <PublicFooter />
     </>
