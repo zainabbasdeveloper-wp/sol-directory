@@ -289,7 +289,7 @@ export default function ServiceLocationPage() {
       {/* Hero */}
       <PageHero
         crumbs={[{ label: 'Home', to: '/' }, { label: 'Services', to: '/services' }, { label: serviceName }, { label: stateName }, { label: suburbName }]}
-        image={bannerFor({ text: serviceName, section: 'locations' })}
+        image={bannerFor({ text: serviceName, section: 'locations', state: stateAbbr })}
         imageAlt={`Support at home for people seeking ${serviceLower}`}
         eyebrow={<>{serviceName} · {stateName}</>}
         title={`Home ${serviceLower} providers in ${suburbName}, ${stateName}`}

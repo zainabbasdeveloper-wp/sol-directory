@@ -13,6 +13,7 @@ import Signup from '../pages/auth/Signup';
 import ConfirmCapacity from '../pages/ConfirmCapacity';
 import { ForgotPassword, ResetPassword } from '../pages/auth/AccountRecovery';
 import LegalPage from '../pages/public/LegalPage';
+import PhotoCredits from '../pages/public/PhotoCredits';
 import GuidePage, { GuidesHubPage } from '../pages/public/GuidePage';
 import Dashboard from '../pages/Dashboard';
 import WorkerDirectory from '../pages/workers/WorkerDirectory';
@@ -197,6 +198,7 @@ export default function AppRoutes() {
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/privacy" element={<LegalPage slug="privacy" />} />
       <Route path="/terms" element={<LegalPage slug="terms" />} />
+      <Route path="/photo-credits" element={<PhotoCredits />} />
       <Route path="/provider-agreement" element={<LegalPage slug="provider-agreement" />} />
       <Route path="/lead-disclaimer" element={<LegalPage slug="lead-disclaimer" />} />
       <Route path="/guides" element={<GuidesHubPage />} />

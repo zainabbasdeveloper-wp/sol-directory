@@ -157,6 +157,7 @@ export function PublicFooter() {
           <Link to="/terms">Terms of use</Link>
           <Link to="/provider-agreement">Provider agreement</Link>
           <Link to="/lead-disclaimer">Enquiry disclaimer</Link>
+          <Link to="/photo-credits">Photo credits</Link>
         </div>
       </div>
       <div className="public-footer-legal">

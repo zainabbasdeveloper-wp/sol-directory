@@ -11,7 +11,8 @@
  * Options:
  *   --topic=therapy     only this topic
  *   --pick=2            use the 2nd best match instead of the 1st (to swap a photo you don't like)
- *   --force             re-download topics that already have a photo
+ *   --variants=3        keep up to 3 different photos per topic (the site picks one per page); default 1
+ *   --force             with --topic: replace that topic's first photo
  *
  * Photo credits are written to public/images/banners/credits.json. Both services allow free commercial
  * use; Unsplash's API rules ask you to credit the photographer and Unsplash, so keep credits.json and show
@@ -43,7 +44,14 @@ const TOPICS = {
   'assistive-technology': ['wheelchair user using laptop', 'person using assistive device technology'],
   'older-people': ['elderly woman with carer smiling', 'senior man walking with support worker'],
   multicultural: ['diverse friends talking and laughing together', 'multicultural family at home smiling', 'women of different backgrounds chatting cafe'],
-  locations: ['Brisbane city skyline river', 'Sydney Australia suburban street sunny', 'Melbourne Australia city laneway', 'Australian coastal suburb houses'],
+  'locations-qld': ['Brisbane city skyline river'],
+  'locations-nsw': ['Sydney harbour skyline Australia', 'Sydney opera house harbour bridge'],
+  'locations-vic': ['Melbourne city skyline Australia', 'Melbourne Yarra river skyline'],
+  'locations-wa': ['Perth city skyline Australia', 'Perth Swan River skyline'],
+  'locations-sa': ['Adelaide city skyline Australia', 'Adelaide Torrens river city'],
+  'locations-tas': ['Hobart Tasmania waterfront', 'Hobart Mount Wellington city'],
+  'locations-act': ['Canberra Lake Burley Griffin parliament', 'Canberra city Australia'],
+  'locations-nt': ['Darwin Australia waterfront', 'Darwin Northern Territory city'],
   guides: ['woman reading guide notebook coffee', 'person writing notes planning at desk'],
   general: ['support worker and client talking warmly', 'carer and woman walking in park'],
 };
@@ -60,6 +68,7 @@ const arg = (name) => process.argv.find((a) => a.startsWith(`--${name}=`))?.spli
 const only = arg('topic');
 const pick = Math.max(1, Number(arg('pick') ?? 1)) - 1;
 const force = process.argv.includes('--force');
+const variants = Math.max(1, Number(arg('variants') ?? 1));
 
 const readJson = async (p, fallback) => (existsSync(p) ? JSON.parse(await readFile(p, 'utf8')) : fallback);
 const manifest = await readJson(manifestPath, { available: [] });
@@ -67,6 +76,9 @@ const credits = await readJson(creditsPath, {});
 await mkdir(outDir, { recursive: true });
 
 const usedPhotoIds = new Set(Object.values(credits).map((c) => c.photoId));
+// Photos reviewed and turned down are listed here so a later run never downloads them again.
+const rejected = await readJson(path.join(outDir, 'rejected.json'), []);
+rejected.forEach((id) => usedPhotoIds.add(id));
 
 // Each provider is mapped to the same shape: { id, width, height, imageUrl(width), pageUrl, photographer, photographerUrl, alt }.
 async function search(query) {
@@ -99,10 +111,23 @@ class RateLimited extends Error {}
 // A banner is wide, so the photo must be large and clearly landscape; the subject should survive a crop.
 const usable = (p) => p.width >= 2400 && p.width / p.height >= 1.45 && p.width / p.height <= 2.1 && !usedPhotoIds.has(p.id);
 
+// A topic can have several photos: the first is <topic>.jpg, then <topic>-2.jpg, <topic>-3.jpg … The site picks one per
+// page from the page's own title, so pages in the same topic show different pictures.
+const variantKey = (topic, n) => (n === 1 ? topic : `${topic}-${n}`);
+manifest.variants ??= {};
+
+let rateLimited = false;
 for (const [topic, queries] of Object.entries(TOPICS)) {
+  if (rateLimited) break;
   if (only && topic !== only) continue;
-  if (!force && !only && manifest.available.includes(topic)) {
-    console.log(`${topic}: already have one (use --force to replace)`);
+
+  const have = manifest.variants[topic] ?? (manifest.available.includes(topic) ? 1 : 0);
+  // --force replaces the first photo only; otherwise only the missing variants are fetched.
+  const wanted = [];
+  if (force && only) wanted.push(1);
+  for (let n = have + 1; n <= variants; n++) wanted.push(n);
+  if (wanted.length === 0) {
+    console.log(`${topic}: already has ${have} photo${have === 1 ? '' : 's'}`);
     continue;
   }
 
@@ -110,36 +135,40 @@ for (const [topic, queries] of Object.entries(TOPICS)) {
   try {
     for (const q of queries) {
       candidates = candidates.concat((await search(q)).filter(usable));
-      if (candidates.length > pick) break;
+      if (candidates.length >= wanted.length + pick) break;
     }
   } catch (err) {
     if (!(err instanceof RateLimited)) throw err;
-    console.warn(`
-${err.message}. Progress is saved; run the same command again later to continue.`);
+    console.warn(`\n${err.message}. Progress is saved; run the same command again in an hour to continue.`);
     break;
   }
-  const photo = candidates[pick];
-  if (!photo) {
-    console.warn(`${topic}: no suitable photo found, skipped`);
-    continue;
-  }
 
-  const imgRes = await fetch(photo.imageUrl(1920));
-  if (!imgRes.ok) {
-    console.warn(`${topic}: download failed (${imgRes.status}), skipped`);
-    continue;
-  }
-  const buf = Buffer.from(await imgRes.arrayBuffer());
-  await writeFile(path.join(outDir, `${topic}.jpg`), buf);
+  for (const [i, n] of wanted.entries()) {
+    const photo = candidates[pick + i];
+    if (!photo) {
+      console.warn(`${variantKey(topic, n)}: no more suitable photos found, skipped`);
+      continue;
+    }
+    const imgRes = await fetch(photo.imageUrl(1920));
+    if (!imgRes.ok) {
+      console.warn(`${variantKey(topic, n)}: download failed (${imgRes.status}), skipped`);
+      continue;
+    }
+    const buf = Buffer.from(await imgRes.arrayBuffer());
+    const key = variantKey(topic, n);
+    await writeFile(path.join(outDir, `${key}.jpg`), buf);
 
-  usedPhotoIds.add(photo.id);
-  await photo.onDownload?.();
-  credits[topic] = { provider, photoId: photo.id, photographer: photo.photographer, photographerUrl: photo.photographerUrl, pageUrl: photo.pageUrl, alt: photo.alt };
-  if (!manifest.available.includes(topic)) manifest.available.push(topic);
-  console.log(`${topic}: ${(buf.length / 1024).toFixed(0)} KB  ${photo.pageUrl}`);
+    usedPhotoIds.add(photo.id);
+    await photo.onDownload?.();
+    credits[key] = { provider, photoId: photo.id, photographer: photo.photographer, photographerUrl: photo.photographerUrl, pageUrl: photo.pageUrl, alt: photo.alt };
+    if (!manifest.available.includes(topic)) manifest.available.push(topic);
+    manifest.variants[topic] = Math.max(manifest.variants[topic] ?? 0, n);
+    console.log(`${key}: ${(buf.length / 1024).toFixed(0)} KB  ${photo.pageUrl}`);
+  }
 }
 
 manifest.available.sort();
+manifest.variants = Object.fromEntries(Object.entries(manifest.variants).sort(([a], [b]) => a.localeCompare(b)));
 await writeFile(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
 await writeFile(creditsPath, JSON.stringify(credits, null, 2) + '\n');
 console.log('\nDone. Review the images in public/images/banners, swap any with --topic=<name> --pick=2 --force, then commit.');

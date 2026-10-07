@@ -48,35 +48,54 @@ export const GENERAL_BANNERS = {
 } as const;
 
 const available = new Set<string>(manifest.available);
+/** How many photos a topic has (<topic>.jpg, <topic>-2.jpg …); the script that downloads them records it. */
+const variantCounts: Record<string, number> = (manifest as { variants?: Record<string, number> }).variants ?? {};
 
 // A keyword matches at the start of a word, so "physio" matches "physiotherapy" but "sda" never matches "wisdom".
 const matchesWord = (haystack: string, keyword: string) =>
   (` ${haystack}`).includes(` ${keyword.replace(/-/g, ' ')}`);
 
-const bannerPath = (id: string) => `/images/banners/${id}.jpg`;
+const hash = (text: string) => {
+  let h = 0;
+  for (let i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) | 0;
+  return Math.abs(h);
+};
+/** A topic with several photos shows a different one per page: the page's own title decides which, so it never changes between visits. */
+const bannerPath = (id: string, seed = '') => {
+  const count = variantCounts[id] ?? 1;
+  const n = count > 1 ? (hash(seed) % count) + 1 : 1;
+  return `/images/banners/${n === 1 ? id : `${id}-${n}`}.jpg`;
+};
 
 interface Hint {
   /** Page title, heading, or slug — whichever says most about the page. */
   text?: string;
   /** Broad section: services, locations, guides, funding, conditions. */
   section?: string;
+  /** State or territory code (QLD, NSW …) — lets a location page show that state's skyline when no service photo fits. */
+  state?: string;
 }
 
-export function bannerFor({ text = '', section = '' }: Hint): string {
+export function bannerFor({ text = '', section = '', state = '' }: Hint): string {
   const haystack = text.toLowerCase().replace(/[-_/]+/g, ' ');
 
   for (const topic of BANNER_TOPICS) {
     if (available.has(topic.id) && topic.keywords.some((k) => matchesWord(haystack, k))) {
-      return bannerPath(topic.id);
+      return bannerPath(topic.id, haystack);
     }
   }
 
+  if (section === 'locations' && state) {
+    const id = `locations-${state.toLowerCase()}`;
+    if (available.has(id)) return bannerPath(id, haystack);
+  }
+
   const sectionTopic = SECTION_TOPICS[section];
-  if (sectionTopic && available.has(sectionTopic)) return bannerPath(sectionTopic);
+  if (sectionTopic && available.has(sectionTopic)) return bannerPath(sectionTopic, haystack);
   if (section === 'locations') return GENERAL_BANNERS.locations;
   if (section === 'guides') return GENERAL_BANNERS.guides;
   if (section === 'services') return GENERAL_BANNERS.services;
-  return available.has('general') ? bannerPath('general') : GENERAL_BANNERS.default;
+  return available.has('general') ? bannerPath('general', haystack) : GENERAL_BANNERS.default;
 }
 
 /**

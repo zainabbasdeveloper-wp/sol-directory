@@ -2,14 +2,37 @@
   "available": [
     "assistive-technology",
     "autism-children",
+    "community",
+    "employment",
     "general",
     "guides",
     "housing",
+    "locations-nsw",
+    "locations-qld",
     "mental-health",
+    "multicultural",
     "older-people",
     "personal-care",
     "plan-management",
+    "support-coordination",
     "therapy",
     "transport"
-  ]
+  ],
+  "variants": {
+    "assistive-technology": 1,
+    "autism-children": 3,
+    "community": 3,
+    "employment": 1,
+    "housing": 2,
+    "locations-nsw": 3,
+    "locations-qld": 3,
+    "mental-health": 3,
+    "multicultural": 3,
+    "older-people": 3,
+    "personal-care": 3,
+    "plan-management": 2,
+    "support-coordination": 2,
+    "therapy": 2,
+    "transport": 1
+  }
 }
