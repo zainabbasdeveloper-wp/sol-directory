@@ -208,7 +208,7 @@ async function main() {
   // built once up front, and each listing's word-tokenised name is
   // cached once rather than recomputed on every comparison.
   console.log('[merge-contact] Loading existing register listings…');
-  const all = await RegisterListing.find({}).select('_id name states website claimStatus').lean();
+  const all = await RegisterListing.find({}).select('_id name states website claimStatus abn').lean();
   const byState = new Map<string, typeof all>();
   const byDomain = new Map<string, typeof all>();
   const wordsCache = new Map<string, string[]>();
@@ -235,8 +235,18 @@ async function main() {
     return hits[0];
   }
 
-  type Merge = { phone?: string; email?: string; abn?: string; verified: boolean; interpreting: boolean };
+  type Merge = { phone?: string; email?: string; abn?: string; verified: boolean; interpreting: boolean; contactRow: boolean };
   const updates = new Map<string, Merge>(); // by listing _id string
+  // ABN -> the listing(s) it belongs to, from listings already carrying that ABN and from rows matched in this run.
+  // A business has several rows (one per outlet) and only some match by name/state/domain; an ABN shared with an
+  // already-matched row is how the others find the same listing. Used for the interpreting tag only.
+  const abnToIds = new Map<string, Set<string>>();
+  const rememberAbn = (abn: string | undefined, id: string) => {
+    if (!abn) return;
+    (abnToIds.get(abn) ?? abnToIds.set(abn, new Set()).get(abn)!).add(id);
+  };
+  for (const d of all) rememberAbn((d as any).abn as string | undefined, String((d as any)._id));
+  const pendingInterpretingAbns: string[] = [];
   let matched = 0, unmatched = 0, ambiguous = 0, skippedClaimed = 0;
   let byStateCount = 0, byDomainCount = 0, byPureDomainCount = 0;
   const unmatchedSample: string[] = [];
@@ -268,6 +278,7 @@ async function main() {
 
     if (!hit) {
       unmatched++;
+      if (r.interpreting && r.abn) pendingInterpretingAbns.push(r.abn);
       if (unmatchedSample.length < 15) unmatchedSample.push(`${r.title} (${r.loc ? `${r.loc.suburb}, ${r.loc.state}` : 'no location'})`);
       continue;
     }
@@ -281,15 +292,33 @@ async function main() {
     const verified = !!(emailDomain && siteDomain && emailDomain === siteDomain);
 
     const id = String((hit as any)._id);
-    const existing = updates.get(id) ?? { verified: false, interpreting: false };
+    rememberAbn(r.abn, id);
+    const existing = updates.get(id) ?? { verified: false, interpreting: false, contactRow: true };
     updates.set(id, {
       phone: existing.phone ?? r.phone,
       email: existing.email ?? r.email,
       abn: existing.abn ?? r.abn,
       verified: existing.verified || verified,
       interpreting: existing.interpreting || !!r.interpreting,
+      contactRow: true,
     });
   }
+
+  // Interpreting rows that matched nothing by name/state/domain: tag the listing their ABN points to, but only when
+  // that ABN points to exactly one listing. Nothing else about these rows (phone, email) is applied.
+  let interpretingByAbn = 0;
+  for (const abn of new Set(pendingInterpretingAbns)) {
+    const ids = abnToIds.get(abn);
+    if (!ids || ids.size !== 1) continue;
+    const id = [...ids][0];
+    const hitListing = all.find((d) => String((d as any)._id) === id);
+    if (!hitListing || (hitListing as any).claimStatus === 'claimed') continue;
+    const existing = updates.get(id);
+    if (existing?.interpreting) continue;
+    updates.set(id, existing ? { ...existing, interpreting: true } : { verified: false, interpreting: true, contactRow: false });
+    interpretingByAbn++;
+  }
+  if (interpretingByAbn) console.log(`\n[merge-contact] ${interpretingByAbn} more listing(s) found for interpreting through a shared ABN.`);
   console.log(`\n[merge-contact] ${matched} row(s) matched an existing listing (${byStateCount} by name+state, ${byDomainCount} by name+domain, ${byPureDomainCount} by domain alone), ${unmatched} matched none, ${ambiguous} matched more than one different listing (skipped), ${skippedClaimed} matched a claimed listing (skipped).`);
   if (unmatchedSample.length) console.log('[merge-contact] sample unmatched:', unmatchedSample);
 
@@ -307,7 +336,8 @@ async function main() {
     updateOne: {
       filter: { _id: id },
       update: {
-        $set: { ...(u.phone ? { phone: u.phone } : {}), ...(u.email ? { email: u.email } : {}), ...(u.abn ? { abn: u.abn } : {}), contactVerified: u.verified },
+        // A listing found only through the interpreting ABN pass has no contact data to apply, so its contactVerified is left alone.
+        ...(u.contactRow ? { $set: { ...(u.phone ? { phone: u.phone } : {}), ...(u.email ? { email: u.email } : {}), ...(u.abn ? { abn: u.abn } : {}), contactVerified: u.verified } } : {}),
         // $addToSet, so re-running never duplicates the tag and never removes anything the register import set.
         ...(u.interpreting ? { $addToSet: { services: 'Interpreting and translation', supportCategories: 'Interpreting & translation' } } : {}),
       },
