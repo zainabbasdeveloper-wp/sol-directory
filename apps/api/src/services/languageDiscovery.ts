@@ -48,12 +48,14 @@ function buildLanguageMap(): Map<string, string> {
 const LANGUAGE_BY_WORD = buildLanguageMap();
 const LANGUAGE_WORD_RE = new RegExp(`\\b(${[...LANGUAGE_BY_WORD.keys()].sort((a, b) => b.length - a.length).join('|')})\\b`, 'gi');
 
-const SPEAKING_RE = new RegExp(`\\b(${[...LANGUAGE_BY_WORD.keys()].join('|')})[\\s-]+(?:speaking|speakers?)\\b`, 'gi');
+const LANG_ALT = [...LANGUAGE_BY_WORD.keys()].sort((a, b) => b.length - a.length).join('|');
+/** "Mandarin speaking", "Mandarin and Cantonese speaking", "Greek-speaking", "Arabic speakers". */
+const SPEAKING_RE = new RegExp(`\\b((?:${LANG_ALT})(?:\\s*(?:,|/|&|and|or)\\s*(?:${LANG_ALT}))*)[\\s-]+(?:speaking|speakers?)\\b`, 'gi');
 
 /** A phrase that introduces a statement about who or what the business offers. The language(s) must follow it closely. */
-const STATEMENT_RE = /\b(?:languages?\s+(?:we\s+)?(?:spoken|speak|offered|supported|available)|languages?\s*:|(?:we|our\s+(?:team|staff|workers|support\s+workers|carers|coordinators|clinicians))\s+(?:also\s+)?speaks?|staff\s+(?:who\s+)?speak|team\s+members?\s+(?:who\s+)?speak|bi-?lingual|multi-?lingual|interpreters?\s+(?:are\s+)?available\s+in|(?:support|services?)\s+(?:is\s+|are\s+)?available\s+in|fluent\s+in)\b/gi;
+const STATEMENT_RE = /\b(?:languages?\s+(?:we\s+)?(?:spoken|speak|offered|supported|available|include|offer|provide)|languages?\s*:|(?:also\s+|can\s+|proudly\s+|fluently\s+)*speaks?(?!\s+(?:to|with|about|up|out|directly|now))|communicate\s+in|(?:support|services?|care|assistance)\s+(?:is\s+|are\s+)?(?:offered\s+|provided\s+|delivered\s+)?in|bi-?lingual|multi-?lingual|interpreters?\s+(?:are\s+)?available\s+in|available\s+in|fluent\s+in|proficient\s+in)\b/gi;
 
-const WINDOW_CHARS = 140;
+const WINDOW_CHARS = 120;
 const MAX_PER_STATEMENT = 8;
 const MAX_LANGUAGES = 12;
 
@@ -90,10 +92,7 @@ export function extractLanguagesFromHtml(html: string): string[] {
   const result = new Set<string>();
 
   // Shape 1: "<Language>-speaking support workers".
-  for (const m of text.matchAll(SPEAKING_RE)) {
-    const name = LANGUAGE_BY_WORD.get(m[1].toLowerCase());
-    if (name) result.add(name);
-  }
+  for (const m of text.matchAll(SPEAKING_RE)) languagesIn(m[1]).forEach((l) => result.add(l));
 
   // Shape 2: a statement phrase, then the language(s) right after it (stopping at the end of the sentence).
   for (const m of text.matchAll(STATEMENT_RE)) {
@@ -109,11 +108,13 @@ export function extractLanguagesFromHtml(html: string): string[] {
 }
 
 /** Paths where a business typically describes its team and services. */
-export const ABOUT_PATHS = ['/about', '/about-us', '/our-team', '/team', '/services', '/our-services'];
+export const ABOUT_PATHS = ['/about', '/about-us', '/our-team', '/team', '/our-services', '/services', '/contact', '/contact-us'];
+/** How many of those pages to read after the homepage (each only if it responds). */
+const MAX_EXTRA_PAGES = 3;
 
 /**
- * Languages a business's own website says it supports. Looks at the homepage, then the first about/team page
- * that responds. Returns [] when nothing is clearly stated, and never throws.
+ * Languages a business's own website says it supports. Looks at the homepage, then up to three about / team /
+ * services / contact pages that respond. Returns [] when nothing is clearly stated, and never throws.
  */
 export async function discoverLanguages(website: string): Promise<string[]> {
   let homepage: string;
@@ -127,11 +128,13 @@ export async function discoverLanguages(website: string): Promise<string[]> {
   const homeHtml = await fetchText(homepage);
   if (homeHtml) extractLanguagesFromHtml(homeHtml).forEach((l) => found.add(l));
 
+  let read = 0;
   for (const path of ABOUT_PATHS) {
+    if (read >= MAX_EXTRA_PAGES) break;
     const html = await fetchText(new URL(path, homepage).toString());
     if (!html) continue;
+    read++;
     extractLanguagesFromHtml(html).forEach((l) => found.add(l));
-    break; // only the first about-style page that actually responds is worth reading
   }
 
   return [...found].slice(0, MAX_LANGUAGES);
