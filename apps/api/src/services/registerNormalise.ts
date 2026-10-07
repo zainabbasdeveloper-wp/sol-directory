@@ -45,6 +45,7 @@ export const REGISTER_SUPPORT_CATEGORIES = [
   'Palliative care',
   'Residential aged care',
   'Support workers',
+  'Interpreting & translation',
 ] as const;
 export type SupportCategory = (typeof REGISTER_SUPPORT_CATEGORIES)[number];
 
@@ -54,6 +55,7 @@ export type SupportCategory = (typeof REGISTER_SUPPORT_CATEGORIES)[number];
 const LISTED_SERVICES: [string, string, SupportCategory | null][] = [
   // General support types
   ['Support workers', 'Support workers', 'Support workers'],
+  ['Interpreting and translation', 'Interpreting and translation', 'Interpreting & translation'],
   ['Personal care', 'Personal care', 'Personal care'],
   ['Daily Personal Activities', 'Daily personal activities', 'Personal care'],
   ['High Intensity Daily Personal Activities', 'High intensity daily personal activities', 'Personal care'],

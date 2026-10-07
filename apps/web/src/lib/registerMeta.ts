@@ -78,6 +78,7 @@ export const SUPPORT_CATEGORIES = [
   'Support coordination', 'Plan management', 'Personal care', 'Domestic assistance', 'Transport', 'Therapy services', 'Nursing',
   'Housing (SDA & SIL)', 'Community access', 'Respite care', 'Behaviour support', 'Employment & education support', 'Life skills',
   'Assistive technology & equipment', 'Home modifications', 'Dementia care', 'Palliative care', 'Residential aged care', 'Support workers',
+  'Interpreting & translation',
 ] as const;
 
 // Service-page names that aren't spelled exactly like a register category.
@@ -86,6 +87,7 @@ export const SUPPORT_CATEGORIES = [
 // "Personal care and safety equipment" is equipment, not personal care).
 // Anything that fits no category honestly is left out rather than forced.
 const CATEGORY_ALIASES: [RegExp, (typeof SUPPORT_CATEGORIES)[number]][] = [
+  [/interpret|translat/i, 'Interpreting & translation'],
   [/plan management/i, 'Plan management'],
   [/support coordination|support connection|psychosocial recovery/i, 'Support coordination'],
   [/respite|short term accommodation|\bsta\b/i, 'Respite care'],

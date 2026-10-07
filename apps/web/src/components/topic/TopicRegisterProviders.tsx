@@ -20,6 +20,10 @@ interface Props {
   includeAll?: boolean;
   /** Shown under the list — what a listing does and doesn't tell you for this topic. */
   disclaimer?: string;
+  /** Render nothing at all (no heading, no "none yet" note) when the register has no listings for this topic. */
+  hideWhenEmpty?: boolean;
+  /** Called once the listing count is known, so a page can show or hide its contents link. */
+  onLoaded?: (total: number) => void;
 }
 
 /**
@@ -30,7 +34,7 @@ interface Props {
  * section never claims a listed provider has experience with the topic
  * or accepts a given funding, only that it lists a related support.
  */
-export default function TopicRegisterProviders({ id, heading, intro, leadNote, defaultType, categories, includeAll, disclaimer }: Props) {
+export default function TopicRegisterProviders({ id, heading, intro, leadNote, defaultType, categories, includeAll, disclaimer, hideWhenEmpty, onLoaded }: Props) {
   const options = includeAll || categories.length === 0 ? ['', ...categories] : categories;
   const [category, setCategory] = useState(options[0]);
   const [data, setData] = useState<{ total: number; states: Record<string, number> } | null>(null);
@@ -41,12 +45,16 @@ export default function TopicRegisterProviders({ id, heading, intro, leadNote, d
     let alive = true;
     setData(null);
     const load = category ? getCategoryCounts(type, category) : getRegisterHub(type).then((h) => ({ total: h.total, states: h.states }));
-    load.then((r) => { if (alive) setData(r); }).catch(() => {});
+    load.then((r) => { if (alive) { setData(r); onLoaded?.(r.total); } }).catch(() => { if (alive) onLoaded?.(0); });
     return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type, category]);
 
   const kind = KIND_BY_TYPE[type];
   const noun = type === 'ndis' ? 'NDIS' : 'aged care';
+
+  // While loading, or when there is nothing to show, a hide-when-empty section leaves no trace on the page.
+  if (hideWhenEmpty && (!data || data.total === 0)) return null;
 
   return (
     <section id={id} className="wp-cpt-section">

@@ -11,7 +11,11 @@
  *  - Never creates a new RegisterListing. Only enriches a listing that
  *    already exists from the official register import — this file's own
  *    business names are unreliable (see below) and its status/services
- *    fields aren't touched.
+ *    fields aren't touched. The one exception is the single support
+ *    "Interpreting and translation": a matched listing whose row lists it
+ *    gets that label and the "Interpreting & translation" category added
+ *    (never removed), because no other source tells the Language pages which
+ *    providers offer interpreting.
  *  - Matches a row to an existing listing by trying, in order: (1) suburb
  *    + state (from the "info" column, tolerant of a street-address prefix
  *    or extra reordered parts — see parseInfoLocation) with a
@@ -97,6 +101,8 @@ interface CsvRow {
   email?: string;
   website?: string;
   abn?: string;
+  /** The row lists the "Interpreting and translation" support — the one service tag this script carries over (see the header). */
+  interpreting?: boolean;
 }
 
 function parseInfoLocation(info: string): { suburb: string; suburbSlug: string; state: StateCode } | null {
@@ -142,6 +148,8 @@ async function main() {
   const header = table[0];
   const idx = (name: string) => header.indexOf(name);
   const col = { title: idx('list-providers-title'), info: idx('info'), phone: idx('info (2)'), email: idx('info (3)'), website: idx('info href (3)'), abn: idx('info (5)') };
+  // Optional: older exports may not have the services column, in which case no interpreting tag is carried over.
+  const servicesCol = idx('no-ellipse');
   if (Object.values(col).some((i) => i < 0)) {
     console.error('[merge-contact] Unexpected column layout — expected list-providers-title, info, info (2), info (3), info href (3), info (5).');
     console.error('[merge-contact] Found columns:', header);
@@ -170,6 +178,7 @@ async function main() {
       email: (() => { const e = (r[col.email] ?? '').trim().toLowerCase(); return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) ? e : undefined; })(),
       website,
       abn: abnRaw.length === 11 ? abnRaw : undefined,
+      interpreting: servicesCol >= 0 && /\binterpreting and translation\b/i.test(r[servicesCol] ?? ''),
     });
     stats.kept++;
   }
@@ -226,7 +235,7 @@ async function main() {
     return hits[0];
   }
 
-  type Merge = { phone?: string; email?: string; abn?: string; verified: boolean };
+  type Merge = { phone?: string; email?: string; abn?: string; verified: boolean; interpreting: boolean };
   const updates = new Map<string, Merge>(); // by listing _id string
   let matched = 0, unmatched = 0, ambiguous = 0, skippedClaimed = 0;
   let byStateCount = 0, byDomainCount = 0, byPureDomainCount = 0;
@@ -272,12 +281,13 @@ async function main() {
     const verified = !!(emailDomain && siteDomain && emailDomain === siteDomain);
 
     const id = String((hit as any)._id);
-    const existing = updates.get(id) ?? { verified: false };
+    const existing = updates.get(id) ?? { verified: false, interpreting: false };
     updates.set(id, {
       phone: existing.phone ?? r.phone,
       email: existing.email ?? r.email,
       abn: existing.abn ?? r.abn,
       verified: existing.verified || verified,
+      interpreting: existing.interpreting || !!r.interpreting,
     });
   }
   console.log(`\n[merge-contact] ${matched} row(s) matched an existing listing (${byStateCount} by name+state, ${byDomainCount} by name+domain, ${byPureDomainCount} by domain alone), ${unmatched} matched none, ${ambiguous} matched more than one different listing (skipped), ${skippedClaimed} matched a claimed listing (skipped).`);
@@ -286,6 +296,8 @@ async function main() {
   const withPhone = [...updates.values()].filter((u) => u.phone).length;
   const withEmail = [...updates.values()].filter((u) => u.email).length;
   const withAbn = [...updates.values()].filter((u) => u.abn).length;
+  const interpretingCount = [...updates.values()].filter((u) => u.interpreting).length;
+  console.log(`[merge-contact] ${interpretingCount} matched listing(s) are listed for "Interpreting and translation" and will be tagged with that support.`);
   const verifiedCount = [...updates.values()].filter((u) => u.verified).length;
   console.log(`[merge-contact] ${updates.size} listing(s) to update: ${withPhone} with a phone, ${withEmail} with an email, ${withAbn} with an ABN, ${verifiedCount} cross-verified (email domain matches website domain — these are the only ones whose phone/email become publicly visible).`);
 
@@ -294,7 +306,11 @@ async function main() {
   const ops = [...updates.entries()].map(([id, u]) => ({
     updateOne: {
       filter: { _id: id },
-      update: { $set: { ...(u.phone ? { phone: u.phone } : {}), ...(u.email ? { email: u.email } : {}), ...(u.abn ? { abn: u.abn } : {}), contactVerified: u.verified } },
+      update: {
+        $set: { ...(u.phone ? { phone: u.phone } : {}), ...(u.email ? { email: u.email } : {}), ...(u.abn ? { abn: u.abn } : {}), contactVerified: u.verified },
+        // $addToSet, so re-running never duplicates the tag and never removes anything the register import set.
+        ...(u.interpreting ? { $addToSet: { services: 'Interpreting and translation', supportCategories: 'Interpreting & translation' } } : {}),
+      },
     },
   }));
   let written = 0;
