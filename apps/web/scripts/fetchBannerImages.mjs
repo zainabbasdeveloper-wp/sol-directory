@@ -44,6 +44,18 @@ const TOPICS = {
   'assistive-technology': ['wheelchair user using laptop', 'person using assistive device technology'],
   'older-people': ['elderly woman with carer smiling', 'senior man walking with support worker'],
   multicultural: ['diverse friends talking and laughing together', 'multicultural family at home smiling', 'women of different backgrounds chatting cafe'],
+  // Finer-grained topics so related pages (each language, each condition group) don't all share one picture.
+  // First Nations uses landscapes on purpose: stock photos of people are easy to get wrong for that community.
+  'language-asia-pacific': ['friends of Asian background chatting together', 'Asian family at home smiling', 'Filipino and Vietnamese community gathering'],
+  'language-europe': ['friends chatting in a european style cafe', 'elderly couple smiling italian greek', 'family sharing a meal together mediterranean'],
+  'language-middle-east-africa': ['Middle Eastern family smiling at home', 'African community friends talking together', 'women of Middle Eastern background chatting'],
+  'language-first-nations': ['Australian outback red earth landscape', 'Australian bush landscape at sunrise', 'eucalyptus trees Australian landscape'],
+  'language-access': ['sign language hands signing', 'sign language interpreter', 'person reading large print easy read document'],
+  'condition-mobility': ['wheelchair user outdoors smiling', 'person with prosthetic leg walking', 'physiotherapist helping patient walk'],
+  'condition-sensory': ['person with hearing aid smiling', 'blind person with white cane on street', 'friends using sign language'],
+  'condition-neuro': ['neurologist and patient consultation smiling', 'elderly man doing exercises with physiotherapist', 'rehabilitation gym patient and therapist'],
+  'condition-intellectual': ['young adult with down syndrome smiling', 'support worker and young man cooking together', 'adults learning life skills in a class'],
+  'funding-veterans': ['older man with his carer smiling at home', 'elderly couple with nurse home visit', 'senior man reading a letter at home'],
   'locations-qld': ['Brisbane city skyline river'],
   'locations-nsw': ['Sydney harbour skyline Australia', 'Sydney opera house harbour bridge'],
   'locations-vic': ['Melbourne city skyline Australia', 'Melbourne Yarra river skyline'],

@@ -101,7 +101,7 @@ export default function LanguageTopicPage() {
       eyebrow={topic.categoryGroup}
       title={`${topic.name} speaking support providers`}
       description={heroExcerpt(editorial.overview)}
-      image={bannerFor({ text: 'multicultural language', section: 'conditions' })}
+      image={bannerFor({ text: `${topic.name} ${topic.categoryGroup} language`, section: 'conditions' })}
       toc={toc}
     >
       <section id="about" className="wp-cpt-short">

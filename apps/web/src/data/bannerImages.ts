@@ -16,6 +16,18 @@ interface Topic {
 }
 
 export const BANNER_TOPICS: Topic[] = [
+  // Finer groups come first. A language page uses its region's photos and a condition page its group's, so related pages
+  // no longer all share one picture. Each topic holds up to 3 photos and the page's own title picks one.
+  { id: 'language-first-nations', keywords: ['first nations', 'aboriginal', 'torres strait', 'kriol', 'yolngu', 'pitjantjatjara'] },
+  { id: 'language-access', keywords: ['access & interpreting', 'interpreters', 'easy read', 'translated documents', 'tis national'] },
+  { id: 'language-asia-pacific', keywords: ['asia pacific'] },
+  { id: 'language-europe', keywords: ['europe'] },
+  { id: 'language-middle-east-africa', keywords: ['middle east'] },
+  { id: 'funding-veterans', keywords: ['veteran', 'dva', 'open arms', 'rehabilitation appliances'] },
+  { id: 'condition-sensory', keywords: ['hearing, vision', 'hearing loss', 'deafness', 'deafblind', 'blindness', 'low vision', 'sensory processing', 'auslan'] },
+  { id: 'condition-mobility', keywords: ['mobility & physical', 'spinal', 'amputation', 'limb loss', 'muscular', 'sclerosis', 'spina bifida', 'arthritis', 'chronic pain'] },
+  { id: 'condition-neuro', keywords: ['neuro', 'brain', 'stroke', 'epilepsy', 'parkinson', 'neurone', 'huntington'] },
+  { id: 'condition-intellectual', keywords: ['intellectual', 'down syndrome', 'cerebral palsy', 'fragile x', 'global developmental'] },
   // Funding and service pages for older people come first so "Home Care Packages" is not read as personal care.
   { id: 'older-people', keywords: ['aged care', 'home care package', 'commonwealth home', 'support at home', 'residential', 'transition care', 'aged', 'older', 'senior', 'elderly', 'dementia', 'memory', 'cognitive', 'veteran', 'dva', 'open arms'] },
   { id: 'support-coordination', keywords: ['support coordination', 'coordinator', 'referral', 'plan review', 'change of circumstances', 'first plan', 'getting started', 'navigating', 'waitlist', 'shortlist'] },
