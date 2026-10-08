@@ -9,6 +9,7 @@ import { ApiError } from '../../api/client';
 import Counter from '../../components/Counter';
 import RoleDonutChart from '../../components/charts/RoleDonutChart';
 import UserGrowthChart from '../../components/charts/UserGrowthChart';
+import AdminOperations from './AdminOperations';
 import './AdminDashboard.css';
 
 const PERIODS = [
@@ -179,6 +180,10 @@ export default function AdminDashboard() {
           </select>
         </div>
       </div>
+
+      <AdminOperations />
+
+      <h2 className="ad-section-heading">Members &amp; activity</h2>
 
       {/* Top stats */}
       <div className="ad-stat-grid">
@@ -362,6 +367,9 @@ export default function AdminDashboard() {
           <Link to="/admin/providers" className="ad-quick-action">Manage providers</Link>
           <Link to="/admin/workers" className="ad-quick-action">Manage workers</Link>
           <Link to="/admin/users" className="ad-quick-action">Coordinators & participants</Link>
+          <Link to="/admin/register" className="ad-quick-action">Directory inventory</Link>
+          <Link to="/admin/claims" className="ad-quick-action">Listing claims</Link>
+          <Link to="/admin/diagnostics" className="ad-quick-action">Email &amp; system diagnostics</Link>
         </div>
       </section>
 

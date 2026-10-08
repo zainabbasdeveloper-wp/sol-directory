@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { connectDB } from '../config/db.js';
+import { runJob } from '../services/jobRunner.js';
 import Lead from '../models/Lead.js';
 import LeadMatch from '../models/LeadMatch.js';
 import Notification from '../models/Notification.js';
@@ -61,8 +61,7 @@ async function notifyProvider(lead: any, provider: any): Promise<boolean> {
   return true;
 }
 
-async function main() {
-  await connectDB();
+async function main(): Promise<string> {
   const cutoff = new Date(Date.now() - DELAY_MINUTES * 60 * 1000);
   const leads = await Lead.find({ status: 'matched', createdAt: { $lte: cutoff } })
     .sort({ createdAt: 1 })
@@ -106,13 +105,7 @@ async function main() {
     if (leadNotificationCount > 0) escalatedLeads += 1;
   }
 
-  console.log(
-    `[escalateUnviewedLeads] Notified ${notifiedProviders} provider(s) across ${escalatedLeads} lead(s); checked ${leads.length} eligible lead(s).`
-  );
-  process.exit(0);
+  return `Notified ${notifiedProviders} provider(s) across ${escalatedLeads} lead(s); checked ${leads.length} eligible lead(s).`;
 }
 
-main().catch((error) => {
-  console.error('[escalateUnviewedLeads] Fatal error:', error);
-  process.exit(1);
-});
+void runJob('lead-escalation', main);

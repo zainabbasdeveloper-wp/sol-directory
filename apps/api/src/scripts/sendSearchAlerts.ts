@@ -1,13 +1,12 @@
 import 'dotenv/config';
 import crypto from 'node:crypto';
-import { connectDB } from '../config/db.js';
+import { runJob } from '../services/jobRunner.js';
 import SearchAlert from '../models/SearchAlert.js';
 import { buildProviderFilter } from '../controllers/providers.controller.js';
 import { findProvidersPaidFirst } from '../services/providerPriority.js';
 import { EmailService } from '../services/email.service.js';
 
-async function main() {
-  await connectDB();
+async function main(): Promise<string> {
   const site = (process.env.SITE_URL || process.env.CLIENT_ORIGIN || 'http://localhost:5173').replace(/\/$/, '');
   const alerts = await SearchAlert.find({ status: 'active' });
   let sent = 0;
@@ -43,11 +42,7 @@ async function main() {
     await alert.save();
   }
 
-  console.log(`[sendSearchAlerts] Sent ${sent} alert email(s); checked ${alerts.length} active alert(s).`);
-  process.exit(0);
+  return `Sent ${sent} alert email(s); checked ${alerts.length} active alert(s).`;
 }
 
-main().catch((error) => {
-  console.error('[sendSearchAlerts] Fatal error:', error);
-  process.exit(1);
-});
+void runJob('search-alerts', main);

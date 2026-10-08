@@ -29,7 +29,7 @@ const CONTENT = {
 // previously pointed there, which would have bounced them to an
 // error page immediately after login.
 const ROLE_DESTINATION: Record<Role, string> = {
-  admin: '/verification',
+  admin: '/dashboard',
   provider: '/dashboard',
   worker: '/dashboard',
   coordinator: '/find-providers',

@@ -25,16 +25,14 @@
  */
 import 'dotenv/config';
 import crypto from 'crypto';
-import { connectDB } from '../config/db.js';
+import { runJob } from '../services/jobRunner.js';
 import Provider from '../models/Provider.js';
 import { EmailService } from '../services/email.service.js';
 import { SmsService } from '../services/sms.service.js';
 
 const CONFIRM_WINDOW_MS = 7 * 24 * 60 * 60 * 1000; // link stays valid for the same 7-day window
 
-async function main() {
-  await connectDB();
-
+async function main(): Promise<string> {
   const pauseResult = await Provider.updateMany(
     {
       accountStatus: 'active',
@@ -43,7 +41,6 @@ async function main() {
     },
     { $set: { listingPaused: true } }
   );
-  console.log(`[weeklyCapacityCheck] Paused ${pauseResult.modifiedCount} unconfirmed listing(s).`);
 
   const providers = await Provider.find({ accountStatus: 'active' });
   const frontendOrigin = process.env.CLIENT_ORIGIN ?? 'http://localhost:5173';
@@ -67,11 +64,7 @@ async function main() {
     sent++;
   }
 
-  console.log(`[weeklyCapacityCheck] Sent ${sent} confirmation prompt(s), skipped ${skippedNoEmail} provider(s) with no intake email.`);
-  process.exit(0);
+  return `Paused ${pauseResult.modifiedCount} unconfirmed listing(s). Sent ${sent} confirmation prompt(s), skipped ${skippedNoEmail} provider(s) with no intake email.`;
 }
 
-main().catch((err) => {
-  console.error('[weeklyCapacityCheck] Fatal error:', err);
-  process.exit(1);
-});
+void runJob('capacity-check', main);

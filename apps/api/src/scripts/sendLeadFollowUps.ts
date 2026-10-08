@@ -8,19 +8,11 @@
  *   npm run job:lead-followups -w apps/api
  */
 import 'dotenv/config';
-import { connectDB } from '../config/db.js';
 import { sendProviderReminders, sendWeeklyMatchDigests } from '../services/leadFollowUp.service.js';
+import { runJob } from '../services/jobRunner.js';
 
-async function main() {
-  await connectDB();
+void runJob('lead-followups', async () => {
   const digests = await sendWeeklyMatchDigests();
-  console.log(`[lead-followups] Weekly matches: checked ${digests.checked} enquiries, sent ${digests.sent}.`);
   const reminders = await sendProviderReminders();
-  console.log(`[lead-followups] Provider reminders: ${reminders.enquiries} waiting enquiries across ${reminders.providers} provider(s).`);
-  process.exit(0);
-}
-
-main().catch((err) => {
-  console.error('[lead-followups] Fatal error:', err);
-  process.exit(1);
+  return `Weekly matches: checked ${digests.checked} enquiries, sent ${digests.sent}. Provider reminders: ${reminders.enquiries} waiting enquiries across ${reminders.providers} provider(s).`;
 });

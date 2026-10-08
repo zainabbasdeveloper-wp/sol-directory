@@ -86,3 +86,48 @@ export async function markNotificationsRead(): Promise<{ success: boolean }> {
   if (!res.ok) throw new ApiError((await res.json()).error ?? 'Request failed', res.status);
   return res.json();
 }
+
+export type JobHealth = 'ok' | 'running' | 'failed' | 'overdue' | 'never_run';
+export interface OperationsData {
+  generatedAt: string;
+  alerts: { severity: 'critical' | 'warning' | 'info'; message: string; link?: string; linkLabel?: string }[];
+  system: {
+    database: boolean; email: boolean; adminAlerts: boolean; senderIdentity: boolean; sms: boolean; payments: boolean; maps: boolean;
+    registerLeadEmails: boolean; uptimeSeconds: number; nodeVersion: string;
+  };
+  jobs: {
+    name: string; label: string; description: string; schedule: string; cron: string; command: string; everyHours: number;
+    health: JobHealth; lastRunAt: string | null; lastSummary: string | null; lastError: string | null; lastDurationMs: number | null;
+    history: { at: string; status: 'running' | 'ok' | 'failed' }[];
+  }[];
+  enquiries: {
+    pipeline: { submitted: number; matched: number; unmatched: number; viewed: number; responded: number };
+    daily: { date: string; count: number }[];
+    recent: { id: string; ref: string; need: string; location: string; matched: number; viewed: boolean; responded: boolean; createdAt: string }[];
+  };
+  email: {
+    last24h: { sent: number; failed: number; skipped: number };
+    last7d: { sent: number; failed: number; skipped: number };
+    daily: { date: string; sent: number; failed: number }[];
+    recentFailures: { to: string; subject: string; error: string | null; at: string }[];
+  };
+  automation: {
+    last7d: { searcherViewed: number; searcherResponded: number; weeklyMatches: number; providerReminders: number; registerNotices: number };
+    registerNoticesTotal: number;
+    registerLeadEmailsOn: boolean;
+  };
+  directory: {
+    total: number; ndis: number; agedCare: number; withEmail: number; withPhone: number; withWebsite: number;
+    verifiedEmails: number; notifiable: number; optedOut: number; withLanguages: number;
+    claims: { unclaimed: number; requested: number; claimed: number }; pendingClaims: number;
+  };
+}
+export function getOperations(): Promise<OperationsData> {
+  return get('/admin/dashboard/operations');
+}
+export async function sendTestAdminEmail(): Promise<{ sent: boolean; to: string }> {
+  const res = await fetch(`${API_URL}/admin/dashboard/test-email`, { method: 'POST', headers: authHeaders() });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ApiError(data.error ?? `Request failed (${res.status})`, res.status);
+  return data;
+}
