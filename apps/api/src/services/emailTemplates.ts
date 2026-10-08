@@ -261,7 +261,7 @@ export function adminNotificationTemplate(input: { title: string; message: strin
   const html = renderEmailLayout({
     preheader: input.title,
     heading: input.title,
-    bodyHtml: `<p>${input.message}</p>`,
+    bodyHtml: input.message.startsWith('<table') ? input.message : `<p>${input.message}</p>`,
     ctaLabel: input.dashboardUrl ? 'Open admin dashboard' : undefined,
     ctaUrl: input.dashboardUrl,
   });

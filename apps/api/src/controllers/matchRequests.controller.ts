@@ -8,28 +8,29 @@ import { SmsService } from '../services/sms.service.js';
 import Notification from '../models/Notification.js';
 import LeadMatch from '../models/LeadMatch.js';
 import { notifyRegisterListings } from '../services/leadFollowUp.service.js';
+import { siteOrigin } from '../services/emailTokens.js';
 
 const escapeHtml = (value: unknown) => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-/** A short email to the site owner for every new enquiry, flagged clearly when no provider could be matched. */
+/** A short email to the site owner for every new enquiry, laid out as a simple details table. */
 async function notifyAdminOfEnquiry(lead: any, requestNumber: string, matchedCount: number) {
-  const row = (label: string, value: unknown) => (value ? `<br /><strong>${label}:</strong> ${escapeHtml(value)}` : '');
-  const message = [
-    matchedCount === 0
-      ? '<strong>No provider was matched to this enquiry.</strong> Nobody has been told about it yet, so it needs a person.'
-      : `${matchedCount} provider${matchedCount === 1 ? ' was' : 's were'} matched and notified.`,
-    row('Reference', requestNumber),
-    row('Name', lead.requesterName),
-    row('Email', lead.requesterEmail),
-    row('Phone', lead.contactPhone),
-    row('Where', [lead.suburb, lead.state, lead.postcode].filter(Boolean).join(', ')),
-    row('Service page', lead.serviceContext),
-    row('Who it is for', lead.careFor),
-    row('When', lead.timeframe),
-    row('Funding', [lead.fundingType, lead.planManagement].filter(Boolean).join(' · ')),
-    row('Details', lead.note),
-  ].join('');
-  await EmailService.notifyAdmin(matchedCount === 0 ? 'New enquiry: no provider matched' : 'New enquiry received', message).catch(() => false);
+  const rows: [string, unknown][] = [
+    ['Reference', requestNumber],
+    ['Name', lead.requesterName],
+    ['Email', lead.requesterEmail],
+    ['Phone', lead.contactPhone],
+    ['Where', [lead.suburb, lead.state, lead.postcode].filter(Boolean).join(', ')],
+    ['Service page', lead.serviceContext],
+    ['Who it is for', lead.careFor],
+    ['When', lead.timeframe],
+    ['Funding', [lead.fundingType, lead.planManagement].filter(Boolean).join(' · ')],
+    ['Details', lead.note],
+    ['Providers notified', matchedCount === 0 ? 'None yet' : String(matchedCount)],
+  ];
+  const message = '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse">'
+    + rows.filter(([, v]) => v).map(([label, value]) => `<tr><td style="padding:7px 14px 7px 0;color:#5A6B84;font-size:13px;vertical-align:top;white-space:nowrap">${label}</td><td style="padding:7px 0;font-size:14.5px;font-weight:600;color:#0B2D5C">${escapeHtml(value)}</td></tr>`).join('')
+    + '</table>';
+  await EmailService.notifyAdmin('New enquiry received', message, `${siteOrigin()}/dashboard`).catch(() => false);
 }
 
 // Maps the wizard's NDIS-specific plan-management wording onto
