@@ -42,6 +42,8 @@ async function main() {
   const args = process.argv.slice(2);
   const csvIdx = args.indexOf('--csv');
   const csvPath = csvIdx >= 0 ? args[csvIdx + 1] : undefined;
+  const exportIdx = args.indexOf('--export-unmatched');
+  const exportPath = exportIdx >= 0 ? args[exportIdx + 1] : undefined;
   await connectDB();
 
   const total = await RegisterListing.countDocuments();
@@ -93,9 +95,10 @@ async function main() {
     const c = { title: col('list-providers-title'), phone: col('info (2)'), email: col('info (3)'), website: col('info href (3)'), abn: col('info (5)') };
     const rows = table.slice(1);
     const abns = new Set<string>(), phones = new Set<string>(), emails = new Set<string>();
+    const firstRowByAbn = new Map<string, string[]>();
     for (const r of rows) {
       const abn = (r[c.abn] ?? '').replace(/\D/g, '');
-      if (abn.length === 11) abns.add(abn);
+      if (abn.length === 11) { abns.add(abn); if (!firstRowByAbn.has(abn)) firstRowByAbn.set(abn, r); }
       const phone = normalisePhone(r[c.phone]);
       if (phone) phones.add(phone);
       const email = (r[c.email] ?? '').trim().toLowerCase();
@@ -105,17 +108,28 @@ async function main() {
 
     const stored = async (field: 'abn' | 'phone' | 'email', set: Set<string>) => {
       const values = [...set];
-      let found = 0;
+      const found = new Set<string>();
       for (let i = 0; i < values.length; i += 2000) {
         const batch = values.slice(i, i + 2000);
-        found += (await RegisterListing.distinct(field, { [field]: { $in: batch } })).length;
+        (await RegisterListing.distinct(field, { [field]: { $in: batch } })).forEach((v) => found.add(String(v)));
       }
       return found;
     };
     const [abnFound, phoneFound, emailFound] = await Promise.all([stored('abn', abns), stored('phone', phones), stored('email', emails)]);
-    line('CSV ABNs that are on a listing', abnFound, abns.size);
-    line('CSV phones that are on a listing', phoneFound, phones.size);
-    line('CSV emails that are on a listing', emailFound, emails.size);
+    line('CSV ABNs that are on a listing', abnFound.size, abns.size);
+    line('CSV phones that are on a listing', phoneFound.size, phones.size);
+    line('CSV emails that are on a listing', emailFound.size, emails.size);
+
+    if (exportPath) {
+      const quote = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+      const out = ['abn,name,phone,email,website'];
+      for (const [abn, r] of firstRowByAbn) {
+        if (abnFound.has(abn)) continue;
+        out.push([abn, r[c.title] ?? '', r[c.phone] ?? '', r[c.email] ?? '', r[c.website] ?? ''].map((v) => quote(String(v).trim())).join(','));
+      }
+      fs.writeFileSync(exportPath, `${out.join('\n')}\n`);
+      console.log(`  Wrote ${out.length - 1} business(es) that are in the CSV but on no listing to ${exportPath}`);
+    }
     console.log('  (A CSV business that is not on the official register has no listing to attach to, so 100% is not expected.)');
   }
 

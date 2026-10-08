@@ -27,7 +27,8 @@
     "job:capacity-check": "tsx src/scripts/weeklyCapacityCheck.ts",
     "job:search-alerts": "tsx src/scripts/sendSearchAlerts.ts",
     "job:lead-followups": "tsx src/scripts/sendLeadFollowUps.ts",
-    "audit:register": "tsx src/scripts/auditRegisterData.ts"
+    "audit:register": "tsx src/scripts/auditRegisterData.ts",
+    "mark:verified-contacts": "tsx src/scripts/markVerifiedContacts.ts"
   },
   "dependencies": {
     "@soldirectory/service-content": "*",
