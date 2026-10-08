@@ -2,7 +2,7 @@ import type { Response } from 'express';
 import type { AuthedRequest } from '../middleware/auth.middleware.js';
 import Provider from '../models/Provider.js';
 import DocumentAsset from '../models/DocumentAsset.js';
-import { getStorageService } from '../services/s3.service.js';
+import { getStorageService, StorageNotConfiguredError } from '../services/s3.service.js';
 import { logActivity } from '../models/AdminActivity.js';
 import { geocodeAddress } from '../services/geocoding.service.js';
 import { generateUniqueProviderSlug } from '../utils/slugify.js';
@@ -10,6 +10,23 @@ import { getActiveProviderForUser } from '../utils/getActiveProvider.js';
 import { syncProviderToWordPress } from '../services/wordpressSync.service.js';
 
 const STEP_KEYS = ['org', 'insurance', 'areas', 'team', 'policy', 'billing'];
+const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
+const POLICY_KIND = 'incident_policy';
+const ALLOWED_DOCUMENT_TYPES = new Set([
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+]);
+
+function validatePolicyDocument(input: { kind: string; contentType: string; filename: string; size: number }) {
+  if (input.kind !== POLICY_KIND) return 'Unsupported document kind';
+  if (!ALLOWED_DOCUMENT_TYPES.has(input.contentType)) return 'Upload a PDF, DOC, or DOCX document';
+  if (!input.filename || input.filename.length > 180) return 'Filename is required and must be under 180 characters';
+  if (!Number.isInteger(input.size) || input.size < 1 || input.size > MAX_DOCUMENT_BYTES) {
+    return 'Document must be no larger than 10 MB';
+  }
+  return null;
+}
 
 export async function getOnboarding(req: AuthedRequest, res: Response) {
   const provider = await getActiveProviderForUser(req.user!.id);
@@ -56,7 +73,7 @@ export async function saveStep(req: AuthedRequest, res: Response) {
     }
   }
   if (stepKey === 'policy') {
-    const hasPolicyDoc = await DocumentAsset.exists({ ownerId: provider._id, kind: 'incident_policy' });
+    const hasPolicyDoc = await DocumentAsset.exists({ ownerId: provider._id, kind: POLICY_KIND, status: 'complete' });
     if (!hasPolicyDoc) {
       return res.status(400).json({ error: 'Upload the incident and complaints policy before marking this step complete.' });
     }
@@ -160,22 +177,67 @@ export async function saveStep(req: AuthedRequest, res: Response) {
 }
 
 export async function getUploadUrl(req: AuthedRequest, res: Response) {
-  const { kind, contentType, filename } = req.body as { kind: string; contentType: string; filename: string };
+  const { kind, contentType, filename, size } = req.body as {
+    kind: string; contentType: string; filename: string; size: number;
+  };
   const provider = await getActiveProviderForUser(req.user!.id);
   if (!provider) return res.status(403).json({ error: 'No provider profile for this account' });
 
-  const key = `providers/${provider._id}/${kind}/${Date.now()}-${filename}`;
-  const storage = getStorageService();
-  const { uploadUrl } = await storage.getUploadUrl(key, contentType);
+  const validationError = validatePolicyDocument({ kind, contentType, filename, size });
+  if (validationError) return res.status(400).json({ error: validationError });
 
-  await DocumentAsset.create({
-    ownerId: provider._id,
-    ownerType: 'Provider',
-    kind,
-    contentType,
-    s3Key: key,
-    originalFilename: filename,
-  });
+  const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const key = `providers/${provider._id}/${kind}/${Date.now()}-${safeFilename}`;
+  try {
+    const { uploadUrl } = await getStorageService().getUploadUrl(key, contentType);
+    return res.json({ uploadUrl, key });
+  } catch (error) {
+    if (error instanceof StorageNotConfiguredError) {
+      return res.status(503).json({ error: 'Document uploads are temporarily unavailable. Please contact support.' });
+    }
+    throw error;
+  }
+}
 
-  res.json({ uploadUrl, key });
+export async function completeUpload(req: AuthedRequest, res: Response) {
+  const { kind, contentType, filename, size, key } = req.body as {
+    kind: string; contentType: string; filename: string; size: number; key: string;
+  };
+  const provider = await getActiveProviderForUser(req.user!.id);
+  if (!provider) return res.status(403).json({ error: 'No provider profile for this account' });
+
+  const validationError = validatePolicyDocument({ kind, contentType, filename, size });
+  if (validationError) return res.status(400).json({ error: validationError });
+
+  const expectedPrefix = `providers/${provider._id}/${kind}/`;
+  if (!key?.startsWith(expectedPrefix)) return res.status(400).json({ error: 'Invalid upload key' });
+
+  try {
+    const metadata = await getStorageService().getObjectMetadata(key);
+    if (metadata.size !== size || metadata.size > MAX_DOCUMENT_BYTES || metadata.contentType !== contentType) {
+      return res.status(400).json({ error: 'Uploaded document does not match the requested file' });
+    }
+
+    await DocumentAsset.findOneAndUpdate(
+      { ownerId: provider._id, kind },
+      {
+        ownerId: provider._id,
+        ownerType: 'Provider',
+        kind,
+        contentType,
+        s3Key: key,
+        originalFilename: filename,
+        size,
+        status: 'complete',
+        uploadedAt: new Date(),
+      },
+      { upsert: true, new: true }
+    );
+    return res.json({ status: 'complete' });
+  } catch (error) {
+    if (error instanceof StorageNotConfiguredError) {
+      return res.status(503).json({ error: 'Document uploads are temporarily unavailable. Please contact support.' });
+    }
+    return res.status(400).json({ error: 'Upload could not be verified. Please try again.' });
+  }
 }

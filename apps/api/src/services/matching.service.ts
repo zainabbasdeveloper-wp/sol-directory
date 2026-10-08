@@ -26,6 +26,17 @@ export interface MatchBreakdown {
   };
 }
 
+export function describeMatchReason(result: MatchBreakdown): string {
+  const reasons: string[] = [];
+  if (result.breakdown.service.matched) reasons.push('offers this service');
+  if (result.breakdown.location.matched) reasons.push('serves this area');
+  if (result.breakdown.condition.matchedCount > 0) {
+    reasons.push(`experience with ${result.breakdown.condition.matchedCount}/${result.breakdown.condition.requiredCount} listed conditions`);
+  }
+  if (result.breakdown.funding.matched) reasons.push('accepts this funding type');
+  return reasons.length > 0 ? reasons.join(', ') : 'partial match on availability/location only';
+}
+
 function scoreFunding(lead: LeadDoc, provider: ProviderDoc): { score: number; matched: boolean } {
   // A non-NDIS lead (Aged Care, Private, DVA, etc.) never has this
   // set — the wizard only asks NDIS plan-management style when the

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { saveOnboardingStep, getUploadUrl } from '../api/resources';
+import { completeUpload, saveOnboardingStep, getUploadUrl } from '../api/resources';
 import { ApiError } from '../api/client';
 import { useToast } from '../components/ui/Toast';
 import { listActiveServices, type ActiveService } from '../api/serviceCatalogue';
@@ -127,7 +127,14 @@ export default function Onboarding() {
   async function handlePolicyUpload(file: File) {
     setPolicyFile({ name: file.name, status: 'uploading' });
     try {
-      await getUploadUrl('incident_policy', file.type, file.name);
+      const { uploadUrl, key } = await getUploadUrl('incident_policy', file.type, file.name, file.size);
+      const uploadResponse = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type },
+        body: file,
+      });
+      if (!uploadResponse.ok) throw new Error('Object storage rejected the upload');
+      await completeUpload('incident_policy', file.type, file.name, file.size, key);
       setPolicyFile({ name: file.name, status: 'uploaded' });
       showToast('Policy document uploaded.');
     } catch (err) {

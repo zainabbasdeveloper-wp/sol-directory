@@ -123,8 +123,12 @@ export function saveOnboardingStep(stepKey: string, data: Record<string, unknown
   return api.post(`/onboarding/${stepKey}`, { data });
 }
 
-export function getUploadUrl(kind: string, contentType: string, filename: string) {
-  return api.post<{ uploadUrl: string; key: string }>('/onboarding/upload-url', { kind, contentType, filename });
+export function getUploadUrl(kind: string, contentType: string, filename: string, size: number) {
+  return api.post<{ uploadUrl: string; key: string }>('/onboarding/upload-url', { kind, contentType, filename, size });
+}
+
+export function completeUpload(kind: string, contentType: string, filename: string, size: number, key: string) {
+  return api.post<{ status: 'complete' }>('/onboarding/upload-complete', { kind, contentType, filename, size, key });
 }
 
 // --- Verification (admin) ---
