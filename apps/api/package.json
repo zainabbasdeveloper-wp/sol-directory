@@ -27,9 +27,12 @@
     "job:capacity-check": "tsx src/scripts/weeklyCapacityCheck.ts",
     "job:search-alerts": "tsx src/scripts/sendSearchAlerts.ts",
     "job:lead-followups": "tsx src/scripts/sendLeadFollowUps.ts",
-    "audit:register": "tsx src/scripts/auditRegisterData.ts"
+    "audit:register": "tsx src/scripts/auditRegisterData.ts",
+    "job:lead-escalation": "tsx src/scripts/escalateUnviewedLeads.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "3.1147.0",
+    "@aws-sdk/s3-request-presigner": "3.1147.0",
     "@soldirectory/service-content": "*",
     "@soldirectory/shared-types": "*",
     "@soldirectory/topic-content": "*",
@@ -39,7 +42,7 @@
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.5.2",
-    "nodemailer": "^6.9.15",
+    "nodemailer": "10.0.16",
     "stripe": "^23.0.0"
   },
   "devDependencies": {

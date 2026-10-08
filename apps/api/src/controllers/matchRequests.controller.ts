@@ -2,23 +2,12 @@ import type { Request, Response } from 'express';
 import Lead from '../models/Lead.js';
 import Provider from '../models/Provider.js';
 import { geocodeAddress } from '../services/geocoding.service.js';
-import { scoreMatch, isGenuineMatch } from '../services/matching.service.js';
+import { describeMatchReason, scoreMatch, isGenuineMatch } from '../services/matching.service.js';
 import { EmailService } from '../services/email.service.js';
 import { SmsService } from '../services/sms.service.js';
 import Notification from '../models/Notification.js';
 import LeadMatch from '../models/LeadMatch.js';
 import { notifyRegisterListings } from '../services/leadFollowUp.service.js';
-
-function describeMatchReason(result: ReturnType<typeof scoreMatch>): string {
-  const reasons: string[] = [];
-  if (result.breakdown.service.matched) reasons.push('offers this service');
-  if (result.breakdown.location.matched) reasons.push('serves this area');
-  if (result.breakdown.condition.matchedCount > 0) {
-    reasons.push(`experience with ${result.breakdown.condition.matchedCount}/${result.breakdown.condition.requiredCount} listed conditions`);
-  }
-  if (result.breakdown.funding.matched) reasons.push('accepts this funding type');
-  return reasons.length > 0 ? reasons.join(', ') : 'partial match on availability/location only';
-}
 
 // Maps the wizard's NDIS-specific plan-management wording onto
 // Lead.funding's existing enum, used by matching's scoreFunding

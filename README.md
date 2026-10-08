@@ -61,7 +61,7 @@ soldirectory-ts/
 
 ## Getting started
 
-**Prerequisites:** Node 18+, a MongoDB instance (local or Atlas).
+**Prerequisites:** Node 20+, a MongoDB instance (local or Atlas).
 
 ```bash
 npm install                       # installs all workspaces from the root
@@ -97,11 +97,9 @@ Seeded accounts (password `password123`): `provider@example.com.au`,
 - **Pagination** — `listWorkers` caps at `MAX_LIMIT = 50` and returns
   a `PaginatedResult<WorkerMasked>`; never an unbounded array.
 - **Documents in object storage, metadata only in Mongo** —
-  `DocumentAsset.ts` + `services/s3.service.ts`. Ships with a stub
-  storage implementation (logs a warning, returns a fake URL) so the
-  app runs without AWS credentials — swap in a real
-  `@aws-sdk/client-s3` implementation behind the same
-  `StorageService` interface before handling real documents.
+  `DocumentAsset.ts` + `services/s3.service.ts`. Signed URLs keep file
+  bytes out of the API process, while server-side object verification
+  prevents incomplete uploads from satisfying compliance checks.
 - **Webhook-owned subscription state** — `services/stripe.service.ts`
   is the only code path that writes `Provider.plan`. `WebhookEvent`
   gives it idempotency against Stripe's at-least-once delivery.
@@ -117,6 +115,46 @@ Seeded accounts (password `password123`): `provider@example.com.au`,
   `(providerId, leadId)` index so even two different keys can't
   double-unlock the same lead.
 
+## Production document storage
+
+Provider compliance uploads use short-lived signed S3 PUT URLs. The
+browser uploads directly to object storage, then the API verifies the
+object with `HeadObject` before creating a completed `DocumentAsset`.
+Without storage configuration, upload requests fail with HTTP 503 and
+cannot mark onboarding complete.
+
+Set these variables in the API process environment:
+
+```text
+S3_BUCKET=private-document-bucket
+S3_REGION=ap-southeast-2
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+```
+
+For an S3-compatible service, also set `S3_ENDPOINT` and, when
+required, `S3_FORCE_PATH_STYLE=true`. Keep the bucket private and
+configure CORS to allow `PUT` from `CLIENT_ORIGIN` with the
+`Content-Type` header. Do not place credentials in tracked files.
+
+## Scheduled jobs
+
+The API jobs are one-shot, cron-friendly commands. A typical production
+schedule from the repository root is:
+
+```cron
+*/15 * * * * cd /path/to/soldirectory-ts && npm run job:lead-escalation --workspace=apps/api
+0 * * * * cd /path/to/soldirectory-ts && npm run job:search-alerts --workspace=apps/api
+0 8 * * 1 cd /path/to/soldirectory-ts && npm run job:capacity-check --workspace=apps/api
+```
+
+Lead escalation defaults to a 120-minute delay, five additional
+providers per run and ten total notified providers per lead. Configure
+these with `LEAD_ESCALATION_DELAY_MINUTES`,
+`LEAD_ESCALATION_BATCH_SIZE`, `MAX_TOTAL_PROVIDERS_PER_LEAD`, and
+`LEAD_ESCALATION_LEADS_PER_RUN`. It stops escalating as soon as an
+existing match has viewed or responded to the lead.
+
 ## What's still a TODO, explicitly
 
 - **Stripe webhook signature verification** —
@@ -124,8 +162,6 @@ Seeded accounts (password `password123`): `provider@example.com.au`,
   Before this touches real payments, verify against the
   `Stripe-Signature` header using
   `stripe.webhooks.constructEvent(rawBody, sig, STRIPE_WEBHOOK_SECRET)`.
-- **Real S3 implementation** — swap `StubStorageService` in
-  `s3.service.ts` for the AWS SDK once bucket credentials exist.
 - **Contact-request acceptance flow** — there's no `ContactRequest`
   model yet; `WorkerProfile.tsx`'s "Request contact" button calls a
   real endpoint, but that endpoint doesn't yet track acceptance state

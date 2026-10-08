@@ -7,6 +7,8 @@ export interface DocumentAssetDoc extends Document {
   contentType: string;
   s3Key: string;
   originalFilename: string;
+  size: number;
+  status: 'complete';
   uploadedAt: Date;
 }
 
@@ -17,6 +19,8 @@ const documentAssetSchema = new Schema<DocumentAssetDoc>({
   contentType: { type: String, required: true },
   s3Key: { type: String, required: true },
   originalFilename: String,
+  size: { type: Number, required: true },
+  status: { type: String, enum: ['complete'], required: true },
   uploadedAt: { type: Date, default: Date.now },
 });
 
