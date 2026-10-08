@@ -9,6 +9,7 @@ import { scoreMatch, isGenuineMatch } from '../services/matching.service.js';
 import LeadView from '../models/LeadView.js';
 import LeadMatch from '../models/LeadMatch.js';
 import { getActiveProviderForUser } from '../utils/getActiveProvider.js';
+import { notifySearcherViewed, notifySearcherResponded } from '../services/leadFollowUp.service.js';
 
 // "Genuine match" is defined once (isGenuineMatch in matching.service.ts)
 // and shared with matchRequests.controller.ts, so "notified" and
@@ -131,7 +132,10 @@ export async function markLeadViewed(req: AuthedRequest, res: Response) {
   LeadMatch.updateOne(
     { leadId: lead._id, providerId: provider._id, status: 'notified' },
     { $set: { status: 'viewed', viewedAt: new Date() } }
-  ).catch(() => {});
+  ).then((result) => {
+    // First time a matched provider opens it: tell the person who asked (once per enquiry).
+    if (result.modifiedCount > 0) void notifySearcherViewed(lead._id);
+  }).catch(() => {});
 
   res.json({ viewed: true });
 }
@@ -183,7 +187,10 @@ export async function unlockLead(req: AuthedRequest, res: Response) {
   LeadMatch.updateOne(
     { leadId: lead._id, providerId: provider._id, respondedAt: { $exists: false } },
     { $set: { status: 'contacted', respondedAt: new Date() } }
-  ).catch(() => {});
+  ).then((result) => {
+    // First time a provider takes it up: tell the person who asked (once per enquiry).
+    if (result.modifiedCount > 0) void notifySearcherResponded(lead._id, provider.tradingName || provider.legalEntityName);
+  }).catch(() => {});
 
   // Geocode once, lazily, on first real unlock — there's no lead
   // creation endpoint in this codebase to do this at submission

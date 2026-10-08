@@ -3,6 +3,7 @@ import { useMatchModal } from '../context/MatchModalContext';
 import { listActiveServices, type ActiveService } from '../api/serviceCatalogue';
 import { ApiError } from '../api/client';
 import { searchPlaces, lookupPostcode, formatPlace, placeSearchEnabled, type PlaceSuggestion } from '../lib/places';
+import { serviceContextFromPath } from '../lib/serviceContext';
 import './MatchingWizard.css';
 
 /**
@@ -190,6 +191,7 @@ export default function MatchingWizard() {
           draftId,
           ...currentForm,
           service: currentForm.service.trim() || SERVICE_NOT_SURE,
+          serviceContext: serviceContextFromPath(window.location.pathname),
         }),
       });
       if (res.ok) {
@@ -321,6 +323,7 @@ export default function MatchingWizard() {
           draftId,
           ...form,
           service: form.service.trim() || SERVICE_NOT_SURE,
+          serviceContext: serviceContextFromPath(window.location.pathname),
         }),
       });
       if (!res.ok) {

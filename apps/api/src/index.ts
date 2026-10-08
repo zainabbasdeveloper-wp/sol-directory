@@ -22,6 +22,7 @@ import matchRequestsRoutes from './routes/matchRequests.routes.js';
 import notificationsRoutes from './routes/notifications.routes.js';
 import sitemapRoutes from './routes/sitemap.routes.js';
 import registerRoutes from './routes/register.routes.js';
+import emailRoutes from './routes/email.routes.js';
 import adminClaimsRoutes from './routes/admin.claims.routes.js';
 import adminRegisterRoutes from './routes/admin.register.routes.js';
 import adminReviewsRoutes from './routes/admin.reviews.routes.js';
@@ -81,6 +82,7 @@ app.use('/api/capacity', capacityRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/search-alerts', searchAlertsRoutes);
 app.use('/api/register', registerRoutes);
+app.use('/api/email', emailRoutes);
 // Crawler-readable HTML for the register pages; nginx routes /ndis-providers/* here (deploy/nginx-soldirectory.conf).
 app.get('/seo-shell/*', (req, res, next) => { registerShell(req, res).catch(next); });
 app.use('/sitemap.xml', sitemapRoutes);

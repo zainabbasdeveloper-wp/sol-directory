@@ -51,6 +51,18 @@ export interface LeadDoc extends Document {
   // abandoned mid-wizard draft is auto-deleted after 30 days instead
   // of accumulating forever, without needing a cron job for cleanup.
   draftExpiresAt?: Date;
+  /** The service the visitor was looking at when they opened the form (e.g. "Personal care"), taken from the page, not asked. Only used to pick who to tell about the enquiry; it never changes matching. */
+  serviceContext?: string;
+  // --- Follow-up emails to the person who made the request (see leadFollowUp.service.ts) ---
+  /** The requester clicked "stop these emails". Nothing optional is sent after this. */
+  emailOptOut?: boolean;
+  /** Set once the first "a provider has looked at your request" email has gone out. */
+  viewedNoticeAt?: Date;
+  /** Set once the "a provider has taken up your request" email has gone out. */
+  respondedNoticeAt?: Date;
+  /** How many weekly "your matches" reminders have been sent, and when the last one went. */
+  digestCount?: number;
+  lastDigestAt?: Date;
   createdAt: Date;
 }
 
@@ -84,6 +96,12 @@ const leadSchema = new Schema<LeadDoc>(
     note: String,
     status: { type: String, enum: ['draft', 'matched', 'unlocked', 'closed'], default: 'matched' },
     draftExpiresAt: { type: Date, expires: 0 }, // TTL: delete once draftExpiresAt is in the past
+    serviceContext: String,
+    emailOptOut: { type: Boolean, default: false },
+    viewedNoticeAt: Date,
+    respondedNoticeAt: Date,
+    digestCount: { type: Number, default: 0 },
+    lastDigestAt: Date,
   },
   { timestamps: true }
 );

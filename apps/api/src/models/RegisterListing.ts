@@ -91,6 +91,8 @@ export interface RegisterListingDoc extends Document {
   languages?: string[];
   /** When the website was last read for languages (whether or not any were found) — skip re-checking too often. */
   languagesCheckedAt?: Date;
+  /** The business asked not to receive enquiry notices (or someone did on its behalf through the unsubscribe link). Respected permanently. */
+  emailOptOut?: boolean;
 }
 
 const areaSchema = new Schema<RegisterArea>(
@@ -125,6 +127,7 @@ const registerListingSchema = new Schema<RegisterListingDoc>(
     wpPostId: Number,
     languages: [String],
     languagesCheckedAt: Date,
+    emailOptOut: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

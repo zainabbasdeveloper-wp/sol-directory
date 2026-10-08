@@ -50,7 +50,7 @@ function getTransporter(): Transporter | null {
  * Returns true/false so callers CAN check and retry/log further up
  * the stack if they want to, without being forced to.
  */
-async function sendMail(to: string, subject: string, html: string): Promise<boolean> {
+async function sendMail(to: string, subject: string, html: string, opts?: { unsubscribeUrl?: string }): Promise<boolean> {
   const t = getTransporter();
   const from = process.env.EMAIL_FROM || 'SolDirectory <no-reply@soldirectory.example>';
 
@@ -61,7 +61,11 @@ async function sendMail(to: string, subject: string, html: string): Promise<bool
   }
 
   try {
-    await t.sendMail({ from, to, subject, html });
+    await t.sendMail({
+      from, to, subject, html,
+      // Lets mail apps show their own "Unsubscribe" button, which also protects the sender's reputation.
+      ...(opts?.unsubscribeUrl ? { headers: { 'List-Unsubscribe': `<${opts.unsubscribeUrl}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' } } : {}),
+    });
     EmailLog.create({ to, subject, status: 'sent' }).catch(() => {});
     return true;
   } catch (err) {
@@ -76,6 +80,11 @@ async function sendMail(to: string, subject: string, html: string): Promise<bool
 }
 
 export const EmailService = {
+  /** Sends an already-built { subject, html } pair, e.g. from followUpTemplates.ts. Pass unsubscribeUrl for anything that is not a direct reply to the recipient. */
+  async sendTemplate(to: string, email: { subject: string; html: string }, opts?: { unsubscribeUrl?: string }) {
+    return sendMail(to, email.subject, email.html, opts);
+  },
+
   async sendLeadConfirmation(to: string, requestNumber: string, need: string, trackingUrl?: string) {
     const { subject, html } = leadConfirmationTemplate({ requestNumber, need, trackingUrl });
     return sendMail(to, subject, html);

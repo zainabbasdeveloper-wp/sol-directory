@@ -298,26 +298,10 @@
   "therapy-3": {
     "provider": "unsplash",
     "photoId": "B3qVNvZ0AHY",
-    "photographer": "Ortopediatri Çocuk Ortopedi Akademisi",
+    "photographer": "Ortopediatri \u00c3\u2021ocuk Ortopedi Akademisi",
     "photographerUrl": "https://unsplash.com/@ortopediatri",
     "pageUrl": "https://unsplash.com/photos/a-man-and-a-woman-standing-next-to-each-other-B3qVNvZ0AHY",
     "alt": "a man and a woman standing next to each other"
-  },
-  "support-coordination-3": {
-    "provider": "unsplash",
-    "photoId": "uwinmIQD8nU",
-    "photographer": "Vitaly Gariev",
-    "photographerUrl": "https://unsplash.com/@silverkblack",
-    "pageUrl": "https://unsplash.com/photos/couple-looking-stressed-over-bills-at-kitchen-table-uwinmIQD8nU",
-    "alt": "Couple looking stressed over bills at kitchen table"
-  },
-  "plan-management-3": {
-    "provider": "unsplash",
-    "photoId": "41Tt5VQFSdA",
-    "photographer": "Giorgio Tomassetti",
-    "photographerUrl": "https://unsplash.com/@gtomassetti",
-    "pageUrl": "https://unsplash.com/photos/someone-is-working-on-paperwork-with-a-calculator-41Tt5VQFSdA",
-    "alt": "Someone is working on paperwork with a calculator"
   },
   "transport-2": {
     "provider": "unsplash",
@@ -335,14 +319,6 @@
     "pageUrl": "https://unsplash.com/photos/two-men-and-one-woman-sitting-beside-van-tYG9XrcjMFg",
     "alt": "two men and one woman sitting beside van"
   },
-  "housing-3": {
-    "provider": "unsplash",
-    "photoId": "Au5zKo4OERs",
-    "photographer": "Michael Brown",
-    "photographerUrl": "https://unsplash.com/@vettexan",
-    "pageUrl": "https://unsplash.com/photos/modern-living-room-with-large-windows-and-bookshelves-Au5zKo4OERs",
-    "alt": "Modern living room with large windows and bookshelves"
-  },
   "employment-2": {
     "provider": "unsplash",
     "photoId": "dgPNu73ihYE",
@@ -358,22 +334,6 @@
     "photographerUrl": "https://unsplash.com/@silverkblack",
     "pageUrl": "https://unsplash.com/photos/woman-talking-on-phone-in-workspace-bJYtjUoqkVE",
     "alt": "A woman in a white sweater talking on a phone at a desk"
-  },
-  "assistive-technology-2": {
-    "provider": "unsplash",
-    "photoId": "ikN0nSOODyM",
-    "photographer": "sarah b",
-    "photographerUrl": "https://unsplash.com/@sixthcitysarah",
-    "pageUrl": "https://unsplash.com/photos/a-man-on-a-phone-ikN0nSOODyM",
-    "alt": "a man on a phone"
-  },
-  "assistive-technology-3": {
-    "provider": "unsplash",
-    "photoId": "Xq_cLJSl4i4",
-    "photographer": "Honbike",
-    "photographerUrl": "https://unsplash.com/@honbike",
-    "pageUrl": "https://unsplash.com/photos/a-person-sitting-in-a-wheelchair-drinking-from-a-bottle-Xq_cLJSl4i4",
-    "alt": "a person sitting in a wheelchair drinking from a bottle"
   },
   "locations-vic": {
     "provider": "unsplash",
@@ -439,14 +399,6 @@
     "pageUrl": "https://unsplash.com/photos/a-view-of-a-city-from-a-hill-HlGEM72pd1g",
     "alt": "a view of a city from a hill"
   },
-  "locations-sa-3": {
-    "provider": "unsplash",
-    "photoId": "CXEn1b0_UTU",
-    "photographer": "Vlad Kutepov",
-    "photographerUrl": "https://unsplash.com/@kvtepov",
-    "pageUrl": "https://unsplash.com/photos/a-large-building-with-a-dome-CXEn1b0_UTU",
-    "alt": "a large building with a dome"
-  },
   "locations-tas": {
     "provider": "unsplash",
     "photoId": "Wdpl-QIiZak",
@@ -454,22 +406,6 @@
     "photographerUrl": "https://unsplash.com/@nicosmit99",
     "pageUrl": "https://unsplash.com/photos/boats-on-dock-near-green-trees-during-daytime-Wdpl-QIiZak",
     "alt": "boats on dock near green trees during daytime"
-  },
-  "locations-tas-2": {
-    "provider": "unsplash",
-    "photoId": "uT3K66fLWK8",
-    "photographer": "Nico Smit",
-    "photographerUrl": "https://unsplash.com/@nicosmit99",
-    "pageUrl": "https://unsplash.com/photos/a-building-with-boats-in-front-of-it-uT3K66fLWK8",
-    "alt": "a building with boats in front of it"
-  },
-  "locations-tas-3": {
-    "provider": "unsplash",
-    "photoId": "zWePslwH1Dk",
-    "photographer": "Nico Smit",
-    "photographerUrl": "https://unsplash.com/@nicosmit99",
-    "pageUrl": "https://unsplash.com/photos/boats-in-a-harbor-zWePslwH1Dk",
-    "alt": "boats in a harbor"
   },
   "locations-act": {
     "provider": "unsplash",
@@ -514,7 +450,7 @@
   "guides-2": {
     "provider": "unsplash",
     "photoId": "WWD93Icc30Y",
-    "photographer": "Priscilla Du Preez 🇨🇦",
+    "photographer": "Priscilla Du Preez \u00f0\u0178\u2021\u00a8\u00f0\u0178\u2021\u00a6",
     "photographerUrl": "https://unsplash.com/@priscilladupreez",
     "pageUrl": "https://unsplash.com/photos/woman-holding-mug-in-front-of-book-WWD93Icc30Y",
     "alt": "woman holding mug in front of book"
@@ -542,5 +478,13 @@
     "photographerUrl": "https://unsplash.com/@amyhirschi",
     "pageUrl": "https://unsplash.com/photos/two-women-sitting-on-leather-chairs-in-front-of-table-K0c8ko3e6AA",
     "alt": "two women sitting on leather chairs in front of table"
+  },
+  "locations-tas-2": {
+    "provider": "unsplash",
+    "photoId": "zWePslwH1Dk",
+    "photographer": "Nico Smit",
+    "photographerUrl": "https://unsplash.com/@nicosmit99",
+    "pageUrl": "https://unsplash.com/photos/boats-in-a-harbor-zWePslwH1Dk",
+    "alt": "boats in a harbor"
   }
 }

@@ -7,6 +7,7 @@ import { EmailService } from '../services/email.service.js';
 import { SmsService } from '../services/sms.service.js';
 import Notification from '../models/Notification.js';
 import LeadMatch from '../models/LeadMatch.js';
+import { notifyRegisterListings } from '../services/leadFollowUp.service.js';
 
 function describeMatchReason(result: ReturnType<typeof scoreMatch>): string {
   const reasons: string[] = [];
@@ -50,9 +51,11 @@ const SERVICE_NOT_SURE = 'Not sure yet';
 // worth spending it on every autosave — only the final submit, and
 // the browse/matching paths, ever need real coordinates).
 function mapFormToLeadFields(body: Record<string, unknown>) {
-  const { location, suburb, state, postcode, careFor, timeframe, funding, planManagement, service, email, phone, name, additionalDetails } = body as Record<string, string | undefined>;
+  const { location, suburb, state, postcode, careFor, timeframe, funding, planManagement, service, serviceContext, email, phone, name, additionalDetails } = body as Record<string, string | undefined>;
   return {
     need: service?.trim() || SERVICE_NOT_SURE,
+    // The service page the visitor opened the form from, if any. Only used to decide who hears about the enquiry; matching ignores it.
+    serviceContext: serviceContext?.trim().slice(0, 80) || undefined,
     fundingType: funding,
     funding: funding === 'NDIS' ? PLAN_MANAGEMENT_TO_FUNDING[planManagement ?? ''] : undefined,
     planManagement: funding === 'NDIS' ? planManagement : undefined,
@@ -226,6 +229,8 @@ export async function submitMatchRequest(req: Request, res: Response) {
     }).catch(() => {});
   }
   EmailService.sendLeadConfirmation(email, requestNumber, lead.need).catch(() => {});
+  // Businesses on the public register near the enquiry (off unless REGISTER_LEAD_EMAILS=1). Fire-and-forget like the rest.
+  notifyRegisterListings(lead).catch(() => {});
 
   res.status(201).json({
     id: String(lead._id),

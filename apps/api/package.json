@@ -25,7 +25,9 @@
     "seed:conditions": "tsx src/scripts/seedConditionCatalogue.ts",
     "list:providers": "tsx src/scripts/listProviders.ts",
     "job:capacity-check": "tsx src/scripts/weeklyCapacityCheck.ts",
-    "job:search-alerts": "tsx src/scripts/sendSearchAlerts.ts"
+    "job:search-alerts": "tsx src/scripts/sendSearchAlerts.ts",
+    "job:lead-followups": "tsx src/scripts/sendLeadFollowUps.ts",
+    "audit:register": "tsx src/scripts/auditRegisterData.ts"
   },
   "dependencies": {
     "@soldirectory/service-content": "*",

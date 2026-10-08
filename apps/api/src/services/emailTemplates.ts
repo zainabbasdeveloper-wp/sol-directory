@@ -9,7 +9,7 @@ const PRIMARY = '#1769E0';
 const BG = '#F5F8FC';
 const TEXT_MUTED = '#5A6B84';
 
-function escapeHtml(value: unknown): string {
+export function escapeHtml(value: unknown): string {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -24,8 +24,10 @@ export function renderEmailLayout(opts: {
   bodyHtml: string; // pre-built inner HTML — paragraphs, etc.
   ctaLabel?: string;
   ctaUrl?: string;
+  /** Extra footer lines, e.g. who sent this and how to stop receiving it — required on anything that is not a direct response to the recipient's own action. */
+  footerHtml?: string;
 }): string {
-  const { preheader, heading, bodyHtml, ctaLabel, ctaUrl } = opts;
+  const { preheader, heading, bodyHtml, ctaLabel, ctaUrl, footerHtml } = opts;
   return `<!doctype html>
 <html>
 <head>
@@ -58,7 +60,7 @@ export function renderEmailLayout(opts: {
         <tr>
           <td style="padding:20px 28px; border-top:1px solid #E8EEF7; font-size:12px; color:${TEXT_MUTED};">
             SolDirectory · This is an automated message.<br />
-            Need help? Contact support at the details in your account, or visit the SolDirectory support page.
+            Need help? Contact support at the details in your account, or visit the SolDirectory support page.${footerHtml ? `<br /><br />${footerHtml}` : ''}
           </td>
         </tr>
       </table>
@@ -167,7 +169,7 @@ export function providerLeadTeaserTemplate(input: { need: string; suburb: string
   const html = renderEmailLayout({
     preheader: `A new ${escapeHtml(input.need)} lead is available in ${escapeHtml(input.suburb)}`,
     heading: 'New lead in your service area',
-    bodyHtml: `<p>A new request for <strong>${escapeHtml(input.need)}</strong> in <strong>${escapeHtml(input.suburb)}</strong> may suit your organisation.</p><p>Upgrade your plan to unlock the full brief and contact details. The requester's email and phone number are hidden until the lead is unlocked.</p>${input.claimUrl ? `<p><strong>This organisation has a free SolDirectory listing that has not been claimed yet.</strong> <a href="${escapeHtml(input.claimUrl)}">Claim your listing</a> to update your details and respond to enquiries.</p>` : ''}`,
+    bodyHtml: `<p>A new request for <strong>${escapeHtml(input.need)}</strong> in <strong>${escapeHtml(input.suburb)}</strong> may suit your organisation.</p><p>Upgrade your plan to unlock the full brief and contact details. The requester's email and phone number are hidden until the lead is unlocked.</p>${input.claimUrl ? `<p><strong>Your organisation has a free SolDirectory listing.</strong> <a href="${escapeHtml(input.claimUrl)}">Manage your listing</a> to update your details and respond to enquiries.</p>` : ''}`,
     ctaLabel: input.dashboardUrl ? 'View lead opportunity' : undefined,
     ctaUrl: input.dashboardUrl,
   });

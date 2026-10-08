@@ -16,6 +16,8 @@ export interface LeadMatchDoc extends Document {
   notifiedAt: Date;
   viewedAt?: Date;
   respondedAt?: Date;
+  /** When the "you have an enquiry waiting" reminder went to the provider, so it is only ever sent once per match. */
+  reminderSentAt?: Date;
   status: 'notified' | 'viewed' | 'contacted' | 'declined';
 }
 
@@ -28,6 +30,7 @@ const schema = new Schema<LeadMatchDoc>(
     notifiedAt: { type: Date, default: Date.now },
     viewedAt: Date,
     respondedAt: Date,
+    reminderSentAt: Date,
     status: { type: String, enum: ['notified', 'viewed', 'contacted', 'declined'], default: 'notified' },
   },
   { timestamps: false }
