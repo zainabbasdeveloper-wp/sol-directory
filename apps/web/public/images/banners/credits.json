@@ -298,7 +298,7 @@
   "therapy-3": {
     "provider": "unsplash",
     "photoId": "B3qVNvZ0AHY",
-    "photographer": "Ortopediatri \u00c3\u0192\u00c6\u2019\u00c3\u00a2\u00e2\u201a\u00ac\u00c2\u00a1ocuk Ortopedi Akademisi",
+    "photographer": "Ortopediatri ÃƒÆ’Ã¢â‚¬Â¡ocuk Ortopedi Akademisi",
     "photographerUrl": "https://unsplash.com/@ortopediatri",
     "pageUrl": "https://unsplash.com/photos/a-man-and-a-woman-standing-next-to-each-other-B3qVNvZ0AHY",
     "alt": "a man and a woman standing next to each other"
@@ -450,7 +450,7 @@
   "guides-2": {
     "provider": "unsplash",
     "photoId": "WWD93Icc30Y",
-    "photographer": "Priscilla Du Preez \u00c3\u0192\u00c2\u00b0\u00c3\u2026\u00c2\u00b8\u00c3\u00a2\u00e2\u201a\u00ac\u00c2\u00a1\u00c3\u201a\u00c2\u00a8\u00c3\u0192\u00c2\u00b0\u00c3\u2026\u00c2\u00b8\u00c3\u00a2\u00e2\u201a\u00ac\u00c2\u00a1\u00c3\u201a\u00c2\u00a6",
+    "photographer": "Priscilla Du Preez ÃƒÂ°Ã…Â¸Ã¢â‚¬Â¡Ã‚Â¨ÃƒÂ°Ã…Â¸Ã¢â‚¬Â¡Ã‚Â¦",
     "photographerUrl": "https://unsplash.com/@priscilladupreez",
     "pageUrl": "https://unsplash.com/photos/woman-holding-mug-in-front-of-book-WWD93Icc30Y",
     "alt": "woman holding mug in front of book"
@@ -498,7 +498,7 @@
   "language-asia-pacific-2": {
     "provider": "unsplash",
     "photoId": "Z0dOXKgD2ek",
-    "photographer": "BaljkanN4 \u00c3\u00b0\u00c5\u00b8\u00e2\u20ac\u0153\u00c2\u00b8",
+    "photographer": "BaljkanN4 Ã°Å¸â€œÂ¸",
     "photographerUrl": "https://unsplash.com/@baljkann4",
     "pageUrl": "https://unsplash.com/photos/three-men-sitting-on-a-couch-talking-Z0dOXKgD2ek",
     "alt": "Three men sitting on a couch talking"
@@ -694,5 +694,61 @@
     "photographerUrl": "https://unsplash.com/@silverkblack",
     "pageUrl": "https://unsplash.com/photos/elderly-couple-smiling-together-at-home-qNVcyhtxZOU",
     "alt": "Elderly couple smiling together at home"
+  },
+  "multicultural-4": {
+    "provider": "unsplash",
+    "photoId": "eQlU4-7PGHw",
+    "photographer": "Vitaly Gariev",
+    "photographerUrl": "https://unsplash.com/@silverkblack",
+    "pageUrl": "https://unsplash.com/photos/friends-enjoying-drinks-and-snacks-on-a-rooftop-eQlU4-7PGHw",
+    "alt": "Friends enjoying drinks and snacks on a rooftop"
+  },
+  "multicultural-5": {
+    "provider": "unsplash",
+    "photoId": "d9jiWu7Q90Q",
+    "photographer": "Samsung UK",
+    "photographerUrl": "https://unsplash.com/@samsunguk",
+    "pageUrl": "https://unsplash.com/photos/a-group-of-people-sitting-outside-d9jiWu7Q90Q",
+    "alt": "a group of people sitting outside"
+  },
+  "multicultural-6": {
+    "provider": "unsplash",
+    "photoId": "tCvDVszXdHE",
+    "photographer": "Siviwe Kapteyn",
+    "photographerUrl": "https://unsplash.com/@kaps_snaps",
+    "pageUrl": "https://unsplash.com/photos/grayscale-photo-of-3-women-standing-and-smiling-tCvDVszXdHE",
+    "alt": "grayscale photo of 3 women standing and smiling"
+  },
+  "plan-management-3": {
+    "provider": "unsplash",
+    "photoId": "Cp8l6iNxWqA",
+    "photographer": "Giorgio Tomassetti",
+    "photographerUrl": "https://unsplash.com/@gtomassetti",
+    "pageUrl": "https://unsplash.com/photos/someone-is-calculating-bills-with-a-calculator-Cp8l6iNxWqA",
+    "alt": "Someone is calculating bills with a calculator"
+  },
+  "plan-management-4": {
+    "provider": "unsplash",
+    "photoId": "LNnmSumlwO4",
+    "photographer": "Jakub Żerdzicki",
+    "photographerUrl": "https://unsplash.com/@jakubzerdzicki",
+    "pageUrl": "https://unsplash.com/photos/a-person-sitting-at-a-desk-with-a-calculator-and-a-notebook-LNnmSumlwO4",
+    "alt": "a person sitting at a desk with a calculator and a notebook"
+  },
+  "plan-management-5": {
+    "provider": "unsplash",
+    "photoId": "xoU52jUVUXA",
+    "photographer": "Kelly Sikkema",
+    "photographerUrl": "https://unsplash.com/@kellysikkema",
+    "pageUrl": "https://unsplash.com/photos/person-holding-paper-near-pen-and-calculator-xoU52jUVUXA",
+    "alt": "person holding paper near pen and calculator"
+  },
+  "plan-management-6": {
+    "provider": "unsplash",
+    "photoId": "tLqtcDZltPs",
+    "photographer": "Kelly Sikkema",
+    "photographerUrl": "https://unsplash.com/@kellysikkema",
+    "pageUrl": "https://unsplash.com/photos/person-reviewing-documents-with-calculator-and-laptop-tLqtcDZltPs",
+    "alt": "Person reviewing documents with calculator and laptop"
   }
 }
