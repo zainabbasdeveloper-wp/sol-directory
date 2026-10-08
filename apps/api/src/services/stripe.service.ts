@@ -187,8 +187,7 @@ async function planKeyOf(sub: any): Promise<PaidPlanKey | null> {
 const periodEndOf = (sub: any): Date | undefined => dateOf(sub?.items?.data?.[0]?.current_period_end ?? sub?.current_period_end);
 
 async function tellAdmin(title: string, message: string) {
-  const to = process.env.ADMIN_NOTIFICATION_EMAIL;
-  if (to) await EmailService.sendAdminNotification(to, title, message, `${siteOrigin()}/admin/plans`);
+  await EmailService.notifyAdmin(title, message, `${siteOrigin()}/admin/plans`);
 }
 
 async function tellProvider(provider: ProviderDoc, send: (to: string) => Promise<unknown>) {

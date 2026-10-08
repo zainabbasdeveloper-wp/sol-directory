@@ -1,6 +1,6 @@
 import nodemailer, { type Transporter } from 'nodemailer';
 import {
-  leadConfirmationTemplate, providerMatchedTemplate, providerResponseTemplate,
+  leadConfirmationTemplate, type LeadConfirmationDetails, providerMatchedTemplate, providerResponseTemplate,
   providerLeadNotificationTemplate, providerLeadTeaserTemplate, providerLeadFullTemplate,
   adminNotificationTemplate, renderEmailLayout,
   passwordResetTemplate, passwordChangedTemplate, verificationResultTemplate, welcomeTemplate,
@@ -85,8 +85,19 @@ export const EmailService = {
     return sendMail(to, email.subject, email.html, opts);
   },
 
-  async sendLeadConfirmation(to: string, requestNumber: string, need: string, trackingUrl?: string) {
-    const { subject, html } = leadConfirmationTemplate({ requestNumber, need, trackingUrl });
+  async sendLeadConfirmation(to: string, requestNumber: string, need: string, trackingUrl?: string, extra?: { details?: LeadConfirmationDetails; browseUrl?: string }) {
+    const { subject, html } = leadConfirmationTemplate({ requestNumber, need, trackingUrl, ...extra });
+    return sendMail(to, subject, html);
+  },
+
+  /**
+   * Alerts whoever runs the site. Reads ADMIN_NOTIFICATION_EMAIL (or the older ADMIN_NOTIFY_EMAIL, so an existing setting keeps
+   * working); does nothing when neither is set. `message` is HTML, so escape any user-supplied text before passing it.
+   */
+  async notifyAdmin(title: string, message: string, dashboardUrl?: string) {
+    const to = process.env.ADMIN_NOTIFICATION_EMAIL || process.env.ADMIN_NOTIFY_EMAIL;
+    if (!to) return false;
+    const { subject, html } = adminNotificationTemplate({ title, message, dashboardUrl });
     return sendMail(to, subject, html);
   },
 

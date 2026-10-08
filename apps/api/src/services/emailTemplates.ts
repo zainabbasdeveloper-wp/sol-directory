@@ -4,6 +4,8 @@
 // wraps its content through this function rather than building its
 // own <html> document.
 
+import { siteOrigin } from './emailTokens.js';
+
 const NAVY = '#0B2D5C';
 const PRIMARY = '#1769E0';
 const BG = '#F5F8FC';
@@ -24,43 +26,48 @@ export function renderEmailLayout(opts: {
   bodyHtml: string; // pre-built inner HTML — paragraphs, etc.
   ctaLabel?: string;
   ctaUrl?: string;
-  /** Extra footer lines, e.g. who sent this and how to stop receiving it — required on anything that is not a direct response to the recipient's own action. */
+  /** Extra footer lines, e.g. who sent this and how to stop receiving it — required on anything that is not a direct reply to the recipient's own action. */
   footerHtml?: string;
 }): string {
   const { preheader, heading, bodyHtml, ctaLabel, ctaUrl, footerHtml } = opts;
+  const site = siteOrigin();
+  // Hosted on the site itself (apps/web/public/images). If a mail app blocks images, the alt text shows the name instead.
+  const logo = `${site}/images/email-logo-white.png`;
   return `<!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light only" />
   <title>${heading}</title>
 </head>
-<body style="margin:0; padding:0; background:${BG}; font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif;">
+<body style="margin:0; padding:0; background:${BG}; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing:antialiased;">
   <span style="display:none; font-size:1px; color:${BG}; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden;">${preheader}</span>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BG}; padding: 32px 16px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BG}; padding: 28px 12px;">
     <tr><td align="center">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px; background:#ffffff; border-radius:12px; overflow:hidden; border:1px solid #E8EEF7;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px; background:#ffffff; border-radius:16px; overflow:hidden; border:1px solid #DDE6F2; box-shadow:0 6px 24px rgba(11,45,92,0.08);">
         <tr>
-          <td style="background:${NAVY}; padding:22px 28px;">
-            <span style="color:#ffffff; font-size:18px; font-weight:700; letter-spacing:-0.02em;">SolDirectory</span>
+          <td style="background:${NAVY}; padding:26px 32px 24px;">
+            <a href="${site}" style="text-decoration:none;"><img src="${logo}" width="190" alt="SolDirectory" style="display:block; width:190px; max-width:100%; height:auto; border:0; color:#ffffff; font-size:20px; font-weight:700;" /></a>
           </td>
         </tr>
+        <tr><td style="background:${PRIMARY}; height:4px; line-height:4px; font-size:0;">&nbsp;</td></tr>
         <tr>
-          <td style="padding:32px 28px 12px;">
-            <h1 style="margin:0 0 16px; font-size:20px; font-weight:700; color:${NAVY};">${heading}</h1>
-            <div style="font-size:14.5px; line-height:1.6; color:#10233F;">${bodyHtml}</div>
+          <td style="padding:34px 32px 14px;">
+            <h1 style="margin:0 0 18px; font-size:23px; line-height:1.3; font-weight:700; letter-spacing:-0.01em; color:${NAVY};">${heading}</h1>
+            <div style="font-size:15.5px; line-height:1.65; color:#1B2B43;">${bodyHtml}</div>
           </td>
         </tr>
         ${ctaLabel && ctaUrl ? `
         <tr>
-          <td style="padding: 4px 28px 28px;">
-            <a href="${ctaUrl}" style="display:inline-block; background:${PRIMARY}; color:#ffffff; text-decoration:none; font-size:14px; font-weight:600; padding:12px 24px; border-radius:8px;">${ctaLabel}</a>
+          <td style="padding: 8px 32px 34px;">
+            <a href="${ctaUrl}" style="display:inline-block; background:${PRIMARY}; color:#ffffff; text-decoration:none; font-size:15px; font-weight:600; padding:14px 28px; border-radius:10px;">${ctaLabel}</a>
           </td>
-        </tr>` : ''}
+        </tr>` : '<tr><td style="height:18px; line-height:18px; font-size:0;">&nbsp;</td></tr>'}
         <tr>
-          <td style="padding:20px 28px; border-top:1px solid #E8EEF7; font-size:12px; color:${TEXT_MUTED};">
-            SolDirectory · This is an automated message.<br />
-            Need help? Contact support at the details in your account, or visit the SolDirectory support page.${footerHtml ? `<br /><br />${footerHtml}` : ''}
+          <td style="padding:22px 32px 26px; background:#F8FAFD; border-top:1px solid #E8EEF7; font-size:12.5px; line-height:1.6; color:${TEXT_MUTED};">
+            <strong style="color:${NAVY};">SolDirectory</strong> helps people find NDIS and aged care providers across Australia.<br />
+            <a href="${site}" style="color:${PRIMARY}; text-decoration:none;">Visit the website</a> &nbsp;·&nbsp; <a href="${site}/privacy" style="color:${PRIMARY}; text-decoration:none;">Privacy</a> &nbsp;·&nbsp; This is an automated message, so please don't reply to it.${footerHtml ? `<br /><br />${footerHtml}` : ''}
           </td>
         </tr>
       </table>
@@ -70,19 +77,61 @@ export function renderEmailLayout(opts: {
 </html>`;
 }
 
-export function leadConfirmationTemplate(input: { requestNumber: string; need: string; trackingUrl?: string }): { subject: string; html: string } {
+export interface LeadConfirmationDetails {
+  service?: string;
+  suburb?: string;
+  state?: string;
+  careFor?: string;
+  timeframe?: string;
+  funding?: string;
+}
+
+export function leadConfirmationTemplate(input: {
+  requestNumber: string;
+  need: string;
+  trackingUrl?: string;
+  details?: LeadConfirmationDetails;
+  /** Where "browse providers" should go (the public provider search). Falls back to the tracking link. */
+  browseUrl?: string;
+}): { subject: string; html: string } {
+  const d = input.details ?? {};
+  // The form no longer asks for the service, so the stored need is usually "Not sure yet": show the service only when it is real.
+  const service = [d.service, input.need].find((s) => s && !/^not sure yet$/i.test(s));
+  const place = [d.suburb, d.state].filter(Boolean).join(', ');
+  const rows: [string, string | undefined][] = [
+    ['Reference', input.requestNumber],
+    ['Looking for', service],
+    ['Where', place],
+    ['Who it is for', d.careFor],
+    ['When', d.timeframe],
+    ['Funding', d.funding],
+  ];
+  const summary = rows
+    .filter(([, value]) => !!value)
+    .map(([label, value]) => `<tr><td style="padding:7px 0; width:128px; color:${TEXT_MUTED}; font-size:13.5px; vertical-align:top;">${label}</td><td style="padding:7px 0; font-size:14.5px; font-weight:600; color:${NAVY};">${escapeHtml(value)}</td></tr>`)
+    .join('');
+  const step = (n: number, title: string, text: string) =>
+    `<tr><td style="vertical-align:top; padding:0 14px 14px 0; width:30px;"><div style="width:28px; height:28px; border-radius:14px; background:${PRIMARY}; color:#fff; text-align:center; line-height:28px; font-size:14px; font-weight:700;">${n}</div></td><td style="padding:0 0 14px; font-size:14.5px; line-height:1.55;"><strong style="color:${NAVY};">${title}</strong><br />${text}</td></tr>`;
+
   const html = renderEmailLayout({
-    preheader: `We've received your care request — reference ${input.requestNumber}`,
-    heading: "We've received your care request",
+    preheader: `We've received your request. Your reference is ${input.requestNumber}.`,
+    heading: "We've received your request",
     bodyHtml: `
-      <p>Thanks for submitting a request for <strong>${input.need}</strong> through SolDirectory.</p>
-      <p>Your reference number is <strong>${input.requestNumber}</strong> — keep this for your records.</p>
-      <p><strong>What happens next:</strong> providers matching your request can now review it. Most participants hear back from a provider within a few business days, though this varies by service and location.</p>
-    `,
-    ctaLabel: input.trackingUrl ? 'Track your request' : undefined,
-    ctaUrl: input.trackingUrl,
+      <p style="margin:0 0 18px;">Thank you${service ? ` for asking about <strong>${escapeHtml(service)}</strong>` : ''}. Your request is with SolDirectory, and providers that match it can now see it.</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F4F8FD; border:1px solid #E1ECFB; border-radius:12px; margin:0 0 24px;"><tr><td style="padding:16px 20px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${summary}</table>
+      </td></tr></table>
+      <p style="margin:0 0 12px; font-weight:700; color:${NAVY}; font-size:16px;">What happens next</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${step(1, 'Providers review your request', 'Matching providers see what you asked for. They do not see your contact details unless they take it up.')}
+        ${step(2, 'A provider gets in touch', 'Most people hear back within a few business days, though this varies by service and area. We will email you when a provider looks at your request.')}
+        ${step(3, 'You choose', 'You are never obliged to use anyone. Compare providers, ask about prices and availability, and pick the one that suits you.')}
+      </table>
+      <p style="margin:6px 0 0;">You do not have to wait: you can look at providers in your area now and contact them directly.</p>`,
+    ctaLabel: 'Browse providers near you',
+    ctaUrl: input.browseUrl ?? input.trackingUrl,
   });
-  return { subject: "We've received your SolDirectory care request", html };
+  return { subject: `We've received your SolDirectory request (${input.requestNumber})`, html };
 }
 
 export function providerMatchedTemplate(input: { need: string; trackingUrl?: string }): { subject: string; html: string } {

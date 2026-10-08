@@ -74,13 +74,7 @@ export async function signup(req: Request, res: Response) {
     // actual signup response. ADMIN_NOTIFICATION_EMAIL is a plain env
     // var since no existing "who gets admin alerts" config was found
     // in this codebase.
-    if (process.env.ADMIN_NOTIFICATION_EMAIL) {
-      EmailService.sendAdminNotification(
-        process.env.ADMIN_NOTIFICATION_EMAIL,
-        'New provider registered',
-        `${name} (${email}) registered a new provider account.`
-      ).catch(() => {});
-    }
+    EmailService.notifyAdmin('New provider registered', `${escapeForEmail(name)} (${escapeForEmail(email)}) registered a new provider account.`).catch(() => {});
   }
   // Same gap existed for workers: without a Worker shell created
   // here, a newly-signed-up worker has no profile record at all —
@@ -220,4 +214,8 @@ export async function resetPassword(req: Request, res: Response) {
   await Provider.updateOne({ userId: user._id, claimed: false }, { $set: { claimed: true } });
 
   res.json({ message: 'Your password has been reset. You can now sign in with your new password.' });
+}
+
+function escapeForEmail(value: unknown): string {
+  return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
