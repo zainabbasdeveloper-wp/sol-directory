@@ -1,11 +1,12 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import DOMPurify from 'dompurify';
 import { Link, useParams } from 'react-router-dom';
 import { getBlogCategories, getBlogPost, getBlogPosts, type WPBlogPost, type WPTerm } from '../../api/wordpressApi';
 import { applySeoTags, setJsonLd } from '../../lib/seo';
-import PageHero from '../../components/topic/PageHero';
+import { hubHeaderStyle } from '../../data/bannerImages';
+import { useMatchModal } from '../../context/MatchModalContext';
 import { PublicFooter, PublicHeader } from './PublicLayout';
-import { EDITORIAL_BLOG_POSTS, type EditorialBlogPost } from '@soldirectory/topic-content';
+import { EDITORIAL_BLOG_POSTS, GUIDE_DOCS, type EditorialBlogPost } from '@soldirectory/topic-content';
 import './BlogPage.css';
 
 const SITE_ORIGIN = () => window.location.origin;
@@ -56,6 +57,11 @@ function formatDate(value: string): string {
   return Number.isNaN(date.getTime()) ? '' : new Intl.DateTimeFormat('en-AU', { day: 'numeric', month: 'long', year: 'numeric' }).format(date);
 }
 
+function formatShortDate(value: string): string {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '' : new Intl.DateTimeFormat('en-AU', { day: 'numeric', month: 'short' }).format(date);
+}
+
 function readingMinutes(html: string): number {
   const words = html.replace(/<[^>]+>/g, ' ').trim().split(/\s+/).filter(Boolean).length;
   return Math.max(1, Math.ceil(words / 220));
@@ -63,6 +69,32 @@ function readingMinutes(html: string): number {
 
 function postImage(post: WPBlogPost): string {
   return post.featuredImage?.url || EDITORIAL_COVER;
+}
+
+const sortNewest = (posts: WPBlogPost[]) => [...posts].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+/** Sanitises the article HTML and gives every h2 an id, returning an "On this page" list built from those headings. */
+function prepareArticle(html: string): { html: string; toc: { id: string; text: string }[] } {
+  const clean = DOMPurify.sanitize(html);
+  const doc = new DOMParser().parseFromString(clean, 'text/html');
+  const toc: { id: string; text: string }[] = [];
+  doc.querySelectorAll('h2').forEach((heading, index) => {
+    const text = (heading.textContent ?? '').trim();
+    if (!text) return;
+    const id = `section-${index + 1}-${text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 40)}`;
+    heading.id = id;
+    toc.push({ id, text });
+  });
+  return { html: doc.body.innerHTML, toc };
+}
+
+function SourceBadge() {
+  return (
+    <span className="blog-badge-source" title="This article links to the official source">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+      Official source linked
+    </span>
+  );
 }
 
 function BlogCard({ post, featured = false }: { post: WPBlogPost; featured?: boolean }) {
@@ -73,9 +105,10 @@ function BlogCard({ post, featured = false }: { post: WPBlogPost; featured?: boo
         <img className="blog-card-image" src={postImage(post)} alt={post.featuredImage?.alt || ''} loading="lazy" />
       </Link>
       <div className="blog-card-copy">
-        <div className="blog-card-meta"><span>{category}</span><time dateTime={post.date}>{formatDate(post.date)}</time></div>
+        <div className="blog-card-meta"><span>{category}</span><time dateTime={post.date}>{formatDate(post.date)}</time><span className="blog-card-read">{readingMinutes(post.contentHtml)} min read</span></div>
         <h2><Link to={`/blog/${post.slug}`}>{post.title}</Link></h2>
         <p>{post.excerpt || post.seo.description}</p>
+        {post.editorialSource && <SourceBadge />}
         <Link className="blog-read-link" to={`/blog/${post.slug}`}>Read article <span aria-hidden="true">→</span></Link>
       </div>
     </article>
@@ -84,9 +117,12 @@ function BlogCard({ post, featured = false }: { post: WPBlogPost; featured?: boo
 
 export default function BlogPage() {
   const { slug } = useParams<{ slug?: string }>();
+  const { openMatchModal } = useMatchModal();
   const [posts, setPosts] = useState<WPBlogPost[]>([]);
   const [categories, setCategories] = useState<WPTerm[]>([]);
+  const [categoryCounts, setCategoryCounts] = useState<Record<number, number>>({});
   const [article, setArticle] = useState<WPBlogPost | null>(null);
+  const [related, setRelated] = useState<WPBlogPost[]>([]);
   const [query, setQuery] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState('');
   const [categoryId, setCategoryId] = useState<number | null>(null);
@@ -95,6 +131,8 @@ export default function BlogPage() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     if (!slug) return;
@@ -102,6 +140,7 @@ export default function BlogPage() {
     setLoading(true);
     setError('');
     setArticle(null);
+    window.scrollTo(0, 0);
     const editorialPost = ALL_EDITORIAL_POSTS.find((post) => post.slug === slug);
     getBlogPost(slug)
       .then((result) => { if (current) setArticle(result ?? editorialPost ?? null); })
@@ -113,6 +152,23 @@ export default function BlogPage() {
       .finally(() => { if (current) setLoading(false); });
     return () => { current = false; };
   }, [slug]);
+
+  // "Keep reading": other published articles, same category first.
+  useEffect(() => {
+    if (!slug || !article) return;
+    let current = true;
+    getBlogPosts({ page: 1 })
+      .catch(() => null)
+      .then((result) => {
+        if (!current) return;
+        const pool = new Map<string, WPBlogPost>();
+        for (const post of [...(result?.items ?? []), ...CURRENT_EDITORIAL_POSTS]) if (post.slug !== article.slug) pool.set(post.slug, post);
+        const sameCategory = (post: WPBlogPost) => post.categories.some((c) => article.categories.some((a) => a.name === c.name));
+        const ordered = sortNewest([...pool.values()]);
+        setRelated([...ordered.filter(sameCategory), ...ordered.filter((post) => !sameCategory(post))].slice(0, 3));
+      });
+    return () => { current = false; };
+  }, [slug, article]);
 
   useEffect(() => {
     if (slug) return;
@@ -135,13 +191,17 @@ export default function BlogPage() {
         const remoteItems = categoryId !== null && categoryId < 0 ? [] : result?.items ?? [];
         const remoteSlugs = new Set(remoteItems.map((post) => post.slug));
         const localOnly = localMatches.filter((post) => !remoteSlugs.has(post.slug));
-        const nextPosts = page === 1
-          ? [...remoteItems, ...localOnly].sort((left, right) => new Date(right.date).getTime() - new Date(left.date).getTime())
-          : remoteItems;
+        const nextPosts = page === 1 ? sortNewest([...remoteItems, ...localOnly]) : remoteItems;
         setPosts((existing) => page === 1 ? nextPosts : [...existing, ...nextPosts]);
         setTotalPages(categoryId !== null && categoryId < 0 ? 1 : result?.totalPages ?? 1);
         const mergedCategories = [...EDITORIAL_CATEGORIES, ...availableCategories.filter((item) => !EDITORIAL_CATEGORIES.some((editorial) => editorial.name.toLowerCase() === item.name.toLowerCase()))];
         setCategories(mergedCategories);
+        // Topic counts describe the whole library, so they are taken from the unfiltered first page only.
+        if (page === 1 && categoryId === null && !submittedQuery) {
+          const counts: Record<number, number> = {};
+          for (const post of nextPosts) for (const category of post.categories) counts[category.id] = (counts[category.id] ?? 0) + 1;
+          setCategoryCounts(counts);
+        }
       })
       .catch(() => { if (current) setError('Unable to load articles right now. Please try again shortly.'); })
       .finally(() => {
@@ -174,7 +234,15 @@ export default function BlogPage() {
         url: canonical,
         ...(article.featuredImage?.url ? { image: [article.featuredImage.url] } : {}),
       });
-      return () => setJsonLd('blog-post', null);
+      setJsonLd('blog-breadcrumbs', {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_ORIGIN()}/` },
+          { '@type': 'ListItem', position: 2, name: 'Updates & insights', item: `${SITE_ORIGIN()}/blog` },
+          { '@type': 'ListItem', position: 3, name: article.title, item: canonical },
+        ],
+      });
+      return () => { setJsonLd('blog-post', null); setJsonLd('blog-breadcrumbs', null); };
     }
 
     applySeoTags({
@@ -198,6 +266,23 @@ export default function BlogPage() {
     return () => setJsonLd('blog-archive', null);
   }, [slug, article, posts]);
 
+  // Reading-progress bar for the article view.
+  useEffect(() => {
+    if (!slug) return;
+    function onScroll() {
+      const body = document.querySelector('.blog-article-body');
+      if (!body) return;
+      const rect = body.getBoundingClientRect();
+      const total = rect.height - window.innerHeight * 0.6;
+      setProgress(total <= 0 ? 0 : Math.min(1, Math.max(0, -rect.top / total)));
+    }
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [slug, article]);
+
+  const prepared = useMemo(() => (article ? prepareArticle(article.contentHtml) : null), [article]);
+
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setPage(1);
@@ -209,30 +294,78 @@ export default function BlogPage() {
     setCategoryId(id);
   }
 
+  function copyLink() {
+    navigator.clipboard?.writeText(window.location.href).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }).catch(() => {});
+  }
+
   if (slug) {
+    const expired = !!article?.expiresAt && new Date(article.expiresAt).getTime() <= Date.now();
     return (
       <>
         <PublicHeader />
+        <div className="blog-progress" aria-hidden="true"><span style={{ transform: `scaleX(${progress})` }} /></div>
         <main className="blog-article-page">
           <nav className="blog-breadcrumb" aria-label="Breadcrumb"><Link to="/">Home</Link><span>/</span><Link to="/blog">Updates & insights</Link><span>/</span><span>{article?.title || 'Article'}</span></nav>
-          {loading ? <p className="blog-state">Loading article…</p> : error ? <p className="blog-state" role="alert">{error}</p> : !article ? (
+          {loading ? <p className="blog-state">Loading article…</p> : error ? <p className="blog-state" role="alert">{error}</p> : !article || !prepared ? (
             <section className="blog-not-found"><span className="blog-kicker">SolDirectory journal</span><h1>Article not found</h1><p>This article may have been unpublished or moved.</p><Link className="blog-primary-link" to="/blog">Browse latest updates</Link></section>
           ) : (
-            <article className="blog-article">
-              <header className="blog-article-header">
-                <Link className="blog-back-link" to="/blog">← All updates</Link>
-                <div className="blog-article-categories">{article.categories.map((category) => <span key={category.id}>{category.name}</span>)}</div>
-                <h1>{article.title}</h1>
-                {article.excerpt && <p className="blog-article-deck">{article.excerpt}</p>}
-                <div className="blog-article-byline"><span>{article.authorName}</span><span aria-hidden="true">·</span><time dateTime={article.date}>{formatDate(article.date)}</time><span aria-hidden="true">·</span><span>{readingMinutes(article.contentHtml)} min read</span></div>
-              </header>
-              <img className="blog-article-cover" src={postImage(article)} alt={article.featuredImage?.alt || ''} />
-              <div className="blog-article-body" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(article.contentHtml) }} />
-              {article.modified && article.modified !== article.date && <p className="blog-updated">Updated {formatDate(article.modified)}. Check linked official sources for current requirements.</p>}
-              {article.editorialSource && <aside className="blog-source-note"><strong>Primary source · checked {formatDate(article.editorialSource.checkedAt)}</strong><a href={article.editorialSource.url} target="_blank" rel="noopener noreferrer">{article.editorialSource.label}</a><span>Read the current official notice before acting; the guidance and effective dates can change.</span></aside>}
-              {article.expiresAt && new Date(article.expiresAt).getTime() <= Date.now() && <p className="blog-updated">This scheduled notice has passed. Check the linked official source for current system availability.</p>}
-              <aside className="blog-source-note"><strong>Independent information, not personal advice.</strong><span>NDIS rules and support arrangements can change. Confirm current requirements with the responsible government body before acting.</span><Link to="/guides">Browse practical guides</Link></aside>
-            </article>
+            <>
+              <article className="blog-article">
+                <header className="blog-article-header">
+                  <Link className="blog-back-link" to="/blog">← All updates</Link>
+                  <div className="blog-article-categories">{article.categories.map((category) => <span key={category.id}>{category.name}</span>)}{expired && <span className="blog-chip-expired">Notice has passed</span>}</div>
+                  <h1>{article.title}</h1>
+                  {article.excerpt && <p className="blog-article-deck">{article.excerpt}</p>}
+                  <div className="blog-article-byline"><span>{article.authorName}</span><span aria-hidden="true">·</span><time dateTime={article.date}>{formatDate(article.date)}</time><span aria-hidden="true">·</span><span>{readingMinutes(article.contentHtml)} min read</span></div>
+                </header>
+                <img className="blog-article-cover" src={postImage(article)} alt={article.featuredImage?.alt || ''} />
+
+                <div className="blog-article-layout">
+                  <div className="blog-article-main">
+                    <div className="blog-article-body" dangerouslySetInnerHTML={{ __html: prepared.html }} />
+                    {article.modified && article.modified !== article.date && <p className="blog-updated">Updated {formatDate(article.modified)}. Check linked official sources for current requirements.</p>}
+                    {expired && <p className="blog-updated">This scheduled notice has passed. Check the linked official source for current system availability.</p>}
+                    <aside className="blog-source-note"><strong>Independent information, not personal advice.</strong><span>NDIS rules and support arrangements can change. Confirm current requirements with the responsible government body before acting.</span><Link to="/guides">Browse practical guides</Link></aside>
+                  </div>
+
+                  <aside className="blog-rail" aria-label="Article tools">
+                    {prepared.toc.length > 1 && (
+                      <nav className="blog-rail-card" aria-label="On this page">
+                        <h2>On this page</h2>
+                        <ol>{prepared.toc.map((item) => <li key={item.id}><a href={`#${item.id}`}>{item.text}</a></li>)}</ol>
+                      </nav>
+                    )}
+                    {article.editorialSource && (
+                      <div className="blog-rail-card blog-rail-source">
+                        <h2>Primary source</h2>
+                        <a href={article.editorialSource.url} target="_blank" rel="noopener noreferrer">{article.editorialSource.label}</a>
+                        <p>Checked {formatDate(article.editorialSource.checkedAt)}. Read the current official notice before acting; guidance and effective dates can change.</p>
+                      </div>
+                    )}
+                    <div className="blog-rail-card">
+                      <h2>Share</h2>
+                      <div className="blog-share">
+                        <button type="button" onClick={copyLink}>{copied ? 'Link copied ✓' : 'Copy link'}</button>
+                        <a href={`mailto:?subject=${encodeURIComponent(article.title)}&body=${encodeURIComponent(`${article.title}\n${window.location.href}`)}`}>Email</a>
+                      </div>
+                    </div>
+                    <div className="blog-rail-card blog-rail-cta">
+                      <h2>Need support?</h2>
+                      <p>Compare providers and public-register listings for your area, or send one free request.</p>
+                      <button type="button" onClick={() => openMatchModal()}>Get matched, free</button>
+                      <Link to="/find-a-provider">Search providers →</Link>
+                    </div>
+                  </aside>
+                </div>
+              </article>
+
+              {related.length > 0 && (
+                <section className="blog-related" aria-labelledby="blog-related-heading">
+                  <h2 id="blog-related-heading">Keep reading</h2>
+                  <div className="blog-card-grid">{related.map((post) => <BlogCard key={post.slug} post={post} />)}</div>
+                </section>
+              )}
+            </>
           )}
         </main>
         <PublicFooter />
@@ -240,28 +373,64 @@ export default function BlogPage() {
     );
   }
 
+  const filtering = categoryId !== null || !!submittedQuery;
+  const featured = !filtering && page === 1 ? posts[0] : undefined;
+  const gridPosts = featured ? posts.slice(1) : posts;
+  const newest = posts[0];
+  const withSource = posts.filter((post) => post.editorialSource).length;
+  const guides = Object.values(GUIDE_DOCS);
+
   return (
     <>
       <PublicHeader />
-      <main className="blog-home">
-        <PageHero
-          crumbs={[{ label: 'Home', to: '/' }, { label: 'Blog' }]}
-          eyebrow="SolDirectory journal"
-          title="Support changes. Clear answers matter."
-          description="Independent explainers and practical guidance for people navigating disability and aged care support in Australia."
-          image={EDITORIAL_COVER}
-          imageAlt="A support worker talking with an older woman in a care setting"
-        />
 
+      <div className="directory-page-header directory-page-header--blog" style={hubHeaderStyle('guides')}>
+        <div className="directory-page-header-inner">
+          <span className="eyebrow eyebrow-light"><span className="eyebrow-rule" />SolDirectory journal</span>
+          <h1 className="section-heading section-heading-light">Support changes. Clear answers matter.</h1>
+          <p className="directory-page-subtitle">Independent explainers and practical guidance for people navigating disability and aged care support in Australia, each linked to its official source.</p>
+          {posts.length > 0 && !filtering && (
+            <ul className="blog-headline" aria-label="Journal at a glance">
+              <li><strong>{posts.length}</strong><span>{posts.length === 1 ? 'article' : 'articles'}</span></li>
+              {withSource > 0 && <li><strong>{withSource}</strong><span>linked to an official source</span></li>}
+              {newest && <li><strong>{formatShortDate(newest.date)}</strong><span>latest update</span></li>}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      <main className="blog-home">
         <section className="blog-disclosure" aria-label="Editorial approach">
           <strong>Independent information, not government advice.</strong>
           <span>We link to official sources and note when guidance was published or updated. Confirm current rules directly with the responsible agency.</span>
         </section>
 
         <section className="blog-content" id="latest" aria-labelledby="blog-latest-heading">
+          {featured && (
+            <div className="blog-feature-row">
+              <div className="blog-feature-main">
+                <span className="blog-kicker">Latest update</span>
+                <BlogCard post={featured} featured />
+              </div>
+              {posts.length > 1 && (
+                <aside className="blog-timeline" aria-label="Recent notices">
+                  <h2>Recent notices</h2>
+                  <ol>
+                    {posts.slice(0, 6).map((post) => (
+                      <li key={post.slug}>
+                        <time dateTime={post.date}>{formatShortDate(post.date)}</time>
+                        <div><span>{post.categories[0]?.name || 'Update'}</span><Link to={`/blog/${post.slug}`}>{post.title}</Link></div>
+                      </li>
+                    ))}
+                  </ol>
+                </aside>
+              )}
+            </div>
+          )}
+
           <div className="blog-section-heading">
-            <div><span className="blog-kicker">The latest</span><h2 id="blog-latest-heading">Updates & insights</h2></div>
-            <span className="blog-results-count">{loading ? 'Loading articles' : `${posts.length} articles shown`}</span>
+            <div><span className="blog-kicker">{filtering ? 'Results' : 'More to read'}</span><h2 id="blog-latest-heading">{filtering ? 'Matching articles' : 'Updates & insights'}</h2></div>
+            <span className="blog-results-count">{loading ? 'Loading articles' : `${posts.length} ${posts.length === 1 ? 'article' : 'articles'} shown`}</span>
           </div>
 
           <div className="blog-tools">
@@ -269,28 +438,48 @@ export default function BlogPage() {
               <label className="visually-hidden" htmlFor="blog-search-input">Search articles</label>
               <input id="blog-search-input" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search topics, changes or support…" />
               <button type="submit" aria-label="Search articles">Search</button>
+              {submittedQuery && <button type="button" className="blog-search-clear" onClick={() => { setQuery(''); setSubmittedQuery(''); setPage(1); }}>Clear</button>}
             </form>
-            <div className="blog-categories" aria-label="Filter by topic">
-              <button type="button" className={categoryId === null ? 'is-active' : ''} onClick={() => chooseCategory(null)}>All topics</button>
-              {categories.map((category) => <button type="button" key={category.id} className={categoryId === category.id ? 'is-active' : ''} onClick={() => chooseCategory(category.id)}>{category.name}</button>)}
+            <div className="blog-categories" role="group" aria-label="Filter by topic">
+              <button type="button" aria-pressed={categoryId === null} className={categoryId === null ? 'is-active' : ''} onClick={() => chooseCategory(null)}>All topics{Object.keys(categoryCounts).length > 0 && categoryId === null && !submittedQuery ? ` (${posts.length})` : ''}</button>
+              {categories.filter((category) => category.slug !== 'uncategorized').map((category) => (
+                <button type="button" key={category.id} aria-pressed={categoryId === category.id} className={categoryId === category.id ? 'is-active' : ''} onClick={() => chooseCategory(category.id)}>
+                  {category.name}{categoryCounts[category.id] ? ` (${categoryCounts[category.id]})` : ''}
+                </button>
+              ))}
             </div>
           </div>
 
           {error && <p className="blog-state" role="alert">{error}</p>}
-          {loading ? <div className="blog-card-grid" aria-label="Loading articles"><div className="blog-skeleton" /><div className="blog-skeleton" /><div className="blog-skeleton" /></div> : posts.length ? (
+          {loading ? <div className="blog-card-grid" aria-label="Loading articles"><div className="blog-skeleton" /><div className="blog-skeleton" /><div className="blog-skeleton" /></div> : gridPosts.length ? (
             <div className="blog-card-grid">
-              {posts.map((post, index) => <BlogCard key={post.id} post={post} featured={page === 1 && index === 0} />)}
+              {gridPosts.map((post) => <BlogCard key={post.id} post={post} />)}
             </div>
-          ) : !error ? (
-            <div className="blog-empty"><h3>No published articles yet</h3><p>New explainers and practical updates will appear here. In the meantime, browse our current guides and official links.</p><Link className="blog-primary-link" to="/guides">Browse guides</Link></div>
+          ) : !error && !featured ? (
+            <div className="blog-empty"><h3>{filtering ? 'No articles match that search' : 'No published articles yet'}</h3><p>{filtering ? 'Try a different word, or clear the filter to see everything.' : 'New explainers and practical updates will appear here. In the meantime, browse our current guides and official links.'}</p><Link className="blog-primary-link" to="/guides">Browse guides</Link></div>
           ) : null}
 
           {posts.length > 0 && page < totalPages && <div className="blog-load-more"><button type="button" onClick={() => setPage((current) => current + 1)} disabled={loadingMore}>{loadingMore ? 'Loading…' : 'Load more articles'}</button></div>}
         </section>
 
+        <section className="blog-guides" aria-labelledby="blog-guides-heading">
+          <div className="blog-guides-inner">
+            <div className="blog-section-heading"><div><span className="blog-kicker">Start with the basics</span><h2 id="blog-guides-heading">Practical guides</h2></div><Link className="blog-read-link" to="/guides">All guides <span aria-hidden="true">→</span></Link></div>
+            <div className="blog-guide-grid">
+              {guides.map((guide) => (
+                <Link key={guide.slug} className="blog-guide-card" to={`/guides/${guide.slug}`}>
+                  <strong>{guide.title}</strong>
+                  <span>{guide.summary}</span>
+                  <em>Read the guide →</em>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
         <section className="blog-bottom-band">
           <div><span className="blog-kicker">Make the next decision clearer</span><h2>From updates to support options</h2><p>Understand a change, prepare your questions, then compare providers and public-register information for your area.</p></div>
-          <div className="blog-bottom-actions"><Link to="/guides">Read practical guides</Link><Link to="/find-a-provider">Find a provider</Link></div>
+          <div className="blog-bottom-actions"><Link to="/find-a-provider">Find a provider</Link><Link to="/locations">Browse by location</Link><button type="button" onClick={() => openMatchModal()}>Get matched, free</button></div>
         </section>
       </main>
       <PublicFooter />
