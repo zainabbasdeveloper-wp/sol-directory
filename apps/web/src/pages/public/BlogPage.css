@@ -237,3 +237,17 @@
 .blog-skel-dark { background: linear-gradient(90deg, rgba(255,255,255,0.12) 25%, rgba(255,255,255,0.24) 38%, rgba(255,255,255,0.12) 62%); background-size: 400% 100%; }
 .blog-hero-art--loading { min-height: 300px; }
 @media (prefers-reduced-motion: reduce) { .blog-skel { animation: none; } }
+
+/* Share buttons: explicit colours so no global button style shows through, and every pill sizes to its content */
+button.blog-share-btn { background: #fff; color: #29446b; font-family: inherit; line-height: 1; }
+.blog-share-btn svg { flex: none; }
+.blog-share-btn span { white-space: nowrap; }
+.blog-share--bar .blog-share-row { gap: 8px; }
+.blog-share--bar .blog-share-btn--copy { width: auto; min-width: 40px; padding: 0 16px 0 14px; }
+.blog-share--bar .blog-share-btn--copy .blog-share-copy-text { display: inline; }
+button.blog-share-btn.is-copied { background: #E4F5EC; color: #177C4B; }
+button.blog-share-btn:hover:not(.is-copied) { color: #fff; }
+button.blog-share-btn--native { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+@media (max-width: 600px) {
+  .blog-share--bar .blog-share-btn--copy { padding: 0 14px; }
+}

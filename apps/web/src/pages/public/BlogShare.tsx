@@ -60,7 +60,7 @@ export default function BlogShare({ url, title, variant = 'bar' }: Props) {
           {copied ? Icons.check : Icons.link}
           <span className={variant === 'panel' ? '' : 'blog-share-copy-text'}>{copied ? 'Copied' : 'Copy link'}</span>
         </button>
-        {canNativeShare && (
+        {canNativeShare && variant === 'panel' && (
           <button type="button" className="blog-share-btn blog-share-btn--native" onClick={() => { navigator.share({ title, url }).catch(() => {}); }}>
             <span>Share…</span>
           </button>
