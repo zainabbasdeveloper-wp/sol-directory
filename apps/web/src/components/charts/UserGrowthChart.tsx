@@ -44,6 +44,7 @@ export default function UserGrowthChart({ series }: Props) {
             y: { beginAtZero: true, grid: { color: '#E8EEF7' }, ticks: { precision: 0, font: { size: 11 } } },
           },
           plugins: {
+            legend: { display: false },
             tooltip: {
               callbacks: {
                 title: (items) => new Date(series[items[0].dataIndex].date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }),

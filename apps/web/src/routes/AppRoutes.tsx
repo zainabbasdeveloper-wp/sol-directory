@@ -32,6 +32,7 @@ import AdminMemberPlans from '../pages/admin/AdminMemberPlans';
 import AdminServices from '../pages/admin/AdminServices';
 import AdminConditions from '../pages/admin/AdminConditions';
 import AdminDiagnostics from '../pages/admin/AdminDiagnostics';
+import AdminOperations from '../pages/admin/AdminOperations';
 import AdminClaims from '../pages/admin/AdminClaims';
 import AdminRegisterListings from '../pages/admin/AdminRegisterListings';
 import AdminWorkerReviews from '../pages/admin/AdminWorkerReviews';
@@ -254,6 +255,7 @@ export default function AppRoutes() {
         <Route path="/admin/plans" element={<RequireRole roles={['admin']}><AdminMemberPlans /></RequireRole>} />
         <Route path="/admin/services" element={<RequireRole roles={['admin']}><AdminServices /></RequireRole>} />
         <Route path="/admin/conditions" element={<RequireRole roles={['admin']}><AdminConditions /></RequireRole>} />
+        <Route path="/admin/operations" element={<RequireRole roles={['admin']}><AdminOperations /></RequireRole>} />
         <Route path="/admin/diagnostics" element={<RequireRole roles={['admin']}><AdminDiagnostics /></RequireRole>} />
         <Route path="/admin/claims" element={<RequireRole roles={['admin']}><AdminClaims /></RequireRole>} />
         <Route path="/admin/register" element={<RequireRole roles={['admin']}><AdminRegisterListings /></RequireRole>} />

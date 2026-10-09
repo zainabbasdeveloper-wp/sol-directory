@@ -9,8 +9,11 @@ import { ApiError } from '../../api/client';
 import Counter from '../../components/Counter';
 import RoleDonutChart from '../../components/charts/RoleDonutChart';
 import UserGrowthChart from '../../components/charts/UserGrowthChart';
-import AdminOperations from './AdminOperations';
+import DailyBarChart from '../../components/charts/DailyBarChart';
+import { useOperations } from '../../hooks/useOperations';
+import { timeAgo, pct } from './adminFormat';
 import './AdminDashboard.css';
+import './AdminOperations.css';
 
 const PERIODS = [
   { value: 'today', label: 'Today' },
@@ -68,15 +71,16 @@ export default function AdminDashboard() {
   const [workerBreakdowns, setWorkerBreakdowns] = useState<{ byService: { label: string; count: number }[]; bySuburb: { label: string; count: number }[] }>({ byService: [], bySuburb: [] });
   const [providerActivity, setProviderActivity] = useState<{ id: string; name: string; views: number; shortlists: number; callbackRequests: number }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+  const { data: ops } = useOperations(30_000);
   const [error, setError] = useState('');
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResults | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
 
-  function loadAll() {
-    setLoading(true);
-    setError('');
+  function loadAll(silent = false) {
+    if (!silent) { setLoading(true); setError(''); }
     Promise.allSettled([
       getDashboardOverview(period),
       getRecentProviders(),
@@ -104,16 +108,22 @@ export default function AdminDashboard() {
         }
       })
       .catch((err) => {
+        if (silent) return; // a failed background refresh keeps showing the last good numbers
         if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
           setError('Your admin session is no longer valid. Log out, sign in again, and reload this dashboard.');
           return;
         }
         setError(err instanceof ApiError ? err.message : 'Unable to load dashboard statistics.');
       })
-      .finally(() => setLoading(false));
+      .finally(() => { setLoading(false); setUpdatedAt(new Date().toISOString()); });
   }
 
-  useEffect(loadAll, [period]);
+  // Loads once, then quietly refreshes every 30 seconds (not while the browser tab is hidden) so the numbers stay live.
+  useEffect(() => {
+    loadAll();
+    const id = setInterval(() => { if (!document.hidden) loadAll(true); }, 30_000);
+    return () => clearInterval(id);
+  }, [period]);
 
   useEffect(() => {
     if (searchQuery.trim().length < 2) { setSearchResults(null); return; }
@@ -136,7 +146,7 @@ export default function AdminDashboard() {
       <div className="ad-error-state">
         <p className="ad-error-title">Unable to load provider statistics.</p>
         <p>{error}</p>
-        <button className="ad-btn-primary" onClick={loadAll}>Try again</button>
+        <button className="ad-btn-primary" onClick={() => loadAll()}>Try again</button>
       </div>
     );
   }
@@ -150,6 +160,7 @@ export default function AdminDashboard() {
         <div>
           <h1 className="ad-heading">{greeting()}, Admin</h1>
           <p className="ad-subheading">Here's what's happening across SolDirectory.</p>
+          <p className="ad-live"><span className="ad-live-dot" /> Live · refreshes every 30 seconds{updatedAt ? ` · updated ${timeAgo(updatedAt)}` : ''}</p>
         </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', position: 'relative' }}>
           <div className="ad-search-wrap">
@@ -181,9 +192,16 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <AdminOperations />
-
-      <h2 className="ad-section-heading">Members &amp; activity</h2>
+      {ops && (
+        <Link to="/admin/operations" className={`ad-attn-strip ${ops.alerts.some((a) => a.severity === 'critical') ? 'ad-attn-strip-critical' : ops.alerts.length > 0 ? 'ad-attn-strip-warn' : 'ad-attn-strip-ok'}`}>
+          <span>
+            {ops.alerts.length === 0
+              ? 'All systems running normally.'
+              : `${ops.alerts.length} item${ops.alerts.length === 1 ? '' : 's'} need attention${ops.alerts.some((a) => a.severity === 'critical') ? ' — including a critical one' : ''}.`}
+          </span>
+          <span className="ad-attn-strip-link">Open Operations →</span>
+        </Link>
+      )}
 
       {/* Top stats */}
       <div className="ad-stat-grid">
@@ -195,23 +213,83 @@ export default function AdminDashboard() {
         <StatCard label="Pending verifications" value={overview.pendingVerifications} tone="warn" />
         <StatCard label="Active providers" value={overview.providers.active} />
         <StatCard label="Open leads" value={overview.leads.matched} />
+        {ops && <StatCard label="Enquiries, last 14 days" value={ops.enquiries.daily.reduce((n, d) => n + d.count, 0)} />}
+        {ops && <StatCard label="Emails sent, last 24h" value={ops.email.last24h.sent} />}
+        {ops && <StatCard label="Emails failed, last 24h" value={ops.email.last24h.failed} tone={ops.email.last24h.failed > 0 ? 'warn' : 'default'} />}
       </div>
       <p className="ad-stat-footnote">Figures are live counts for the selected period. No comparison shown where prior-period history isn't tracked.</p>
 
+      {/* Live graphs */}
       <div className="ad-two-col">
-        {/* Role distribution */}
         <section className="ad-panel">
-          <h2 className="ad-panel-title">User role distribution</h2>
-          <RoleDonutChart data={overview.roleDistribution} />
+          <h2 className="ad-panel-title">Enquiries per day</h2>
+          {ops
+            ? <DailyBarChart dates={ops.enquiries.daily.map((d) => d.date)} series={[{ label: 'Enquiries', values: ops.enquiries.daily.map((d) => d.count), color: '#1769E0' }]} noun="enquiries" />
+            : <div className="ad-skel-block" style={{ height: 190 }} />}
+          <p className="ad-growth-caption">Last 14 days, by date received</p>
         </section>
-
-        {/* User growth */}
         <section className="ad-panel">
           <h2 className="ad-panel-title">User growth</h2>
           <UserGrowthChart series={growth} />
           <p className="ad-growth-caption">Daily registrations, {growth.length} days shown</p>
         </section>
       </div>
+
+      <div className="ad-two-col">
+        <section className="ad-panel">
+          <h2 className="ad-panel-title">Email delivery</h2>
+          {ops
+            ? <DailyBarChart dates={ops.email.daily.map((d) => d.date)} series={[{ label: 'Sent', values: ops.email.daily.map((d) => d.sent), color: '#1F9D63' }, { label: 'Failed', values: ops.email.daily.map((d) => d.failed), color: '#D64545' }]} noun="emails" />
+            : <div className="ad-skel-block" style={{ height: 190 }} />}
+          <p className="ad-growth-caption">Last 14 days · {ops?.email.last7d.sent ?? 0} sent and {ops?.email.last7d.failed ?? 0} failed in the last 7 days</p>
+        </section>
+        <section className="ad-panel">
+          <h2 className="ad-panel-title">User role distribution</h2>
+          <RoleDonutChart data={overview.roleDistribution} />
+        </section>
+      </div>
+
+      {ops && (
+        <div className="ad-two-col">
+          <section className="ad-panel">
+            <h2 className="ad-panel-title">Where enquiries end up <span className="ao-dim">(last 30 days)</span></h2>
+            <div className="ad-bar-list">
+              {[
+                { label: 'Submitted', n: ops.enquiries.pipeline.submitted },
+                { label: 'Matched to providers', n: ops.enquiries.pipeline.matched },
+                { label: 'Opened by a provider', n: ops.enquiries.pipeline.viewed },
+                { label: 'Answered by a provider', n: ops.enquiries.pipeline.responded },
+              ].map((r) => (
+                <div key={r.label}>
+                  <div className="ad-bar-row"><span>{r.label}</span><span className="ad-bar-count">{r.n} <span className="ao-dim">({pct(r.n, ops.enquiries.pipeline.submitted)}%)</span></span></div>
+                  <div className="ad-bar-track"><div className="ad-bar-fill" style={{ width: `${pct(r.n, ops.enquiries.pipeline.submitted)}%` }} /></div>
+                </div>
+              ))}
+            </div>
+          </section>
+          <section className="ad-panel">
+            <h2 className="ad-panel-title">Latest enquiries <span className="ad-live-badge"><span className="ad-live-dot" /> live</span></h2>
+            {ops.enquiries.recent.length === 0 ? <p className="ad-empty-note">No enquiries yet.</p> : (
+              <div className="ad-feed">
+                {ops.enquiries.recent.slice(0, 6).map((e) => (
+                  <div key={e.id} className="ad-feed-row">
+                    <div className="ad-feed-main">
+                      <span className="ad-feed-title">{e.need}</span>
+                      <span className="ad-feed-sub">{e.location} · <span className="ao-mono">{e.ref}</span></span>
+                    </div>
+                    <div className="ad-feed-side">
+                      <span className={`ao-pill ${e.responded ? 'ao-pill-ok' : e.viewed ? 'ao-pill-running' : e.matched === 0 ? 'ao-pill-never_run' : 'ao-pill-overdue'}`}>
+                        {e.responded ? 'Answered' : e.viewed ? 'Opened' : e.matched === 0 ? 'Not matched' : 'Waiting'}
+                      </span>
+                      <span className="ao-dim">{timeAgo(e.createdAt)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+      )}
 
       <div className="ad-two-col">
         {/* Provider overview */}

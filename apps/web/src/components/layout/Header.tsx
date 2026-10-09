@@ -27,6 +27,7 @@ const TABS: { to: string; label: string; roles?: Role[] }[] = [
   { to: '/provider/listing', label: 'My listing', roles: ['provider'] },
   { to: '/find-providers', label: 'Find providers', roles: ['coordinator', 'participant', 'admin'] },
   { to: '/saved-providers', label: 'Saved providers', roles: ['coordinator', 'participant'] },
+  { to: '/admin/operations', label: 'Operations', roles: ['admin'] },
   { to: '/verification', label: 'Verification', roles: ['admin'] },
   { to: '/admin/providers', label: 'Providers', roles: ['admin'] },
   { to: '/admin/workers', label: 'Manage workers', roles: ['admin'] },

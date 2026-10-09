@@ -1,33 +1,21 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getOperations, sendTestAdminEmail, type OperationsData, type JobHealth } from '../../api/adminDashboardResources';
+import { sendTestAdminEmail, type JobHealth } from '../../api/adminDashboardResources';
+import { useOperations } from '../../hooks/useOperations';
+import { timeAgo, pct } from './adminFormat';
 import { ApiError } from '../../api/client';
 import DailyBarChart from '../../components/charts/DailyBarChart';
+import './AdminDashboard.css';
 import './AdminOperations.css';
-
-const REFRESH_MS = 60_000;
 
 const HEALTH_LABEL: Record<JobHealth, string> = {
   ok: 'On time', running: 'Running now', failed: 'Failed', overdue: 'Overdue', never_run: 'Never run',
 };
 
-function timeAgo(iso: string | null): string {
-  if (!iso) return 'never';
-  const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins} min ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
-  const days = Math.floor(hours / 24);
-  return `${days} day${days === 1 ? '' : 's'} ago`;
-}
-
 function uptime(seconds: number): string {
   const d = Math.floor(seconds / 86400), h = Math.floor((seconds % 86400) / 3600), m = Math.floor((seconds % 3600) / 60);
   return d > 0 ? `${d}d ${h}h` : h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
-
-const pct = (n: number, total: number) => (total ? Math.round((n / total) * 100) : 0);
 
 function Coverage({ label, n, total }: { label: string; n: number; total: number }) {
   return (
@@ -39,27 +27,10 @@ function Coverage({ label, n, total }: { label: string; n: number; total: number
 }
 
 export default function AdminOperations() {
-  const [data, setData] = useState<OperationsData | null>(null);
-  const [error, setError] = useState('');
-  const [refreshing, setRefreshing] = useState(false);
+  const { data, error, refreshing, reload: load } = useOperations(30_000);
   const [testMsg, setTestMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [testing, setTesting] = useState(false);
   const [copied, setCopied] = useState('');
-
-  const load = useCallback(() => {
-    setRefreshing(true);
-    getOperations()
-      .then((d) => { setData(d); setError(''); })
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Unable to load live operations data.'))
-      .finally(() => setRefreshing(false));
-  }, []);
-
-  useEffect(() => {
-    load();
-    // Keeps the page live without anyone reloading it; paused while the tab is hidden.
-    const id = setInterval(() => { if (!document.hidden) load(); }, REFRESH_MS);
-    return () => clearInterval(id);
-  }, [load]);
 
   async function testAlert() {
     setTesting(true);
@@ -80,8 +51,8 @@ export default function AdminOperations() {
     navigator.clipboard?.writeText(line).then(() => { setCopied(name); setTimeout(() => setCopied(''), 2000); }).catch(() => {});
   }
 
-  if (error && !data) return <section className="ad-panel"><p className="ad-empty-note">{error}</p></section>;
-  if (!data) return <div className="ad-skel-block" />;
+  if (error && !data) return <div className="ad-page"><section className="ad-panel"><p className="ad-empty-note">{error}</p></section></div>;
+  if (!data) return <div className="ad-page"><div className="ad-skel-block" /></div>;
 
   const { system, jobs, enquiries, email, automation, directory, alerts } = data;
   const pipe = enquiries.pipeline;
@@ -98,9 +69,12 @@ export default function AdminOperations() {
   ];
 
   return (
-    <div className="ao-wrap">
+    <div className="ad-page ao-wrap">
       <div className="ao-toolbar">
-        <h2 className="ao-title">Live operations</h2>
+        <div>
+          <h1 className="ad-heading">Operations</h1>
+          <p className="ad-subheading">System health, scheduled jobs and automatic emails — refreshes every 30 seconds.</p>
+        </div>
         <div className="ao-toolbar-right">
           <span className="ao-dim">Updated {timeAgo(data.generatedAt)} · server up {uptime(system.uptimeSeconds)}</span>
           <button type="button" className="ao-btn" onClick={load} disabled={refreshing}>{refreshing ? 'Refreshing…' : 'Refresh'}</button>
