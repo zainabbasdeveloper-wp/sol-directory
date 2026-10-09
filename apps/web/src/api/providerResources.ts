@@ -65,12 +65,13 @@ export function listPublicProviders(params: {
   return get(`/providers/public?${qs.toString()}`);
 }
 
-export function listProviders(params: { q?: string; suburb?: string; service?: string; page?: number } = {}): Promise<ProviderListResult> {
+export function listProviders(params: { q?: string; suburb?: string; service?: string; page?: number; limit?: number } = {}): Promise<ProviderListResult> {
   const qs = new URLSearchParams();
   if (params.q) qs.set('q', params.q);
   if (params.suburb) qs.set('suburb', params.suburb);
   if (params.service) qs.set('service', params.service);
   qs.set('page', String(params.page ?? 1));
+  if (params.limit) qs.set('limit', String(params.limit));
   return get(`/providers?${qs.toString()}`);
 }
 

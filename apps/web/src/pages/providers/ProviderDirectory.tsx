@@ -1,20 +1,23 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { listProviders, listMyShortlist, type ProviderRow } from '../../api/providerResources';
 import { listActiveServices, type ActiveService } from '../../api/serviceCatalogue';
 import { searchRegister, type RegisterListItem } from '../../api/registerApi';
 import { ApiError } from '../../api/client';
 import ProviderDetailModal from '../../components/ProviderDetailModal';
 import ProviderMap from '../../components/ProviderMap';
+import Pagination from '../../components/ui/Pagination';
 import RegisterCard from '../public/register/RegisterCard';
 import { KIND_BY_TYPE, STATES, categoryForService, registerPath, type RegisterType } from '../../lib/registerMeta';
 import './ProviderDirectory.css';
 
-const PAGE = 24;
+const PAGE = 12;
 const fmt = (n: number) => n.toLocaleString('en-AU');
 const slugify = (s: string) => s.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 
 export default function ProviderDirectory() {
   const [items, setItems] = useState<ProviderRow[]>([]);
+  const [memberTotal, setMemberTotal] = useState(0);
+  const [memberPage, setMemberPage] = useState(1);
   const [query, setQuery] = useState('');
   const [service, setService] = useState('');
   const [suburb, setSuburb] = useState('');
@@ -23,6 +26,8 @@ export default function ProviderDirectory() {
   const [serviceOptions, setServiceOptions] = useState<ActiveService[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const memberRequestId = useRef(0);
+  const memberResultsRef = useRef<HTMLHeadingElement>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [shortlistedIds, setShortlistedIds] = useState<Set<string>>(new Set());
 
@@ -36,27 +41,40 @@ export default function ProviderDirectory() {
   const category = useMemo(() => (service ? categoryForService(service) : undefined), [service]);
   const suburbSlug = state && suburb.trim() ? slugify(suburb) : undefined;
   const kind = KIND_BY_TYPE[registerType];
+  const memberTotalPages = Math.max(1, Math.ceil(memberTotal / PAGE));
+  const registerTotalPages = Math.max(1, Math.ceil(regTotal / PAGE));
 
   useEffect(() => {
     listMyShortlist().then((r) => setShortlistedIds(new Set(r.items.map((i) => i.provider.id)))).catch(() => {});
     listActiveServices('provider').then((res) => setServiceOptions(res.items)).catch(() => {});
   }, []);
 
-  // Filters drive one real query, whose result feeds BOTH the card
-  // grid and the map (map receives `items` directly below) — so
-  // "filters update both results and map markers" is true by
-  // construction, not two separate code paths that could drift out
-  // of sync with each other.
+  // Filters drive one bounded member-provider page, which also feeds its map markers.
+  useEffect(() => { setMemberPage(1); }, [query, service, suburb]);
+
   useEffect(() => {
     setLoading(true);
+    setError('');
+    const requestId = ++memberRequestId.current;
     const t = setTimeout(() => {
-      listProviders({ q: query, service: service || undefined, suburb: suburb || undefined })
-        .then((res) => { setItems(res.items); setError(''); })
-        .catch((err) => setError(err instanceof ApiError ? err.message : 'Unable to load providers.'))
-        .finally(() => setLoading(false));
-    }, 300);
-    return () => clearTimeout(t);
-  }, [query, service, suburb]);
+      listProviders({ q: query, service: service || undefined, suburb: suburb || undefined, page: memberPage, limit: PAGE })
+        .then((res) => {
+          if (requestId !== memberRequestId.current) return;
+          setItems(res.items);
+          setMemberTotal(res.total);
+        })
+        .catch((err) => { if (requestId === memberRequestId.current) setError(err instanceof ApiError ? err.message : 'Unable to load providers.'); })
+        .finally(() => { if (requestId === memberRequestId.current) setLoading(false); });
+    }, memberPage === 1 ? 300 : 0);
+    return () => { clearTimeout(t); };
+  }, [query, service, suburb, memberPage]);
+
+  function goToMemberPage(nextPage: number) {
+    const target = Math.min(Math.max(1, nextPage), memberTotalPages);
+    if (target === memberPage) return;
+    setMemberPage(target);
+    memberResultsRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
 
   // Any filter change starts the register list again from page 1.
   useEffect(() => { setRegPage(1); }, [query, service, state, suburbSlug, registerType]);
@@ -67,12 +85,19 @@ export default function ProviderDirectory() {
     setRegFailed(false);
     const t = setTimeout(() => {
       searchRegister({ type: registerType, state: state || undefined, suburb: suburbSlug, category, q: query.trim() || undefined, page: regPage, limit: PAGE })
-        .then((r) => { if (!alive) return; setRegTotal(r.total); setRegItems((prev) => (regPage === 1 ? r.items : [...prev, ...r.items])); })
+        .then((r) => { if (!alive) return; setRegTotal(r.total); setRegItems(r.items); })
         .catch(() => { if (alive) setRegFailed(true); })
         .finally(() => { if (alive) setRegLoading(false); });
     }, regPage === 1 ? 300 : 0);
     return () => { alive = false; clearTimeout(t); };
   }, [registerType, state, suburbSlug, category, query, regPage]);
+
+  function goToRegisterPage(nextPage: number) {
+    const target = Math.min(Math.max(1, nextPage), registerTotalPages);
+    if (target === regPage) return;
+    setRegPage(target);
+    document.getElementById('pd-register-results')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
 
   function handleShortlistChange(providerId: string, shortlisted: boolean) {
     setShortlistedIds((prev) => {
@@ -131,7 +156,7 @@ export default function ProviderDirectory() {
       <p className="pd-result-count">
         {loading || regLoading && regPage === 1 ? 'Searching…' : (
           <>
-            {items.length} member provider{items.length === 1 ? '' : 's'} · {fmt(regTotal)} {kind.label} register provider{regTotal === 1 ? '' : 's'}
+            {memberTotal === 0 ? '0 member providers' : `${fmt((memberPage - 1) * PAGE + 1)}–${fmt(Math.min(memberPage * PAGE, memberTotal))} of ${fmt(memberTotal)} member providers`} · {fmt(regTotal)} {kind.label} register provider{regTotal === 1 ? '' : 's'}
             {onMap > 0 && onMap < mapPoints.length ? ` · ${fmt(onMap)} shown on map` : ''}
           </>
         )}
@@ -143,7 +168,7 @@ export default function ProviderDirectory() {
         </div>
       )}
 
-      <h2 className="pd-section-title">Member providers</h2>
+      <h2 className="pd-section-title" ref={memberResultsRef}>Member providers</h2>
       {loading ? (
         <p>Loading…</p>
       ) : (
@@ -168,21 +193,16 @@ export default function ProviderDirectory() {
           )}
         </div>
       )}
+      {memberTotalPages > 1 && !error && <Pagination page={memberPage} totalPages={memberTotalPages} onChange={goToMemberPage} disabled={loading} />}
 
-      <h2 className="pd-section-title">{kind.label} register providers{stateName ? ` in ${stateName}` : ''}{category ? ` · ${category}` : ''}</h2>
+      <h2 className="pd-section-title" id="pd-register-results">{kind.label} register providers{stateName ? ` in ${stateName}` : ''}{category ? ` · ${category}` : ''}</h2>
       <p className="pd-section-note">Listed A–Z from the public register, not ranked. A listing shows what the register says, not who has capacity or the quality of their service.</p>
       {regFailed && <p className="pd-error" role="alert">We couldn’t load the register list just now. Please try again shortly.</p>}
       <ul className="dir-grid" aria-busy={regLoading}>
         {regItems.map((p) => <RegisterCard key={`${p.type}:${p.slug}`} item={p} matchedCategory={category} />)}
       </ul>
       {!regLoading && !regFailed && regItems.length === 0 && <p className="pd-section-note">No register providers match these filters.</p>}
-      {regItems.length < regTotal && (
-        <div className="pd-more">
-          <button type="button" className="btn-tint" disabled={regLoading} onClick={() => setRegPage((n) => n + 1)}>
-            {regLoading ? 'Loading…' : `Show more (${fmt(regTotal - regItems.length)} left)`}
-          </button>
-        </div>
-      )}
+      {registerTotalPages > 1 && !regFailed && <Pagination page={regPage} totalPages={registerTotalPages} onChange={goToRegisterPage} disabled={regLoading} />}
 
       {openId && (
         <ProviderDetailModal providerId={openId} onClose={() => setOpenId(null)} onShortlistChange={handleShortlistChange} />
