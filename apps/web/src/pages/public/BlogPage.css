@@ -231,3 +231,9 @@
 
 /* Article pages use a tighter container so text and side column sit together, with the banner on the same edges */
 .blog-hero-art .blog-wrap, .blog-article-page .blog-wrap { max-width: 1280px; }
+
+/* Loading skeleton for an article that is still being fetched */
+.blog-skel { border-radius: 8px; background: linear-gradient(90deg, #e3eaf4 25%, #f1f5fb 38%, #e3eaf4 62%); background-size: 400% 100%; animation: blog-shimmer 1.4s ease infinite; }
+.blog-skel-dark { background: linear-gradient(90deg, rgba(255,255,255,0.12) 25%, rgba(255,255,255,0.24) 38%, rgba(255,255,255,0.12) 62%); background-size: 400% 100%; }
+.blog-hero-art--loading { min-height: 300px; }
+@media (prefers-reduced-motion: reduce) { .blog-skel { animation: none; } }

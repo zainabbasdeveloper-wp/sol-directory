@@ -122,14 +122,15 @@ export default function BlogPage() {
   const [posts, setPosts] = useState<WPBlogPost[]>([]);
   const [categories, setCategories] = useState<WPTerm[]>([]);
   const [categoryCounts, setCategoryCounts] = useState<Record<number, number>>({});
-  const [article, setArticle] = useState<WPBlogPost | null>(null);
+  // An article we already have on hand opens instantly; the live copy replaces it when it arrives.
+  const [article, setArticle] = useState<WPBlogPost | null>(() => (slug ? ALL_EDITORIAL_POSTS.find((post) => post.slug === slug) ?? null : null));
   const [related, setRelated] = useState<WPBlogPost[]>([]);
   const [query, setQuery] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState('');
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !(slug && ALL_EDITORIAL_POSTS.some((post) => post.slug === slug)));
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
   const [progress, setProgress] = useState(0);
@@ -137,11 +138,11 @@ export default function BlogPage() {
   useEffect(() => {
     if (!slug) return;
     let current = true;
-    setLoading(true);
-    setError('');
-    setArticle(null);
-    window.scrollTo(0, 0);
     const editorialPost = ALL_EDITORIAL_POSTS.find((post) => post.slug === slug);
+    setLoading(!editorialPost);
+    setError('');
+    setArticle(editorialPost ?? null);
+    window.scrollTo(0, 0);
     getBlogPost(slug)
       .then((result) => { if (current) setArticle(result ?? editorialPost ?? null); })
       .catch(() => {
@@ -303,7 +304,31 @@ export default function BlogPage() {
         <div className="blog-progress" aria-hidden="true"><span style={{ transform: `scaleX(${progress})` }} /></div>
 
         {loading ? (
-          <main className="blog-article-page"><div className="blog-wrap"><p className="blog-state">Loading article…</p></div></main>
+          <div className="blog-skel-article" role="status" aria-live="polite" aria-label="Loading article">
+            <div className="blog-hero-art blog-hero-art--loading">
+              <div className="blog-hero-art-shade">
+                <div className="blog-wrap">
+                  <div className="blog-skel blog-skel-dark" style={{ width: 220, height: 14, marginBottom: 'clamp(30px, 5vw, 56px)' }} />
+                  <div className="blog-skel blog-skel-dark" style={{ width: 120, height: 26, borderRadius: 100 }} />
+                  <div className="blog-skel blog-skel-dark" style={{ width: 'min(100%, 760px)', height: 44, marginTop: 20 }} />
+                  <div className="blog-skel blog-skel-dark" style={{ width: 'min(100%, 560px)', height: 44, marginTop: 12 }} />
+                  <div className="blog-skel blog-skel-dark" style={{ width: 'min(100%, 640px)', height: 18, marginTop: 24 }} />
+                  <div className="blog-skel blog-skel-dark" style={{ width: 'min(100%, 420px)', height: 18, marginTop: 10 }} />
+                </div>
+              </div>
+            </div>
+            <div className="blog-article-page">
+              <div className="blog-wrap">
+                <div className="blog-article-layout">
+                  <div className="blog-article-main">
+                    <div className="blog-skel" style={{ width: 'min(100%, 340px)', height: 40, marginBottom: 34 }} />
+                    {[100, 96, 100, 82, 100, 94, 70].map((w, i) => <div key={i} className="blog-skel" style={{ width: `${w}%`, height: 16, marginBottom: 16 }} />)}
+                  </div>
+                  <div className="blog-rail"><div className="blog-skel" style={{ width: '100%', height: 190, borderRadius: 12 }} /></div>
+                </div>
+              </div>
+            </div>
+          </div>
         ) : error ? (
           <main className="blog-article-page"><div className="blog-wrap"><p className="blog-state" role="alert">{error}</p></div></main>
         ) : !article || !prepared ? (
