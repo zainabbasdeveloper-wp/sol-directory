@@ -7,6 +7,7 @@ import { hubHeaderStyle } from '../../data/bannerImages';
 import { useMatchModal } from '../../context/MatchModalContext';
 import { PublicFooter, PublicHeader } from './PublicLayout';
 import BlogShare from './BlogShare';
+import { BLOG_FAQS, BLOG_TOPICS, relatedLinksFor } from '../../data/blogSeo';
 import { EDITORIAL_BLOG_POSTS, GUIDE_DOCS, type EditorialBlogPost } from '@soldirectory/topic-content';
 import './BlogPage.css';
 
@@ -223,6 +224,9 @@ export default function BlogPage() {
         publisher: { '@type': 'Organization', name: 'SolDirectory', url: `${SITE_ORIGIN()}/` },
         mainEntityOfPage: canonical,
         url: canonical,
+        inLanguage: 'en-AU',
+        articleSection: article.categories[0]?.name,
+        keywords: ['NDIS', ...article.categories.map((c) => c.name)].join(', '),
         ...(article.featuredImage?.url ? { image: [article.featuredImage.url] } : {}),
       });
       setJsonLd('blog-breadcrumbs', {
@@ -237,8 +241,8 @@ export default function BlogPage() {
     }
 
     applySeoTags({
-      title: 'NDIS updates and practical insights | SolDirectory',
-      description: 'Independent explainers on NDIS changes, provider responsibilities and practical support decisions, with links to official sources.',
+      title: 'NDIS updates, plan changes and provider news | SolDirectory',
+      description: 'Plain-English NDIS updates, plan and budget changes, pricing explainers and provider news for participants, families and providers across Australia.',
       canonicalUrl: `${SITE_ORIGIN()}/blog`,
       noindex: posts.length === 0 && !submittedQuery && categoryId === null,
     });
@@ -254,7 +258,11 @@ export default function BlogPage() {
         datePublished: post.date,
       })),
     });
-    return () => setJsonLd('blog-archive', null);
+    setJsonLd('blog-faq', {
+      '@type': 'FAQPage',
+      mainEntity: BLOG_FAQS.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })),
+    });
+    return () => { setJsonLd('blog-archive', null); setJsonLd('blog-faq', null); };
   }, [slug, article, posts]);
 
   // Reading-progress bar for the article view.
@@ -371,6 +379,14 @@ export default function BlogPage() {
                     )}
 
                     <BlogShare url={articleUrl} title={article.title} variant="panel" />
+
+                    <section className="blog-learn" aria-labelledby="blog-learn-heading">
+                      <h2 id="blog-learn-heading">Keep learning</h2>
+                      <p>Guides and tools that go with this topic.</p>
+                      <ul>
+                        {relatedLinksFor(article.categories.map((c) => c.name)).map((item) => <li key={item.to}><Link to={item.to}>{item.label} <span aria-hidden="true">→</span></Link></li>)}
+                      </ul>
+                    </section>
 
                     <aside className="blog-source-note"><strong>Independent information, not personal advice.</strong><span>NDIS rules and support arrangements can change. Confirm current requirements with the responsible government body before acting.</span><Link to="/guides">Browse practical guides</Link></aside>
                   </article>
@@ -503,6 +519,38 @@ export default function BlogPage() {
                   <span>{guide.summary}</span>
                   <em>Read the guide →</em>
                 </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="blog-seo" aria-labelledby="blog-seo-heading">
+          <div className="blog-seo-inner">
+            <div className="blog-seo-intro">
+              <span className="blog-kicker">About this journal</span>
+              <h2 id="blog-seo-heading">NDIS updates, plan changes and provider news in plain English</h2>
+              <p>SolDirectory’s journal explains changes to the NDIS, aged care and the wider disability support system in language people can act on. Each article covers what a change is, who it may affect and which questions to ask, so participants, families, support coordinators, plan managers and providers can prepare without wading through policy documents.</p>
+              <p>We write about NDIS plan and budget changes, the price guide and pricing arrangements, provider responsibilities, claiming and payments, service outages and notices, and how to choose and compare providers. Articles link to the official notice they are based on and show when they were published or updated. For anything that affects a decision, confirm the current rules with the NDIA, the NDIS Commission or My Aged Care.</p>
+            </div>
+
+            <h3 className="blog-seo-subhead">What we cover</h3>
+            <div className="blog-topic-grid">
+              {BLOG_TOPICS.map((topic) => (
+                <Link key={topic.title} className="blog-topic-card" to={topic.to}>
+                  <strong>{topic.title}</strong>
+                  <span>{topic.text}</span>
+                  <em>{topic.cta} →</em>
+                </Link>
+              ))}
+            </div>
+
+            <h3 className="blog-seo-subhead" id="blog-faq-heading">Frequently asked questions</h3>
+            <div className="blog-faq" aria-labelledby="blog-faq-heading">
+              {BLOG_FAQS.map((faq) => (
+                <details key={faq.q} className="blog-faq-item">
+                  <summary>{faq.q}</summary>
+                  <p>{faq.a}</p>
+                </details>
               ))}
             </div>
           </div>
