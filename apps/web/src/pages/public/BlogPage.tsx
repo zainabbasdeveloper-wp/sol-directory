@@ -42,7 +42,7 @@ function editorialToPost(article: EditorialBlogPost): WPBlogPost {
     seo: { title: `${article.title} | SolDirectory`, description: article.summary, ogImage: article.coverImage, noindex: false },
     date: article.publishedAt,
     modified: article.checkedAt,
-    authorName: 'SolDirectory editorial desk',
+    authorName: 'SolDirectory',
     categories: [category],
     editorialSource: { ...article.source, checkedAt: article.checkedAt },
     expiresAt: article.expiresAt,
@@ -89,15 +89,6 @@ function prepareArticle(html: string): { html: string; toc: { id: string; text: 
   return { html: doc.body.innerHTML, toc };
 }
 
-function SourceBadge() {
-  return (
-    <span className="blog-badge-source" title="This article links to the official source">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-      Official source linked
-    </span>
-  );
-}
-
 function BlogCard({ post, featured = false }: { post: WPBlogPost; featured?: boolean }) {
   const category = post.categories[0]?.name || 'Practical guidance';
   return (
@@ -109,7 +100,6 @@ function BlogCard({ post, featured = false }: { post: WPBlogPost; featured?: boo
         <div className="blog-card-meta"><span>{category}</span><time dateTime={post.date}>{formatDate(post.date)}</time><span className="blog-card-read">{readingMinutes(post.contentHtml)} min read</span></div>
         <h2><Link to={`/blog/${post.slug}`}>{post.title}</Link></h2>
         <p>{post.excerpt || post.seo.description}</p>
-        {post.editorialSource && <SourceBadge />}
         <Link className="blog-read-link" to={`/blog/${post.slug}`}>Read article <span aria-hidden="true">→</span></Link>
       </div>
     </article>
@@ -342,14 +332,14 @@ export default function BlogPage() {
                   <div className="blog-hero-art-copy">
                     <div className="blog-article-categories">
                       {article.categories.map((category) => <span key={category.id}>{category.name}</span>)}
-                      {article.editorialSource && <span className="blog-chip-source">✓ Official source linked</span>}
                       {expired && <span className="blog-chip-expired">Notice has passed</span>}
                     </div>
                     <h1>{article.title}</h1>
                     {article.excerpt && <p className="blog-article-deck">{article.excerpt}</p>}
                     <div className="blog-article-byline">
-                      <span className="blog-byline-badge" aria-hidden="true">S</span>
-                      <span className="blog-byline-name">{article.authorName}</span>
+                      {article.authorName === 'SolDirectory'
+                        ? <img className="blog-byline-logo" src="/images/sol-directory-logo-white-transparent-v2.png" alt="SolDirectory" />
+                        : <span className="blog-byline-name">{article.authorName}</span>}
                       <span aria-hidden="true">·</span><time dateTime={article.date}>{formatDate(article.date)}</time>
                       <span aria-hidden="true">·</span><span>{readingMinutes(article.contentHtml)} min read</span>
                     </div>
@@ -420,7 +410,6 @@ export default function BlogPage() {
   const featured = !filtering && page === 1 ? posts[0] : undefined;
   const gridPosts = featured ? posts.slice(1) : posts;
   const newest = posts[0];
-  const withSource = posts.filter((post) => post.editorialSource).length;
   const guides = Object.values(GUIDE_DOCS);
 
   return (
@@ -431,11 +420,10 @@ export default function BlogPage() {
         <div className="directory-page-header-inner">
           <span className="eyebrow eyebrow-light"><span className="eyebrow-rule" />SolDirectory journal</span>
           <h1 className="section-heading section-heading-light">Support changes. Clear answers matter.</h1>
-          <p className="directory-page-subtitle">Independent explainers and practical guidance for people navigating disability and aged care support in Australia, each linked to its official source.</p>
+          <p className="directory-page-subtitle">Independent explainers and practical guidance for people navigating disability and aged care support in Australia.</p>
           {posts.length > 0 && !filtering && (
             <ul className="blog-headline" aria-label="Journal at a glance">
               <li><strong>{posts.length}</strong><span>{posts.length === 1 ? 'article' : 'articles'}</span></li>
-              {withSource > 0 && <li><strong>{withSource}</strong><span>linked to an official source</span></li>}
               {newest && <li><strong>{formatShortDate(newest.date)}</strong><span>latest update</span></li>}
             </ul>
           )}

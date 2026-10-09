@@ -1175,7 +1175,7 @@ function editorialBlogPage(site: string, editorial: EditorialBlogPost): Page {
       { id: 'blog-post', data: {
         '@type': 'BlogPosting', headline: editorial.title, description: editorial.summary,
         datePublished: editorial.publishedAt, dateModified: editorial.checkedAt,
-        author: { '@type': 'Organization', name: 'SolDirectory editorial desk' },
+        author: { '@type': 'Organization', name: 'SolDirectory' },
         publisher: { '@type': 'Organization', name: 'SolDirectory', url: `${site}/` },
         mainEntityOfPage: `${site}${path}`, url: `${site}${path}`,
         image: [`${site}${editorial.coverImage}`], articleSection: editorial.category,

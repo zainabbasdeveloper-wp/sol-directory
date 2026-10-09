@@ -251,3 +251,5 @@ button.blog-share-btn--native { background: var(--color-primary); border-color: 
 @media (max-width: 600px) {
   .blog-share--bar .blog-share-btn--copy { padding: 0 14px; }
 }
+
+.blog-byline-logo { display: block; height: 26px; width: auto; }
