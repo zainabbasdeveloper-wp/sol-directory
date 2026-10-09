@@ -18,7 +18,7 @@ import './Home.css';
 import './Directory.css';
 import './register/register.css';
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 24;
 // "Near a suburb" search radius. Wide enough to catch providers based in
 // neighbouring suburbs who travel to the area; providers that list the
 // suburb by name are always included regardless.
