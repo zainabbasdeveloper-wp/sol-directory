@@ -6,6 +6,7 @@ import { applySeoTags, setJsonLd } from '../../lib/seo';
 import { hubHeaderStyle } from '../../data/bannerImages';
 import { useMatchModal } from '../../context/MatchModalContext';
 import { PublicFooter, PublicHeader } from './PublicLayout';
+import BlogShare from './BlogShare';
 import { EDITORIAL_BLOG_POSTS, GUIDE_DOCS, type EditorialBlogPost } from '@soldirectory/topic-content';
 import './BlogPage.css';
 
@@ -131,7 +132,6 @@ export default function BlogPage() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
-  const [copied, setCopied] = useState(false);
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
@@ -294,39 +294,71 @@ export default function BlogPage() {
     setCategoryId(id);
   }
 
-  function copyLink() {
-    navigator.clipboard?.writeText(window.location.href).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }).catch(() => {});
-  }
-
   if (slug) {
     const expired = !!article?.expiresAt && new Date(article.expiresAt).getTime() <= Date.now();
+    const articleUrl = article ? `${SITE_ORIGIN()}/blog/${article.slug}` : '';
     return (
       <>
         <PublicHeader />
         <div className="blog-progress" aria-hidden="true"><span style={{ transform: `scaleX(${progress})` }} /></div>
-        <main className="blog-article-page">
-          <nav className="blog-breadcrumb" aria-label="Breadcrumb"><Link to="/">Home</Link><span>/</span><Link to="/blog">Updates & insights</Link><span>/</span><span>{article?.title || 'Article'}</span></nav>
-          {loading ? <p className="blog-state">Loading article…</p> : error ? <p className="blog-state" role="alert">{error}</p> : !article || !prepared ? (
-            <section className="blog-not-found"><span className="blog-kicker">SolDirectory journal</span><h1>Article not found</h1><p>This article may have been unpublished or moved.</p><Link className="blog-primary-link" to="/blog">Browse latest updates</Link></section>
-          ) : (
-            <>
-              <article className="blog-article">
-                <header className="blog-article-header">
-                  <Link className="blog-back-link" to="/blog">← All updates</Link>
-                  <div className="blog-article-categories">{article.categories.map((category) => <span key={category.id}>{category.name}</span>)}{expired && <span className="blog-chip-expired">Notice has passed</span>}</div>
-                  <h1>{article.title}</h1>
-                  {article.excerpt && <p className="blog-article-deck">{article.excerpt}</p>}
-                  <div className="blog-article-byline"><span>{article.authorName}</span><span aria-hidden="true">·</span><time dateTime={article.date}>{formatDate(article.date)}</time><span aria-hidden="true">·</span><span>{readingMinutes(article.contentHtml)} min read</span></div>
-                </header>
-                <img className="blog-article-cover" src={postImage(article)} alt={article.featuredImage?.alt || ''} />
 
+        {loading ? (
+          <main className="blog-article-page"><div className="blog-wrap"><p className="blog-state">Loading article…</p></div></main>
+        ) : error ? (
+          <main className="blog-article-page"><div className="blog-wrap"><p className="blog-state" role="alert">{error}</p></div></main>
+        ) : !article || !prepared ? (
+          <main className="blog-article-page"><div className="blog-wrap"><section className="blog-not-found"><span className="blog-kicker">SolDirectory journal</span><h1>Article not found</h1><p>This article may have been unpublished or moved.</p><Link className="blog-primary-link" to="/blog">Browse latest updates</Link></section></div></main>
+        ) : (
+          <>
+            <header className="blog-hero-art" style={{ backgroundImage: `url(${postImage(article)})` }}>
+              <div className="blog-hero-art-shade">
+                <div className="blog-wrap">
+                  <nav className="blog-breadcrumb" aria-label="Breadcrumb"><Link to="/">Home</Link><span>/</span><Link to="/blog">Updates & insights</Link><span>/</span><span>{article.categories[0]?.name || 'Article'}</span></nav>
+                  <div className="blog-hero-art-copy">
+                    <div className="blog-article-categories">
+                      {article.categories.map((category) => <span key={category.id}>{category.name}</span>)}
+                      {article.editorialSource && <span className="blog-chip-source">✓ Official source linked</span>}
+                      {expired && <span className="blog-chip-expired">Notice has passed</span>}
+                    </div>
+                    <h1>{article.title}</h1>
+                    {article.excerpt && <p className="blog-article-deck">{article.excerpt}</p>}
+                    <div className="blog-article-byline">
+                      <span className="blog-byline-badge" aria-hidden="true">S</span>
+                      <span className="blog-byline-name">{article.authorName}</span>
+                      <span aria-hidden="true">·</span><time dateTime={article.date}>{formatDate(article.date)}</time>
+                      <span aria-hidden="true">·</span><span>{readingMinutes(article.contentHtml)} min read</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </header>
+
+            <main className="blog-article-page">
+              <div className="blog-wrap">
                 <div className="blog-article-layout">
-                  <div className="blog-article-main">
+                  <article className="blog-article-main">
+                    <div className="blog-article-top">
+                      <Link className="blog-back-link" to="/blog">← All updates</Link>
+                      <BlogShare url={articleUrl} title={article.title} variant="bar" />
+                    </div>
+
                     <div className="blog-article-body" dangerouslySetInnerHTML={{ __html: prepared.html }} />
+
                     {article.modified && article.modified !== article.date && <p className="blog-updated">Updated {formatDate(article.modified)}. Check linked official sources for current requirements.</p>}
                     {expired && <p className="blog-updated">This scheduled notice has passed. Check the linked official source for current system availability.</p>}
+
+                    {article.editorialSource && (
+                      <aside className="blog-source-card">
+                        <span className="blog-source-card-label">Primary source · checked {formatDate(article.editorialSource.checkedAt)}</span>
+                        <a href={article.editorialSource.url} target="_blank" rel="noopener noreferrer">{article.editorialSource.label} <span aria-hidden="true">↗</span></a>
+                        <p>Read the current official notice before acting. Guidance and effective dates can change.</p>
+                      </aside>
+                    )}
+
+                    <BlogShare url={articleUrl} title={article.title} variant="panel" />
+
                     <aside className="blog-source-note"><strong>Independent information, not personal advice.</strong><span>NDIS rules and support arrangements can change. Confirm current requirements with the responsible government body before acting.</span><Link to="/guides">Browse practical guides</Link></aside>
-                  </div>
+                  </article>
 
                   <aside className="blog-rail" aria-label="Article tools">
                     {prepared.toc.length > 1 && (
@@ -335,20 +367,6 @@ export default function BlogPage() {
                         <ol>{prepared.toc.map((item) => <li key={item.id}><a href={`#${item.id}`}>{item.text}</a></li>)}</ol>
                       </nav>
                     )}
-                    {article.editorialSource && (
-                      <div className="blog-rail-card blog-rail-source">
-                        <h2>Primary source</h2>
-                        <a href={article.editorialSource.url} target="_blank" rel="noopener noreferrer">{article.editorialSource.label}</a>
-                        <p>Checked {formatDate(article.editorialSource.checkedAt)}. Read the current official notice before acting; guidance and effective dates can change.</p>
-                      </div>
-                    )}
-                    <div className="blog-rail-card">
-                      <h2>Share</h2>
-                      <div className="blog-share">
-                        <button type="button" onClick={copyLink}>{copied ? 'Link copied ✓' : 'Copy link'}</button>
-                        <a href={`mailto:?subject=${encodeURIComponent(article.title)}&body=${encodeURIComponent(`${article.title}\n${window.location.href}`)}`}>Email</a>
-                      </div>
-                    </div>
                     <div className="blog-rail-card blog-rail-cta">
                       <h2>Need support?</h2>
                       <p>Compare providers and public-register listings for your area, or send one free request.</p>
@@ -357,17 +375,17 @@ export default function BlogPage() {
                     </div>
                   </aside>
                 </div>
-              </article>
 
-              {related.length > 0 && (
-                <section className="blog-related" aria-labelledby="blog-related-heading">
-                  <h2 id="blog-related-heading">Keep reading</h2>
-                  <div className="blog-card-grid">{related.map((post) => <BlogCard key={post.slug} post={post} />)}</div>
-                </section>
-              )}
-            </>
-          )}
-        </main>
+                {related.length > 0 && (
+                  <section className="blog-related" aria-labelledby="blog-related-heading">
+                    <h2 id="blog-related-heading">Keep reading</h2>
+                    <div className="blog-card-grid">{related.map((post) => <BlogCard key={post.slug} post={post} />)}</div>
+                  </section>
+                )}
+              </div>
+            </main>
+          </>
+        )}
         <PublicFooter />
       </>
     );

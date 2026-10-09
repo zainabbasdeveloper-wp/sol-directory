@@ -95,11 +95,11 @@ export function PublicHeader() {
             <Link to="/locations" className="public-nav-link">
               Locations
             </Link>
-            <Link to="/blog" className="public-nav-link">
-              Blog
-            </Link>
             <Link to="/independent-workers" className="public-nav-link">
               Independent Workers
+            </Link>
+            <Link to="/blog" className="public-nav-link">
+              Blog
             </Link>
             <div className="public-nav-actions">
               <button type="button" onClick={getMatched} className="public-cta-btn public-cta-btn--panel">
@@ -142,6 +142,7 @@ export function PublicFooter() {
           <Link to="/ndis-providers">NDIS provider register</Link>
           <Link to="/aged-care-providers">Aged care provider register</Link>
           <Link to="/#about">How it works</Link>
+          <Link to="/blog">Blog</Link>
         </div>
         <div className="public-footer-col">
           <Link className="public-footer-heading" to="/guides">Guides</Link>
