@@ -17,3 +17,9 @@
 .pd-select { height: 46px; padding: 0 14px; border: 1px solid var(--color-border-strong, #DDE4EF); border-radius: 10px; font: inherit; font-size: 14px; background: #fff; min-width: 160px; }
 .pd-result-count { font-size: 13.5px; font-weight: 600; margin: 0 0 14px; color: var(--color-text, #10233F); }
 .pd-empty-state { grid-column: 1 / -1; text-align: center; padding: 50px 20px; background: #fff; border: 1px dashed var(--color-border-strong, #DDE4EF); border-radius: 14px; }
+
+.pd-search-inline { max-width: 320px; flex: 1 1 220px; margin-bottom: 0; }
+.pd-hint { margin: 0 0 12px; font-size: 12.5px; color: var(--color-text-muted, #5A6B84); }
+.pd-section-title { margin: 28px 0 6px; font-size: 18px; font-weight: 700; }
+.pd-section-note { margin: 0 0 14px; font-size: 12.5px; color: var(--color-text-muted, #5A6B84); }
+.pd-more { display: flex; justify-content: center; margin: 22px 0 8px; }
