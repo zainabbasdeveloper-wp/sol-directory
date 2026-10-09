@@ -248,6 +248,19 @@ export interface WPContentBase {
   seo: { title: string; description: string; ogImage: string | null; noindex: boolean };
 }
 
+export interface WPBlogPost extends WPContentBase {
+  date: string;
+  modified: string;
+  authorName: string;
+  categories: WPTerm[];
+}
+
+export interface WPBlogPage {
+  items: WPBlogPost[];
+  page: number;
+  totalPages: number;
+}
+
 // SEO title/description/image/noindex, in priority order:
 //  1. The plugin's own "SEO" ACF field group (soldirectory_add_group in
 //     acf-fields.php) — real per-page editorial control, works without
@@ -277,6 +290,61 @@ function mapBaseContent(raw: any): WPContentBase {
     terms: extractTerms(raw),
     seo: mapSeo(raw),
   };
+}
+
+function mapBlogPost(raw: any): WPBlogPost {
+  return {
+    ...mapBaseContent(raw),
+    date: raw.date ?? '',
+    modified: raw.modified ?? raw.date ?? '',
+    authorName: raw._embedded?.author?.[0]?.name || 'SolDirectory',
+    categories: extractTerms(raw).filter((term) => term.taxonomy === 'category'),
+  };
+}
+
+export async function getBlogPosts(input: { page?: number; search?: string; category?: number | null } = {}): Promise<WPBlogPage> {
+  await ensureCacheFresh();
+  const page = Math.max(1, input.page ?? 1);
+  const params = new URLSearchParams({
+    status: 'publish',
+    per_page: '9',
+    page: String(page),
+    orderby: 'date',
+    order: 'desc',
+    _embed: '1',
+  });
+  if (input.search?.trim()) params.set('search', input.search.trim());
+  if (input.category) params.set('categories', String(input.category));
+
+  const response = await fetch(`${API_URL}/wp/rest/wp-json/wp/v2/posts?${params}`);
+  if (!response.ok) throw new Error(`WordPress responded ${response.status}`);
+  const rawPosts = await response.json();
+  if (!Array.isArray(rawPosts)) throw new Error('Unexpected WordPress posts response');
+  return {
+    items: rawPosts
+      .filter((post: any) => post.slug !== 'hello-world')
+      .map(mapBlogPost)
+      .filter((post: WPBlogPost) => !post.seo.noindex),
+    page,
+    totalPages: Math.max(1, Number(response.headers.get('X-WP-TotalPages')) || 1),
+  };
+}
+
+export async function getBlogPost(slug: string): Promise<WPBlogPost | null> {
+  const results = await wpFetchStrict<any[]>(`/wp-json/wp/v2/posts?slug=${encodeURIComponent(slug)}&_embed`, `blog-post:${slug}`);
+  if (!Array.isArray(results) || !results.length || results[0].status !== 'publish') return null;
+  return mapBlogPost(results[0]);
+}
+
+export async function getBlogCategories(): Promise<WPTerm[]> {
+  const categories = await wpFetch<any[]>('/wp-json/wp/v2/categories?per_page=100&hide_empty=true', 'blog:categories');
+  return (categories ?? []).map((term: any) => ({
+    id: term.id,
+    name: term.name,
+    slug: term.slug,
+    taxonomy: 'category',
+    parent: term.parent ?? 0,
+  }));
 }
 
 export async function getWordPressPage(slug: string): Promise<WPContentBase | null> {

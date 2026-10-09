@@ -186,7 +186,7 @@ const missingFragments = fragments.flatMap((ref) => {
   return target?.status === 200 && !target.anchors.has(fragment) ? [{ source: ref.source, url: ref.href, fragment }] : [];
 });
 const inbound = new Set(refsByTarget.keys());
-const zeroInbound = sitemapUrls.filter((url) => !inbound.has(targetKey(url)));
+const unlinkedFromSample = sitemapUrls.filter((url) => !inbound.has(targetKey(url)));
 
 const report = {
   generatedAt: new Date().toISOString(), base, sitemapUrls: sitemapUrls.length,
@@ -195,7 +195,7 @@ const report = {
   uniqueTargets: targets.length,
   sourceFetchFailures: sourcePages.filter((page) => page.error || page.status >= 400).map((page) => ({ url: page.url, status: page.status, error: page.error })),
   failures, redirects, noindexTargets, missingFragments,
-  zeroInbound: { count: zeroInbound.length, examples: zeroInbound.slice(0, 50) },
+  unlinkedFromSample: { count: unlinkedFromSample.length, examples: unlinkedFromSample.slice(0, 50) },
 };
 if (outFile) fs.writeFileSync(outFile, JSON.stringify(report, null, 2));
 console.log(JSON.stringify(report, null, 2));

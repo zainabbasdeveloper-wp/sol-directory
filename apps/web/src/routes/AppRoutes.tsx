@@ -15,6 +15,7 @@ import { ForgotPassword, ResetPassword } from '../pages/auth/AccountRecovery';
 import LegalPage from '../pages/public/LegalPage';
 import PhotoCredits from '../pages/public/PhotoCredits';
 import GuidePage, { GuidesHubPage } from '../pages/public/GuidePage';
+import BlogPage from '../pages/public/BlogPage';
 import Dashboard from '../pages/Dashboard';
 import WorkerDirectory from '../pages/workers/WorkerDirectory';
 import WorkerProfile from '../pages/workers/WorkerProfile';
@@ -168,6 +169,8 @@ export default function AppRoutes() {
       <Route path="/language" element={<LanguageHubPage />} />
       <Route path="/language/:slug" element={<LanguageTopicPage />} />
       <Route path="/support-coordinators" element={<SupportCoordinators />} />
+      <Route path="/blog" element={<BlogPage />} />
+      <Route path="/blog/:slug" element={<BlogPage />} />
       <Route path="/directory/:slug" element={<ProviderPublicPage />} />
       {/* Real, register-backed pages: one per (service, suburb) with genuine
           register demand (see computeServiceSuburbs / sitemap-services-N.xml).

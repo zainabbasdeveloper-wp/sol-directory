@@ -75,7 +75,7 @@ const options = {
 };
 
 // Same list as the nginx rule in deploy/nginx-soldirectory.conf — the paths served by the SEO shell.
-const SHELL_PATH = /^\/((ndis-providers|aged-care-providers)(\/|$)|find-a-provider\/?$|locations(\/[^/]+)?\/?$|providers\/?$|support-coordinators\/?$|directory\/[^/]+\/?$|directory\/in\/[^/]+\/?$|condition(\/[^/]+)?\/?$|funding(\/[^/]+)?\/?$|guides(\/[^/]+)?\/?$|language(\/[^/]+)?\/?$|services\/?$|services\/[^/]+\/?$|services\/[^/]+\/[^/]+\/?$|services\/[^/]+\/[^/]+\/[^/]+\/?$|independent-workers(\/[^/]+)?\/?$|[a-z0-9][a-z0-9-]*\/?$)/;
+const SHELL_PATH = /^\/((ndis-providers|aged-care-providers)(\/|$)|find-a-provider\/?$|locations(\/[^/]+)?\/?$|providers\/?$|support-coordinators\/?$|blog(\/[^/]+)?\/?$|directory\/[^/]+\/?$|directory\/in\/[^/]+\/?$|condition(\/[^/]+)?\/?$|funding(\/[^/]+)?\/?$|guides(\/[^/]+)?\/?$|language(\/[^/]+)?\/?$|services\/?$|services\/[^/]+\/?$|services\/[^/]+\/[^/]+\/?$|services\/[^/]+\/[^/]+\/[^/]+\/?$|independent-workers(\/[^/]+)?\/?$|[a-z0-9][a-z0-9-]*\/?$)/;
 
 const decode = (value: string) => value
   .replace(/&amp;/g, '&')

@@ -27,6 +27,7 @@
     "job:capacity-check": "tsx src/scripts/weeklyCapacityCheck.ts",
     "job:search-alerts": "tsx src/scripts/sendSearchAlerts.ts",
     "job:lead-followups": "tsx src/scripts/sendLeadFollowUps.ts",
+    "job:ndis-news-monitor": "tsx src/scripts/monitorNdisNews.ts",
     "audit:register": "tsx src/scripts/auditRegisterData.ts",
 "mark:verified-contacts": "tsx src/scripts/markVerifiedContacts.ts",
     "job:lead-escalation": "tsx src/scripts/escalateUnviewedLeads.ts"
@@ -38,6 +39,7 @@
     "@soldirectory/shared-types": "*",
     "@soldirectory/topic-content": "*",
     "bcryptjs": "^2.4.3",
+    "cheerio": "1.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",

@@ -49,7 +49,12 @@ router.get(/^\/rest\/(.*)$/, async (req, res) => {
     const url = `${WP_REST_BASE.replace(/\/$/, '')}/${path}${qs ? `?${qs}` : ''}`;
     const wpRes = await fetch(url);
     const data = await wpRes.text(); // pass through raw — could be JSON or an error page, don't assume
-    res.status(wpRes.status).set('Content-Type', wpRes.headers.get('content-type') ?? 'application/json').send(data);
+    res.status(wpRes.status).set('Content-Type', wpRes.headers.get('content-type') ?? 'application/json');
+    for (const name of ['x-wp-total', 'x-wp-totalpages']) {
+      const value = wpRes.headers.get(name);
+      if (value) res.set(name, value);
+    }
+    res.send(data);
   } catch (err: any) {
     res.status(502).json({ error: 'Could not reach the WordPress REST API', detail: err.message });
   }
