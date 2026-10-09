@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import Provider from '../models/Provider.js';
 import Worker from '../models/Worker.js';
 import RegisterListing from '../models/RegisterListing.js';
-import { CONDITION_TOPICS, FUNDING_TOPICS, GUIDE_DOCS, LANGUAGE_TOPICS } from '@soldirectory/topic-content';
+import { CONDITION_TOPICS, EDITORIAL_BLOG_POSTS, FUNDING_TOPICS, GUIDE_DOCS, LANGUAGE_TOPICS } from '@soldirectory/topic-content';
 import { computeHub, computeServiceSuburbs } from './register.controller.js';
 import { MIN_INDEXABLE_PROVIDERS, areaRows } from './providersPublic.controller.js';
 import { REAL_SERVICES, REGISTER_TYPES, STATE_CODES, type RegisterType } from '../services/registerNormalise.js';
@@ -30,6 +30,10 @@ const STATIC_PUBLIC_ROUTES = [
   '/independent-workers', '/ndis-providers',
   '/aged-care-providers', '/support-coordinators', ...GUIDE_ROUTES, ...FUNDING_ROUTES, ...CONDITION_ROUTES, ...LANGUAGE_ROUTES,
 ];
+function editorialBlogRoutes(): string[] {
+  const active = EDITORIAL_BLOG_POSTS.filter((post) => !post.expiresAt || new Date(post.expiresAt).getTime() > Date.now());
+  return active.length ? ['/blog', ...active.map((post) => `/blog/${post.slug}`)] : [];
+}
 const REGISTER_PATH: Record<RegisterType, string> = { ndis: '/ndis-providers', aged_care: '/aged-care-providers' };
 const REGISTER_CHUNK = 10_000;
 const SERVICE_CHUNK = 10_000;
@@ -79,7 +83,7 @@ async function fetchWpSlugs(base: string, path: string): Promise<string[]> {
 async function buildPageUrls(): Promise<UrlEntry[]> {
   if (pagesCache && Date.now() - pagesCache.at < CACHE_MS) return pagesCache.urls;
 
-  const paths = [...STATIC_PUBLIC_ROUTES];
+  const paths = [...STATIC_PUBLIC_ROUTES, ...editorialBlogRoutes()];
   const wpUrl = process.env.WORDPRESS_URL; // server-side var, separate from the frontend's VITE_WORDPRESS_URL
 
   // Real provider slugs — only accounts that actually completed

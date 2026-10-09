@@ -1,14 +1,54 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import DOMPurify from 'dompurify';
 import { Link, useParams } from 'react-router-dom';
-import { bannerFor } from '../../data/bannerImages';
 import { getBlogCategories, getBlogPost, getBlogPosts, type WPBlogPost, type WPTerm } from '../../api/wordpressApi';
 import { applySeoTags, setJsonLd } from '../../lib/seo';
 import { PublicFooter, PublicHeader } from './PublicLayout';
+import { EDITORIAL_BLOG_POSTS, type EditorialBlogPost } from '@soldirectory/topic-content';
 import './BlogPage.css';
 
 const SITE_ORIGIN = () => window.location.origin;
 const BLOG_PAGE_SIZE = 9;
+const EDITORIAL_COVER = '/images/six-checks-on-every-provider.jpg';
+const editorialCategoryNames = [...new Set(EDITORIAL_BLOG_POSTS.map((article) => article.category))];
+const EDITORIAL_CATEGORIES: WPTerm[] = editorialCategoryNames.map((name, index) => ({
+  id: -(index + 1),
+  name,
+  slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+  taxonomy: 'category',
+  parent: 0,
+}));
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character] as string);
+}
+
+function editorialToPost(article: EditorialBlogPost): WPBlogPost {
+  const category = EDITORIAL_CATEGORIES.find((item) => item.name === article.category)!;
+  const contentHtml = article.sections.map((section) =>
+    `<section><h2>${escapeHtml(section.heading)}</h2>${section.paragraphs.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join('')}</section>`
+  ).join('');
+  return {
+    id: -Math.abs(article.slug.split('').reduce((hash, character) => (hash * 31 + character.charCodeAt(0)) | 0, 0)),
+    slug: article.slug,
+    title: article.title,
+    contentHtml,
+    excerpt: article.summary,
+    featuredImage: { url: article.coverImage, alt: article.coverAlt },
+    terms: [category],
+    seo: { title: `${article.title} | SolDirectory`, description: article.summary, ogImage: article.coverImage, noindex: false },
+    date: article.publishedAt,
+    modified: article.checkedAt,
+    authorName: 'SolDirectory editorial desk',
+    categories: [category],
+    editorialSource: { ...article.source, checkedAt: article.checkedAt },
+    expiresAt: article.expiresAt,
+  };
+}
+
+const ALL_EDITORIAL_POSTS = EDITORIAL_BLOG_POSTS.map(editorialToPost);
+const CURRENT_EDITORIAL_POSTS = ALL_EDITORIAL_POSTS
+  .filter((article) => !article.expiresAt || new Date(article.expiresAt).getTime() > Date.now())
 
 function formatDate(value: string): string {
   const date = new Date(value);
@@ -21,7 +61,7 @@ function readingMinutes(html: string): number {
 }
 
 function postImage(post: WPBlogPost): string {
-  return post.featuredImage?.url || bannerFor({ text: post.title, section: 'guides' });
+  return post.featuredImage?.url || EDITORIAL_COVER;
 }
 
 function BlogCard({ post, featured = false }: { post: WPBlogPost; featured?: boolean }) {
@@ -61,9 +101,14 @@ export default function BlogPage() {
     setLoading(true);
     setError('');
     setArticle(null);
+    const editorialPost = ALL_EDITORIAL_POSTS.find((post) => post.slug === slug);
     getBlogPost(slug)
-      .then((result) => { if (current) setArticle(result); })
-      .catch(() => { if (current) setError('Unable to load this article right now. Please try again shortly.'); })
+      .then((result) => { if (current) setArticle(result ?? editorialPost ?? null); })
+      .catch(() => {
+        if (!current) return;
+        setArticle(editorialPost ?? null);
+        if (!editorialPost) setError('Unable to load this article right now. Please try again shortly.');
+      })
       .finally(() => { if (current) setLoading(false); });
     return () => { current = false; };
   }, [slug]);
@@ -75,14 +120,27 @@ export default function BlogPage() {
     setLoadingMore(page > 1);
     setError('');
     Promise.all([
-      getBlogPosts({ page, search: submittedQuery, category: categoryId }),
+      getBlogPosts({ page, search: submittedQuery, category: categoryId }).catch(() => null),
       page === 1 ? getBlogCategories().catch(() => []) : Promise.resolve(categories),
     ])
       .then(([result, availableCategories]) => {
         if (!current) return;
-        setPosts((existing) => page === 1 ? result.items : [...existing, ...result.items]);
-        setTotalPages(result.totalPages);
-        setCategories(availableCategories);
+        const localMatches = CURRENT_EDITORIAL_POSTS.filter((post) => {
+          const categoryMatch = categoryId === null || post.categories.some((category) => category.id === categoryId)
+            || (categoryId > 0 && post.categories.some((category) => category.name === availableCategories.find((item) => item.id === categoryId)?.name));
+          const searchable = `${post.title} ${post.excerpt} ${post.categories.map((category) => category.name).join(' ')} ${post.contentHtml.replace(/<[^>]+>/g, ' ')}`.toLowerCase();
+          return categoryMatch && (!submittedQuery || searchable.includes(submittedQuery.toLowerCase()));
+        });
+        const remoteItems = categoryId !== null && categoryId < 0 ? [] : result?.items ?? [];
+        const remoteSlugs = new Set(remoteItems.map((post) => post.slug));
+        const localOnly = localMatches.filter((post) => !remoteSlugs.has(post.slug));
+        const nextPosts = page === 1
+          ? [...remoteItems, ...localOnly].sort((left, right) => new Date(right.date).getTime() - new Date(left.date).getTime())
+          : remoteItems;
+        setPosts((existing) => page === 1 ? nextPosts : [...existing, ...nextPosts]);
+        setTotalPages(categoryId !== null && categoryId < 0 ? 1 : result?.totalPages ?? 1);
+        const mergedCategories = [...EDITORIAL_CATEGORIES, ...availableCategories.filter((item) => !EDITORIAL_CATEGORIES.some((editorial) => editorial.name.toLowerCase() === item.name.toLowerCase()))];
+        setCategories(mergedCategories);
       })
       .catch(() => { if (current) setError('Unable to load articles right now. Please try again shortly.'); })
       .finally(() => {
@@ -101,7 +159,7 @@ export default function BlogPage() {
         description,
         ogImage: article.seo.ogImage || article.featuredImage?.url,
         canonicalUrl: canonical,
-        noindex: article.seo.noindex,
+        noindex: article.seo.noindex || (!!article.expiresAt && new Date(article.expiresAt).getTime() <= Date.now()),
       });
       setJsonLd('blog-post', {
         '@type': 'BlogPosting',
@@ -170,7 +228,9 @@ export default function BlogPage() {
               <img className="blog-article-cover" src={postImage(article)} alt={article.featuredImage?.alt || ''} />
               <div className="blog-article-body" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(article.contentHtml) }} />
               {article.modified && article.modified !== article.date && <p className="blog-updated">Updated {formatDate(article.modified)}. Check linked official sources for current requirements.</p>}
-              <aside className="blog-source-note"><strong>Keep checking the source.</strong><span>NDIS rules, prices and program details can change. Confirm current requirements with the responsible government body before acting.</span><Link to="/guides">Browse practical guides</Link></aside>
+              {article.editorialSource && <aside className="blog-source-note"><strong>Primary source · checked {formatDate(article.editorialSource.checkedAt)}</strong><a href={article.editorialSource.url} target="_blank" rel="noopener noreferrer">{article.editorialSource.label}</a><span>Read the current official notice before acting; the guidance and effective dates can change.</span></aside>}
+              {article.expiresAt && new Date(article.expiresAt).getTime() <= Date.now() && <p className="blog-updated">This scheduled notice has passed. Check the linked official source for current system availability.</p>}
+              <aside className="blog-source-note"><strong>Independent information, not personal advice.</strong><span>NDIS rules and support arrangements can change. Confirm current requirements with the responsible government body before acting.</span><Link to="/guides">Browse practical guides</Link></aside>
             </article>
           )}
         </main>
@@ -190,7 +250,7 @@ export default function BlogPage() {
             <p>Independent explainers and practical guidance for people navigating disability and aged care support in Australia.</p>
             <a className="blog-hero-link" href="#latest">Explore the latest <span aria-hidden="true">↓</span></a>
           </div>
-          <div className="blog-hero-image-wrap"><img src={bannerFor({ text: 'support coordination community', section: 'guides' })} alt="" /></div>
+          <div className="blog-hero-image-wrap"><img src={EDITORIAL_COVER} alt="A support worker talking with an older woman in a care setting" /></div>
         </section>
 
         <section className="blog-disclosure" aria-label="Editorial approach">

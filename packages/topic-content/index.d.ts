@@ -40,3 +40,31 @@ export const LANGUAGE_TOPICS: readonly Topic[];
 export function conditionShellEditorial(topic: Topic): ShellEditorial;
 export function fundingShellEditorial(topic: Topic): ShellEditorial;
 export function languageShellEditorial(topic: Topic): ShellEditorial;
+
+export interface EditorialBlogSection {
+  heading: string;
+  paragraphs: string[];
+}
+
+export interface EditorialBlogSource {
+  label: string;
+  url: string;
+  date: string;
+}
+
+export interface EditorialBlogPost {
+  slug: string;
+  title: string;
+  summary: string;
+  category: string;
+  publishedAt: string;
+  checkedAt: string;
+  expiresAt?: string;
+  coverImage: string;
+  coverAlt: string;
+  source: EditorialBlogSource;
+  additionalSources: { label: string; url: string }[];
+  sections: EditorialBlogSection[];
+}
+
+export const EDITORIAL_BLOG_POSTS: readonly EditorialBlogPost[];

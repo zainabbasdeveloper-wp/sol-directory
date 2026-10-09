@@ -118,6 +118,7 @@ function editorialBrief(update: SourceUpdate): string {
 }
 
 async function createDrafts(updates: SourceUpdate[], dryRun: boolean): Promise<{ created: number; existing: number; candidates: number }> {
+  if (dryRun) return { created: 0, existing: 0, candidates: updates.length };
   const { base, authorization } = wordpressAuth();
   let created = 0;
   let existing = 0;
@@ -130,7 +131,7 @@ async function createDrafts(updates: SourceUpdate[], dryRun: boolean): Promise<{
     const found = await check.json();
     if (Array.isArray(found) && found.length) { existing += 1; continue; }
     candidates += 1;
-    if (dryRun || created >= MAX_DRAFTS_PER_RUN) continue;
+    if (created >= MAX_DRAFTS_PER_RUN) continue;
 
     const payload = {
       title: `EDITOR REVIEW REQUIRED - NDIS source ${update.reference}`,

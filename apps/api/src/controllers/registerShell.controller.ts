@@ -13,7 +13,8 @@ import { workersForService, workersInArea } from './workersPublic.controller.js'
 import { MIN_INDEXABLE_PROVIDERS, VISIBLE_PROVIDER, areaRows, conditionRows, publicLogoUrl } from './providersPublic.controller.js';
 import { serviceEditorialFor } from '@soldirectory/service-content';
 import {
-  CONDITION_TOPICS, FUNDING_TOPICS, GUIDE_DOCS, LANGUAGE_TOPICS, conditionShellEditorial, fundingShellEditorial, languageShellEditorial,
+  CONDITION_TOPICS, EDITORIAL_BLOG_POSTS, FUNDING_TOPICS, GUIDE_DOCS, LANGUAGE_TOPICS, conditionShellEditorial, fundingShellEditorial, languageShellEditorial,
+  type EditorialBlogPost,
   type Topic, type ShellEditorial,
 } from '@soldirectory/topic-content';
 
@@ -839,7 +840,8 @@ async function fetchWpItem(restBase: 'pages' | 'services' | 'locations' | 'posts
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 6000);
   try {
-    const res = await fetch(`${base.replace(/\/$/, '')}/wp-json/wp/v2/${restBase}?slug=${encodeURIComponent(slug)}`, { signal: ctrl.signal });
+    const embed = restBase === 'posts' ? '&_embed=1' : '';
+    const res = await fetch(`${base.replace(/\/$/, '')}/wp-json/wp/v2/${restBase}?slug=${encodeURIComponent(slug)}${embed}`, { signal: ctrl.signal });
     if (!res.ok) throw new WordPressUnavailable(`WordPress responded ${res.status}`);
     const list = await res.json();
     if (!Array.isArray(list)) throw new WordPressUnavailable('Unexpected WordPress response');
@@ -1065,14 +1067,36 @@ async function fetchPublishedBlogPosts(): Promise<any[]> {
   }
 }
 
+function activeEditorialBlogPosts(): EditorialBlogPost[] {
+  const now = Date.now();
+  return EDITORIAL_BLOG_POSTS.filter((post) => !post.expiresAt || new Date(post.expiresAt).getTime() > now);
+}
+
+function editorialBlogContent(post: EditorialBlogPost): string {
+  const sections = post.sections.map((section) =>
+    `<section><h2>${esc(section.heading)}</h2>${section.paragraphs.map((paragraph) => `<p>${esc(paragraph)}</p>`).join('')}</section>`
+  ).join('');
+  const sources = [post.source, ...post.additionalSources];
+  return sections +
+    `<section><h2>Official sources</h2><ul>${sources.map((source) => `<li><a href="${esc(source.url)}" rel="noopener">${esc(source.label)}</a></li>`).join('')}</ul>` +
+    `<p>Source checked ${esc(contentDate(post.checkedAt))}. Rules and guidance can change; verify current details with the responsible agency.</p></section>`;
+}
+
 async function blogArchivePage(site: string): Promise<Page> {
-  const posts = await fetchPublishedBlogPosts();
+  const cmsPosts = await fetchPublishedBlogPosts().catch(() => []);
+  const editorialPosts = activeEditorialBlogPosts();
+  const cmsSlugs = new Set(cmsPosts.map((post: any) => post.slug));
+  const posts = [
+    ...cmsPosts,
+    ...editorialPosts.filter((post) => !cmsSlugs.has(post.slug)),
+  ].sort((left: any, right: any) => new Date(right.date ?? right.publishedAt).getTime() - new Date(left.date ?? left.publishedAt).getTime());
   const path = '/blog';
   const articleLinks = posts.map((post: any) => {
-    const title = plain(post.title?.rendered ?? '');
-    const excerpt = plain(post.excerpt?.rendered ?? '');
-    const published = contentDate(post.date);
-    return `<article><h2><a href="/blog/${esc(post.slug)}">${esc(title)}</a></h2>${published ? `<time datetime="${esc(post.date)}">${esc(published)}</time>` : ''}${excerpt ? `<p>${esc(excerpt)}</p>` : ''}</article>`;
+    const title = plain(post.title?.rendered ?? post.title ?? '');
+    const excerpt = plain(post.excerpt?.rendered ?? post.summary ?? '');
+    const date = post.date ?? post.publishedAt;
+    const published = contentDate(date);
+    return `<article><h2><a href="/blog/${esc(post.slug)}">${esc(title)}</a></h2>${published ? `<time datetime="${esc(date)}">${esc(published)}</time>` : ''}${excerpt ? `<p>${esc(excerpt)}</p>` : ''}</article>`;
   }).join('');
 
   return {
@@ -1083,7 +1107,7 @@ async function blogArchivePage(site: string): Promise<Page> {
     noindex: posts.length === 0,
     jsonLd: [
       breadcrumbLd(site, [{ name: 'Home', path: '/' }, { name: 'Updates and insights', path }]),
-      { id: 'blog-archive', data: { '@type': 'Blog', name: 'SolDirectory updates and insights', url: `${site}${path}`, blogPost: posts.map((post: any) => ({ '@type': 'BlogPosting', headline: plain(post.title?.rendered ?? ''), url: `${site}/blog/${post.slug}`, datePublished: post.date })) } },
+      { id: 'blog-archive', data: { '@type': 'Blog', name: 'SolDirectory updates and insights', url: `${site}${path}`, blogPost: posts.map((post: any) => ({ '@type': 'BlogPosting', headline: plain(post.title?.rendered ?? post.title ?? ''), url: `${site}/blog/${post.slug}`, datePublished: post.date ?? post.publishedAt })) } },
     ],
     body:
       `<nav aria-label="Breadcrumb"><a href="/">Home</a> / Updates and insights</nav>` +
@@ -1093,11 +1117,7 @@ async function blogArchivePage(site: string): Promise<Page> {
   };
 }
 
-async function blogArticlePage(site: string, slug: string): Promise<Page> {
-  if (!SLUG_RE.test(slug) || slug === 'hello-world') return notFound();
-  const post = await fetchWpItem('posts', slug);
-  if (!post || post.status !== 'publish') return notFound();
-
+function wordpressBlogArticlePage(site: string, post: any): Page {
   const title = plain(post.title?.rendered ?? '');
   if (!title) return notFound();
   const excerpt = plain(post.excerpt?.rendered ?? '');
@@ -1137,6 +1157,51 @@ async function blogArticlePage(site: string, slug: string): Promise<Page> {
       `${safeWordPressBlocks(post.content?.rendered ?? '')}` +
       `<p>NDIS rules and support arrangements can change. <a href="/guides">Browse SolDirectory guides</a> and confirm current requirements with official sources.</p></article>`,
   };
+}
+
+function editorialBlogPage(site: string, editorial: EditorialBlogPost): Page {
+  const expired = !!editorial.expiresAt && new Date(editorial.expiresAt).getTime() <= Date.now();
+  const path = `/blog/${editorial.slug}`;
+  return {
+    status: 200,
+    title: `${editorial.title} | SolDirectory`,
+    description: trimTo(editorial.summary, 158),
+    canonical: path,
+    noindex: expired,
+    ogImage: `${site}${editorial.coverImage}`,
+    ogType: 'article',
+    jsonLd: [
+      breadcrumbLd(site, [{ name: 'Home', path: '/' }, { name: 'Updates and insights', path: '/blog' }, { name: editorial.title, path }]),
+      { id: 'blog-post', data: {
+        '@type': 'BlogPosting', headline: editorial.title, description: editorial.summary,
+        datePublished: editorial.publishedAt, dateModified: editorial.checkedAt,
+        author: { '@type': 'Organization', name: 'SolDirectory editorial desk' },
+        publisher: { '@type': 'Organization', name: 'SolDirectory', url: `${site}/` },
+        mainEntityOfPage: `${site}${path}`, url: `${site}${path}`,
+        image: [`${site}${editorial.coverImage}`], articleSection: editorial.category,
+      } },
+    ],
+    body:
+      `<nav aria-label="Breadcrumb"><a href="/">Home</a> / <a href="/blog">Updates and insights</a> / ${esc(editorial.title)}</nav>` +
+      `<article><h1>${esc(editorial.title)}</h1>` +
+      `<p><time datetime="${esc(editorial.publishedAt)}">Published ${esc(contentDate(editorial.publishedAt))}</time> · ${esc(editorial.category)} · Source checked ${esc(contentDate(editorial.checkedAt))}</p>` +
+      `<p>${esc(editorial.summary)}</p>` +
+      (expired ? `<p><strong>This time-sensitive notice has passed. Check the official source for current information.</strong></p>` : '') +
+      editorialBlogContent(editorial) + `</article>`,
+  };
+}
+
+async function blogArticlePage(site: string, slug: string): Promise<Page> {
+  if (!SLUG_RE.test(slug) || slug === 'hello-world') return notFound();
+  const editorial = EDITORIAL_BLOG_POSTS.find((item) => item.slug === slug);
+  let post: any = null;
+  try {
+    post = await fetchWpItem('posts', slug);
+  } catch (error) {
+    if (!editorial) throw error;
+  }
+  if (post?.status === 'publish') return wordpressBlogArticlePage(site, post);
+  return editorial ? editorialBlogPage(site, editorial) : notFound();
 }
 
 async function genericWpPage(site: string, restBase: 'pages' | 'locations', slug: string): Promise<Page> {

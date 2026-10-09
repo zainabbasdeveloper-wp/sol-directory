@@ -1,4 +1,5 @@
 export { GUIDE_DOCS } from './guides.js';
+export { EDITORIAL_BLOG_POSTS } from './blog.js';
 
 const group = (categoryGroup, names) => names.map(([slug, name]) => ({ slug, name, categoryGroup }));
 

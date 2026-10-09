@@ -253,6 +253,8 @@ export interface WPBlogPost extends WPContentBase {
   modified: string;
   authorName: string;
   categories: WPTerm[];
+  editorialSource?: { label: string; url: string; date: string; checkedAt: string };
+  expiresAt?: string;
 }
 
 export interface WPBlogPage {
@@ -314,7 +316,7 @@ export async function getBlogPosts(input: { page?: number; search?: string; cate
     _embed: '1',
   });
   if (input.search?.trim()) params.set('search', input.search.trim());
-  if (input.category) params.set('categories', String(input.category));
+  if (input.category && input.category > 0) params.set('categories', String(input.category));
 
   const response = await fetch(`${API_URL}/wp/rest/wp-json/wp/v2/posts?${params}`);
   if (!response.ok) throw new Error(`WordPress responded ${response.status}`);
