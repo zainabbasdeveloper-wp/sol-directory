@@ -33,8 +33,8 @@ const STATUS_STYLE: Record<string, { label: string; tone: 'ok' | 'limited' | 'wa
   Closed: { label: 'Not accepting referrals', tone: 'closed' },
 };
 
-function initials(name: string): string {
-  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('') || '?';
+function initials(name?: string | null): string {
+  return (name ?? '').trim().split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('') || '?';
 }
 
 /**
@@ -489,7 +489,7 @@ export default function Directory() {
 
             <ul className={`dir-grid${pageLoading ? ' dir-grid-loading' : ''}`} aria-busy={pageLoading}>
               {results.map((p) => {
-                const name = p.tradingName || p.legalEntityName;
+                const name = p.tradingName || p.legalEntityName || 'Provider';
                 const status = STATUS_STYLE[p.intakeStatus];
                 const moreSuburbs = p.serviceSuburbCount - p.serviceSuburbs.length;
                 return (

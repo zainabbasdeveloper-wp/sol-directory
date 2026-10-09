@@ -252,7 +252,17 @@ const roundCoord = (n: number) => Math.round(n * 100) / 100;
 export async function listPublicProviders(req: Request, res: Response) {
   const page = Math.max(1, Number(req.query.page) || 1);
   const limit = Math.min(PUBLIC_MAX_LIMIT, Math.max(1, Number(req.query.limit) || 12));
-  const filter = buildProviderFilter(req.query);
+  const baseFilter = buildProviderFilter(req.query);
+  const filter = {
+    ...baseFilter,
+    $and: [
+      ...(Array.isArray(baseFilter.$and) ? baseFilter.$and : []),
+      { $or: [{ tradingName: { $regex: /\S/ } }, { legalEntityName: { $regex: /\S/ } }] },
+    ],
+  };
+  const namedProvider = { $or: [{ tradingName: { $regex: /\S/ } }, { legalEntityName: { $regex: /\S/ } }] };
+  const existingAnd = Array.isArray(filter.$and) ? filter.$and : [];
+  filter.$and = [...existingAnd, namedProvider];
 
   const [docs, total] = await Promise.all([
     findProvidersPaidFirst<any>(filter, PUBLIC_LIST_PROJECTION, { skip: (page - 1) * limit, limit }),

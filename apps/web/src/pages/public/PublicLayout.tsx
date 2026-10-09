@@ -96,7 +96,7 @@ export function PublicHeader() {
               Locations
             </Link>
             <Link to="/blog" className="public-nav-link">
-              Updates
+              Blog
             </Link>
             <Link to="/independent-workers" className="public-nav-link">
               Independent Workers

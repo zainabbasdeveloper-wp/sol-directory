@@ -3,6 +3,7 @@ import DOMPurify from 'dompurify';
 import { Link, useParams } from 'react-router-dom';
 import { getBlogCategories, getBlogPost, getBlogPosts, type WPBlogPost, type WPTerm } from '../../api/wordpressApi';
 import { applySeoTags, setJsonLd } from '../../lib/seo';
+import PageHero from '../../components/topic/PageHero';
 import { PublicFooter, PublicHeader } from './PublicLayout';
 import { EDITORIAL_BLOG_POSTS, type EditorialBlogPost } from '@soldirectory/topic-content';
 import './BlogPage.css';
@@ -243,15 +244,14 @@ export default function BlogPage() {
     <>
       <PublicHeader />
       <main className="blog-home">
-        <section className="blog-hero">
-          <div className="blog-hero-copy">
-            <span className="blog-kicker">SolDirectory journal</span>
-            <h1>Support changes. Clear answers matter.</h1>
-            <p>Independent explainers and practical guidance for people navigating disability and aged care support in Australia.</p>
-            <a className="blog-hero-link" href="#latest">Explore the latest <span aria-hidden="true">↓</span></a>
-          </div>
-          <div className="blog-hero-image-wrap"><img src={EDITORIAL_COVER} alt="A support worker talking with an older woman in a care setting" /></div>
-        </section>
+        <PageHero
+          crumbs={[{ label: 'Home', to: '/' }, { label: 'Blog' }]}
+          eyebrow="SolDirectory journal"
+          title="Support changes. Clear answers matter."
+          description="Independent explainers and practical guidance for people navigating disability and aged care support in Australia."
+          image={EDITORIAL_COVER}
+          imageAlt="A support worker talking with an older woman in a care setting"
+        />
 
         <section className="blog-disclosure" aria-label="Editorial approach">
           <strong>Independent information, not government advice.</strong>
