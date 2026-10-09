@@ -33,6 +33,9 @@ export async function getDashboardOverview(req: AuthedRequest, res: Response) {
   const since = periodStartDate(period);
   const createdFilter = since ? { createdAt: { $gte: since } } : {};
 
+  // People and providers are current totals — "Total users" and "Pending verifications" must not shrink when the period
+  // changes. Only the activity counts (leads, shortlists, "new in this period") follow the selected period.
+  const periodLeads = { ...createdFilter, status: { $ne: 'draft' } };
   const [
     totalUsers,
     roleCounts,
@@ -52,27 +55,33 @@ export async function getDashboardOverview(req: AuthedRequest, res: Response) {
     leadClosed,
     leadsWithViewsResult,
     shortlistTotal,
-    newUsersInPeriod,
+    openLeads,
+    newUsers,
+    newProviders,
+    newWorkers,
   ] = await Promise.all([
-    User.countDocuments(createdFilter),
-    User.aggregate([{ $match: createdFilter }, { $group: { _id: '$role', count: { $sum: 1 } } }]),
-    Provider.countDocuments(createdFilter),
-    Provider.countDocuments({ ...createdFilter, accountStatus: 'active' }),
-    Provider.countDocuments({ ...createdFilter, accountStatus: 'suspended' }),
-    Provider.countDocuments({ ...createdFilter, intakeStatus: 'Open to referrals' }),
-    Provider.countDocuments({ ...createdFilter, intakeStatus: { $in: ['Limited capacity', 'Waitlist only'] } }),
-    Worker.countDocuments(createdFilter),
-    Worker.countDocuments({ ...createdFilter, verificationStatus: 'approved' }),
-    Worker.countDocuments({ ...createdFilter, verificationStatus: 'awaiting_review' }),
-    Worker.countDocuments({ ...createdFilter, verificationStatus: 'rejected' }),
-    Worker.countDocuments({ ...createdFilter, published: true }),
-    Lead.countDocuments(createdFilter),
+    User.countDocuments(),
+    User.aggregate([{ $group: { _id: '$role', count: { $sum: 1 } } }]),
+    Provider.countDocuments(),
+    Provider.countDocuments({ accountStatus: 'active' }),
+    Provider.countDocuments({ accountStatus: 'suspended' }),
+    Provider.countDocuments({ intakeStatus: 'Open to referrals' }),
+    Provider.countDocuments({ intakeStatus: { $in: ['Limited capacity', 'Waitlist only'] } }),
+    Worker.countDocuments(),
+    Worker.countDocuments({ verificationStatus: 'approved' }),
+    Worker.countDocuments({ verificationStatus: 'awaiting_review' }),
+    Worker.countDocuments({ verificationStatus: 'rejected' }),
+    Worker.countDocuments({ published: true }),
+    Lead.countDocuments(periodLeads),
     Lead.countDocuments({ ...createdFilter, status: 'matched' }),
     Lead.countDocuments({ ...createdFilter, status: 'unlocked' }),
     Lead.countDocuments({ ...createdFilter, status: 'closed' }),
-    LeadView.distinct('leadId'),
+    LeadView.distinct('leadId', since ? { firstViewedAt: { $gte: since } } : {}),
     Shortlist.countDocuments(createdFilter),
-    User.countDocuments(since ? { createdAt: { $gte: since } } : { createdAt: { $gte: new Date(Date.now() - 30 * 86400000) } }),
+    Lead.countDocuments({ status: 'matched' }),
+    User.countDocuments(createdFilter),
+    Provider.countDocuments(createdFilter),
+    Worker.countDocuments(createdFilter),
   ]);
 
   // Onboarding funnel — how many providers have completed each step,
@@ -91,7 +100,7 @@ export async function getDashboardOverview(req: AuthedRequest, res: Response) {
   res.json({
     period,
     totalUsers,
-    newUsersRecently: newUsersInPeriod,
+    newInPeriod: since ? { users: newUsers, providers: newProviders, workers: newWorkers } : null,
     roleDistribution,
     providers: {
       total: providerTotal,
@@ -115,6 +124,7 @@ export async function getDashboardOverview(req: AuthedRequest, res: Response) {
       closed: leadClosed,
       viewed: leadsWithViewsResult.length,
       notViewed: Math.max(0, leadTotal - leadsWithViewsResult.length),
+      open: openLeads,
     },
     shortlists: { total: shortlistTotal },
     onboardingFunnel,

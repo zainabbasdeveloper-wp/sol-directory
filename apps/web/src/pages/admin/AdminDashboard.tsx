@@ -36,11 +36,12 @@ function greeting(): string {
   return 'Good evening';
 }
 
-function StatCard({ label, value, tone = 'default' }: { label: string; value: number; tone?: 'default' | 'warn' }) {
+function StatCard({ label, value, tone = 'default', added }: { label: string; value: number; tone?: 'default' | 'warn'; added?: { n: number; period: string } }) {
   return (
     <div className={`ad-stat-card ${tone === 'warn' ? 'ad-stat-card-warn' : ''}`}>
       <p className="ad-stat-value"><Counter value={value} /></p>
       <p className="ad-stat-label">{label}</p>
+      {added && <p className={`ad-stat-added ${added.n > 0 ? 'ad-stat-added-up' : ''}`}>{added.n > 0 ? `+${added.n}` : 'No change'} {added.period}</p>}
     </div>
   );
 }
@@ -152,6 +153,8 @@ export default function AdminDashboard() {
   }
 
   if (!overview) return null;
+  const periodLabel = PERIODS.find((p) => p.value === period)?.label.toLowerCase() ?? '';
+  const added = (n?: number) => (n === undefined ? undefined : { n, period: period === 'today' ? 'today' : `in ${periodLabel}` });
   const maxFunnel = Math.max(1, ...overview.onboardingFunnel.map((f) => f.completedCount));
 
   return (
@@ -205,19 +208,19 @@ export default function AdminDashboard() {
 
       {/* Top stats */}
       <div className="ad-stat-grid">
-        <StatCard label="Total users" value={overview.totalUsers} />
-        <StatCard label="Providers" value={overview.roleDistribution.provider} />
-        <StatCard label="NDIS workers" value={overview.roleDistribution.worker} />
+        <StatCard label="Total users" value={overview.totalUsers} added={added(overview.newInPeriod?.users)} />
+        <StatCard label="Providers" value={overview.roleDistribution.provider} added={added(overview.newInPeriod?.providers)} />
+        <StatCard label="NDIS workers" value={overview.roleDistribution.worker} added={added(overview.newInPeriod?.workers)} />
         <StatCard label="Support coordinators" value={overview.roleDistribution.coordinator} />
         <StatCard label="Participants / families" value={overview.roleDistribution.participant} />
         <StatCard label="Pending verifications" value={overview.pendingVerifications} tone="warn" />
         <StatCard label="Active providers" value={overview.providers.active} />
-        <StatCard label="Open leads" value={overview.leads.matched} />
+        <StatCard label="Open leads" value={overview.leads.open} />
         {ops && <StatCard label="Enquiries, last 14 days" value={ops.enquiries.daily.reduce((n, d) => n + d.count, 0)} />}
         {ops && <StatCard label="Emails sent, last 24h" value={ops.email.last24h.sent} />}
         {ops && <StatCard label="Emails failed, last 24h" value={ops.email.last24h.failed} tone={ops.email.last24h.failed > 0 ? 'warn' : 'default'} />}
       </div>
-      <p className="ad-stat-footnote">Figures are live counts for the selected period. No comparison shown where prior-period history isn't tracked.</p>
+      <p className="ad-stat-footnote">Totals are current and update every 30 seconds. The green "+N" shows how many were added in the selected period; activity panels further down follow that period.</p>
 
       {/* Live graphs */}
       <div className="ad-two-col">

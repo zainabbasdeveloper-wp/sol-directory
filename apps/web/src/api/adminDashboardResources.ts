@@ -23,11 +23,11 @@ async function get<T>(path: string): Promise<T> {
 export interface DashboardOverview {
   period: string;
   totalUsers: number;
-  newUsersRecently: number;
+  newInPeriod: { users: number; providers: number; workers: number } | null;
   roleDistribution: Record<string, number>;
   providers: { total: number; active: number; suspended: number; acceptingClients: number; atCapacity: number; incompleteOnboarding: number };
   workers: { total: number; approved: number; awaitingReview: number; rejected: number; published: number };
-  leads: { total: number; matched: number; unlocked: number; closed: number; viewed: number; notViewed: number };
+  leads: { total: number; matched: number; unlocked: number; closed: number; viewed: number; notViewed: number; open: number };
   shortlists: { total: number };
   onboardingFunnel: { step: string; completedCount: number }[];
   pendingVerifications: number;
