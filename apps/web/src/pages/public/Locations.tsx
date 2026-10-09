@@ -8,6 +8,7 @@ import { STATE_INFO, LOCATION_FAQS } from '../../data/locationInfo';
 import { KIND_BY_TYPE, STATES, registerPath, stateByCode } from '../../lib/registerMeta';
 import { listPublicAreas, type CountRow } from '../../api/profilesApi';
 import { getRegisterHub, getServiceSuburbs, type RegisterHub } from '../../api/registerApi';
+import Counter from '../../components/Counter';
 import { useSiteStats } from '../../hooks/useSiteStats';
 import { providerCountLabel } from '../../lib/statsCounts';
 import { applySeoTags, setJsonLd } from '../../lib/seo';
@@ -76,18 +77,18 @@ export default function Locations() {
     else if (suburbState) navigate(`/ndis-providers/${STATES.find((s) => s.code === suburbState)?.slug}`);
   }
 
-  const headline: { value: string; label: string }[] = [];
-  if (ndisTotal > 0) headline.push({ value: fmt(ndisTotal), label: 'NDIS register listings' });
-  if (agedTotal > 0) headline.push({ value: fmt(agedTotal), label: 'Aged care register listings' });
-  if (suburbsWithListings > 0) headline.push({ value: fmt(suburbsWithListings), label: 'Suburbs with listings' });
-  if (stats && stats.providersListed > 0) headline.push({ value: fmt(stats.providersListed), label: 'Provider profiles on SolDirectory' });
+  const headline: { value: number; label: string }[] = [];
+  if (ndisTotal > 0) headline.push({ value: ndisTotal, label: 'NDIS register listings' });
+  if (agedTotal > 0) headline.push({ value: agedTotal, label: 'Aged care register listings' });
+  if (suburbsWithListings > 0) headline.push({ value: suburbsWithListings, label: 'Suburbs with listings' });
+  if (stats && stats.providersListed > 0) headline.push({ value: stats.providersListed, label: 'Provider profiles on SolDirectory' });
 
   return (
     <>
       <PublicHeader />
 
       <div className="directory-page-header directory-page-header--locations" style={hubHeaderStyle('locations')}>
-        <div className="directory-page-header-inner">
+        <div className="directory-page-header-inner loc-hero">
           <span className="eyebrow eyebrow-light"><span className="eyebrow-rule" />Cities, suburbs and regions</span>
           <h1 className="section-heading section-heading-light">Find providers near you</h1>
           <p className="directory-page-subtitle">
@@ -107,13 +108,20 @@ export default function Locations() {
 
           {headline.length > 0 && (
             <ul className="loc-headline" aria-label="Directory at a glance">
-              {headline.map((h) => <li key={h.label}><strong>{h.value}</strong><span>{h.label}</span></li>)}
+              {headline.map((h) => <li key={h.label}><strong><Counter value={h.value} /></strong><span>{h.label}</span></li>)}
             </ul>
           )}
         </div>
       </div>
 
       <main className="directory-section directory-content-page loc-page">
+        <nav className="loc-state-nav" aria-label="Jump to a state or territory">
+          {STATE_INFO.map((info) => {
+            const meta = stateByCode(info.code)!;
+            return <a key={info.code} href={`#state-${meta.slug}`}><strong>{info.code}</strong><span>{meta.name}</span></a>;
+          })}
+        </nav>
+
         <section className="directory-intro" aria-labelledby="locations-intro-heading">
           <span className="directory-section-label">Search around daily life</span>
           <h2 id="locations-intro-heading">Start with the suburb where support is needed</h2>
@@ -134,7 +142,7 @@ export default function Locations() {
               const a = aged?.states[info.code] ?? 0;
               const members = memberByState[info.code] ?? 0;
               return (
-                <article className="loc-state-card" key={info.code}>
+                <article className="loc-state-card" key={info.code} id={`state-${meta.slug}`}>
                   <div className="loc-state-photo" style={{ backgroundImage: `url(${bannerFor({ text: meta.name, section: 'locations', state: info.code })})` }}>
                     <span className="loc-state-code">{info.code}</span>
                   </div>
@@ -142,9 +150,9 @@ export default function Locations() {
                     <h3>{meta.name}</h3>
                     <p className="loc-state-capital">Capital: {info.capital}</p>
                     <dl className="loc-state-counts">
-                      <div><dt>NDIS register</dt><dd>{n > 0 ? fmt(n) : '—'}</dd></div>
-                      <div><dt>Aged care register</dt><dd>{a > 0 ? fmt(a) : '—'}</dd></div>
-                      {members > 0 && <div><dt>Profiles</dt><dd>{fmt(members)}</dd></div>}
+                      <div><dt>NDIS register</dt><dd>{n > 0 ? <Counter value={n} /> : '—'}</dd></div>
+                      <div><dt>Aged care register</dt><dd>{a > 0 ? <Counter value={a} /> : '—'}</dd></div>
+                      {members > 0 && <div><dt>Profiles</dt><dd><Counter value={members} /></dd></div>}
                     </dl>
                     <div className="loc-state-links">
                       <Link to={registerPath(KIND_BY_TYPE.ndis, meta.slug)}>NDIS providers</Link>

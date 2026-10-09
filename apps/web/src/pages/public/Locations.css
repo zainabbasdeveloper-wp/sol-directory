@@ -1,18 +1,30 @@
 .loc-page { display: flex; flex-direction: column; gap: clamp(36px, 5vw, 56px); }
 
-/* Header search + at-a-glance numbers */
-.loc-search { display: grid; grid-template-columns: minmax(150px, 0.8fr) minmax(220px, 2fr) auto; gap: 10px; max-width: 760px; margin-top: 26px; }
+/* Banner: everything centred, with an even overlay so centred text stays readable */
+.directory-page-header--locations::after { background: linear-gradient(180deg, rgba(5, 27, 58, 0.86) 0%, rgba(8, 39, 79, 0.78) 100%); }
+.loc-hero { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.loc-hero .eyebrow { justify-content: center; }
+.loc-hero .section-heading { max-width: 30ch; margin-left: auto; margin-right: auto; }
+.loc-hero .directory-page-subtitle { max-width: 62ch; margin-left: auto; margin-right: auto; }
+.loc-search { display: grid; grid-template-columns: minmax(150px, 0.8fr) minmax(220px, 2fr) auto; gap: 10px; width: min(100%, 760px); margin-top: 28px; text-align: left; }
 .loc-search select, .loc-search input { min-height: 52px; padding: 0 16px; border: 0; border-radius: 10px; background: #fff; color: #10233F; font: inherit; font-size: 15px; }
 .loc-search select:focus, .loc-search input:focus { outline: 3px solid rgba(175, 207, 255, 0.9); outline-offset: 0; }
 .loc-search button { min-height: 52px; padding: 0 26px; border-radius: 10px; white-space: nowrap; }
-.loc-headline { display: flex; flex-wrap: wrap; gap: 12px 34px; margin: 26px 0 0; padding: 0; list-style: none; }
-.loc-headline li { display: flex; flex-direction: column; gap: 2px; }
-.loc-headline strong { color: #fff; font-size: clamp(24px, 3vw, 32px); font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+.loc-headline { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px clamp(28px, 5vw, 64px); margin: 34px 0 0; padding: 22px 0 0; list-style: none; border-top: 1px solid rgba(255, 255, 255, 0.22); width: min(100%, 860px); }
+.loc-headline li { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.loc-headline strong { color: #fff; font-size: clamp(26px, 3.4vw, 38px); font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .loc-headline span { color: #d3e3fb; font-size: 13px; }
+
+/* One row of every state and territory */
+.loc-state-nav { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 8px; margin-top: calc(-1 * clamp(20px, 3vw, 36px)); }
+.loc-state-nav a { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 12px 6px; background: #fff; border: 1px solid #DFE7F0; border-radius: 10px; color: #0B2343; text-align: center; box-shadow: 0 4px 12px rgba(11, 45, 92, 0.05); transition: border-color 150ms ease, transform 150ms ease; }
+.loc-state-nav a:hover { border-color: #1769E0; transform: translateY(-2px); }
+.loc-state-nav strong { font-size: 16px; letter-spacing: 0.02em; }
+.loc-state-nav span { color: #52657D; font-size: 11.5px; line-height: 1.25; }
 
 /* State cards */
 .loc-state-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr)); gap: 18px; margin-top: 20px; }
-.loc-state-card { display: flex; flex-direction: column; overflow: hidden; background: #fff; border: 1px solid #DFE7F0; border-radius: 12px; box-shadow: 0 6px 18px rgba(11, 45, 92, 0.05); transition: transform 180ms ease, box-shadow 180ms ease; }
+.loc-state-card { scroll-margin-top: 90px; display: flex; flex-direction: column; overflow: hidden; background: #fff; border: 1px solid #DFE7F0; border-radius: 12px; box-shadow: 0 6px 18px rgba(11, 45, 92, 0.05); transition: transform 180ms ease, box-shadow 180ms ease; }
 .loc-state-card:hover { transform: translateY(-3px); box-shadow: 0 14px 30px rgba(11, 45, 92, 0.12); }
 .loc-state-photo { position: relative; height: 128px; background: #0B2D5C center / cover no-repeat; }
 .loc-state-photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(11, 45, 92, 0) 40%, rgba(11, 45, 92, 0.6)); }
@@ -24,8 +36,9 @@
 .loc-state-counts div { display: flex; flex-direction: column; }
 .loc-state-counts dt { color: #52657D; font-size: 11.5px; order: 2; }
 .loc-state-counts dd { margin: 0; color: #0B2343; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
-.loc-state-links { display: flex; flex-direction: column; gap: 4px; margin-top: auto; padding-top: 10px; border-top: 1px solid #E8EEF7; }
-.loc-state-links a { color: #1769E0; font-size: 14px; font-weight: 600; padding: 4px 0; }
+.loc-state-links { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 12px; border-top: 1px solid #E8EEF7; }
+.loc-state-links a { padding: 6px 11px; border: 1px solid #D5E2F5; border-radius: 100px; background: #F3F7FB; color: #1769E0; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+.loc-state-links a:hover { background: #1769E0; border-color: #1769E0; color: #fff; text-decoration: none; }
 .loc-state-links a:hover { text-decoration: underline; }
 
 /* Cities and regional centres */
@@ -65,6 +78,7 @@
 .loc-official a { color: #1769E0; font-weight: 600; }
 
 @media (max-width: 900px) {
+  .loc-state-nav { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 0; }
   .loc-search { grid-template-columns: 1fr; }
   .loc-centres { grid-template-columns: 1fr; }
   .loc-guidance-grid { grid-template-columns: 1fr; }
