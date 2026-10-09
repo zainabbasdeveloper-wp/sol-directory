@@ -58,11 +58,16 @@ async function fetchWpSlugs(base: string, path: string): Promise<string[]> {
   try {
     const slugs: string[] = [];
     for (let page = 1; ; page += 1) {
-      const res = await fetch(`${base}${path}?per_page=100&page=${page}&_fields=slug,meta.seo_noindex`);
+      const params = new URLSearchParams({ per_page: '100', page: String(page), _fields: 'slug,meta.seo_noindex,yoast_head_json' });
+      const res = await fetch(`${base}${path}?${params}`);
       if (!res.ok) return page === 1 ? [] : slugs;
       const items = await res.json();
       if (!Array.isArray(items)) return slugs;
-      slugs.push(...items.filter((i: any) => !i?.meta?.seo_noindex).map((i: any) => i.slug).filter(Boolean));
+      slugs.push(...items.filter((item: any) => {
+        const customNoindex = item?.meta?.seo_noindex === true || item?.meta?.seo_noindex === 1 || item?.meta?.seo_noindex === '1';
+        const pluginNoindex = item?.yoast_head_json?.robots?.index === 'noindex';
+        return !customNoindex && !pluginNoindex;
+      }).map((item: any) => item.slug).filter(Boolean));
       const totalPages = Number(res.headers.get('x-wp-totalpages')) || 1;
       if (page >= totalPages) return slugs;
     }
@@ -101,15 +106,21 @@ async function buildPageUrls(): Promise<UrlEntry[]> {
   // shouldn't take the whole sitemap down, it just means those URLs
   // are temporarily missing from it until the next regeneration.
   if (wpUrl) {
-    const [pages, services, locations] = await Promise.all([
+    const [pages, services, locations, posts] = await Promise.all([
       fetchWpSlugs(wpUrl, '/wp-json/wp/v2/pages'),
       fetchWpSlugs(wpUrl, '/wp-json/wp/v2/services'),
       fetchWpSlugs(wpUrl, '/wp-json/wp/v2/locations'),
+      fetchWpSlugs(wpUrl, '/wp-json/wp/v2/posts'),
     ]);
     // WordPress ships a placeholder "Sample Page"; it's never real content.
     pages.filter((slug) => slug !== 'sample-page').forEach((slug) => paths.push(`/${slug}`));
     services.forEach((slug) => paths.push(`/services/${slug}`));
     locations.forEach((slug) => paths.push(`/locations/${slug}`));
+    const publishedPosts = posts.filter((slug) => slug !== 'hello-world');
+    if (publishedPosts.length) {
+      paths.push('/blog');
+      publishedPosts.forEach((slug) => paths.push(`/blog/${slug}`));
+    }
   }
 
   const urls = [...new Set(paths)].map((path) => ({ path }));

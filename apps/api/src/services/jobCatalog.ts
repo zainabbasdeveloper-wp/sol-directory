@@ -53,6 +53,15 @@ export const JOB_CATALOG: JobDefinition[] = [
     command: 'npm run job:capacity-check -w apps/api',
     everyHours: 168,
   },
+  {
+    name: 'ndis-news-monitor',
+    label: 'NDIS source update monitor',
+    description: 'Checks official NDIS news and recent policy pages, then creates private editorial briefs for new or updated sources.',
+    schedule: 'Every hour',
+    cron: '0 * * * *',
+    command: 'npm run job:ndis-news-monitor -w apps/api',
+    everyHours: 1,
+  },
 ];
 
 export type JobHealth = 'ok' | 'running' | 'failed' | 'overdue' | 'never_run';

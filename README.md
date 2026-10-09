@@ -137,6 +137,22 @@ required, `S3_FORCE_PATH_STYLE=true`. Keep the bucket private and
 configure CORS to allow `PUT` from `CLIENT_ORIGIN` with the
 `Content-Type` header. Do not place credentials in tracked files.
 
+## Editorial blog
+
+The public `/blog` archive and `/blog/:slug` articles use published
+WordPress `Posts`. Write and publish articles in the normal WordPress
+editor; set an excerpt, featured image, category and SEO fields there.
+Drafts and posts marked `noindex` stay out of the public archive and
+sitemap. While no real article is published, the empty archive remains
+available but is noindex and omitted from the sitemap.
+
+The NDIS monitor creates private editorial briefs from official source
+links; it does not write or publish copied/AI-generated articles. Review
+the linked source, confirm effective dates and write original content
+before publishing. This protects readers from unverified policy changes
+and respects the NDIA's stated copyright restrictions on commercial
+reuse of its material.
+
 ## Scheduled jobs
 
 The API jobs are one-shot, cron-friendly commands. A typical production
@@ -154,6 +170,16 @@ these with `LEAD_ESCALATION_DELAY_MINUTES`,
 `LEAD_ESCALATION_BATCH_SIZE`, `MAX_TOTAL_PROVIDERS_PER_LEAD`, and
 `LEAD_ESCALATION_LEADS_PER_RUN`. It stops escalating as soon as an
 existing match has viewed or responded to the lead.
+
+The hourly `job:ndis-news-monitor` checks the official NDIS latest-news
+and recent-content pages. New source versions become private WordPress
+editorial briefs, deduplicated by source URL and detected date. Run
+`npm run job:ndis-news-monitor -w apps/api -- --dry-run` to preview
+candidates. The job never publishes automatically or copies source
+article text/images; an editor must write and verify original content.
+The NDIA's published copyright terms restrict commercial reuse, so
+seek permission or legal advice before republishing or adapting its
+protected material.
 
 ## What's still a TODO, explicitly
 

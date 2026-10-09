@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { load } from 'cheerio';
 import type { Request, Response } from 'express';
 import RegisterListing from '../models/RegisterListing.js';
 import Provider from '../models/Provider.js';
@@ -106,6 +107,7 @@ interface Page {
   jsonLd: { id: string; data: Record<string, unknown> }[];
   body: string;
   ogImage?: string; // absolute URL
+  ogType?: 'website' | 'article';
 }
 
 const li = (href: string, text: string, extra = '') => `<li><a href="${esc(href)}">${esc(text)}</a>${extra ? ` ${esc(extra)}` : ''}</li>`;
@@ -281,7 +283,7 @@ function render(html: string, req: Request, page: Page, site: string): string {
   const head = [
     page.canonical ? `<link rel="canonical" href="${esc(site + page.canonical)}" />` : '',
     page.canonical ? `<meta property="og:url" content="${esc(site + page.canonical)}" />` : '',
-    `<meta property="og:type" content="website" />`,
+    `<meta property="og:type" content="${page.ogType ?? 'website'}" />`,
     `<meta property="og:site_name" content="SolDirectory" />`,
     `<meta property="og:title" content="${esc(page.title)}" />`,
     `<meta property="og:description" content="${esc(page.description)}" />`,
@@ -828,7 +830,7 @@ function decodeEntities(s: string): string {
 }
 const plain = (html: string) => decodeEntities(String(html ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim());
 
-async function fetchWpItem(restBase: 'pages' | 'services' | 'locations', slug: string): Promise<any | null> {
+async function fetchWpItem(restBase: 'pages' | 'services' | 'locations' | 'posts', slug: string): Promise<any | null> {
   const cacheKey = `${restBase}:${slug}`;
   const hit = wpItemCache.get(cacheKey);
   if (hit && Date.now() - hit.at < WP_TTL_MS) return hit.item;
@@ -1001,6 +1003,142 @@ async function servicePage(site: string, slug: string): Promise<Page> {
   };
 }
 
+const BLOG_PAGE_SIZE = 12;
+
+function contentDate(value: string | undefined): string {
+  if (!value) return '';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function safeWordPressBlocks(markup: string): string {
+  const $ = load(markup);
+  $('script, style, iframe, form, svg').remove();
+  const blocks: string[] = [];
+  const blockTags = new Set(['h2', 'h3', 'h4', 'p', 'blockquote']);
+  const listTags = new Set(['ul', 'ol']);
+
+  $('body').children().each((_, element) => {
+    const tag = element.tagName?.toLowerCase() ?? '';
+    if (blockTags.has(tag)) {
+      const content = $(element).text().trim();
+      if (content) blocks.push(`<${tag}>${esc(content)}</${tag}>`);
+    } else if (listTags.has(tag)) {
+      const items = $(element).children('li').toArray()
+        .map((item) => $(item).text().trim())
+        .filter(Boolean)
+        .map((item) => `<li>${esc(item)}</li>`)
+        .join('');
+      if (items) blocks.push(`<${tag}>${items}</${tag}>`);
+    } else {
+      const content = $(element).text().trim();
+      if (content) blocks.push(`<p>${esc(content)}</p>`);
+    }
+  });
+
+  if (!blocks.length) {
+    const content = $('body').text().trim();
+    if (content) blocks.push(`<p>${esc(content)}</p>`);
+  }
+  return blocks.join('');
+}
+
+async function fetchPublishedBlogPosts(): Promise<any[]> {
+  const base = process.env.WORDPRESS_URL;
+  if (!base) throw new WordPressUnavailable('WORDPRESS_URL is not set');
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 6000);
+  try {
+    const params = new URLSearchParams({ status: 'publish', per_page: String(BLOG_PAGE_SIZE), page: '1', orderby: 'date', order: 'desc', _embed: '1' });
+    const response = await fetch(`${base.replace(/\/$/, '')}/wp-json/wp/v2/posts?${params}`, { signal: ctrl.signal });
+    if (!response.ok) throw new WordPressUnavailable(`WordPress responded ${response.status}`);
+    const posts = await response.json();
+    if (!Array.isArray(posts)) throw new WordPressUnavailable('Unexpected WordPress posts response');
+    return posts.filter((post: any) => post.slug !== 'hello-world'
+      && post.meta?.seo_noindex !== true
+      && post.meta?.seo_noindex !== '1'
+      && post.yoast_head_json?.robots?.index !== 'noindex');
+  } catch (error) {
+    throw error instanceof WordPressUnavailable ? error : new WordPressUnavailable(String((error as Error).message));
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function blogArchivePage(site: string): Promise<Page> {
+  const posts = await fetchPublishedBlogPosts();
+  const path = '/blog';
+  const articleLinks = posts.map((post: any) => {
+    const title = plain(post.title?.rendered ?? '');
+    const excerpt = plain(post.excerpt?.rendered ?? '');
+    const published = contentDate(post.date);
+    return `<article><h2><a href="/blog/${esc(post.slug)}">${esc(title)}</a></h2>${published ? `<time datetime="${esc(post.date)}">${esc(published)}</time>` : ''}${excerpt ? `<p>${esc(excerpt)}</p>` : ''}</article>`;
+  }).join('');
+
+  return {
+    status: 200,
+    title: 'NDIS updates and practical insights | SolDirectory',
+    description: 'Independent explainers on NDIS changes, provider responsibilities and practical support decisions, with links to official sources.',
+    canonical: path,
+    noindex: posts.length === 0,
+    jsonLd: [
+      breadcrumbLd(site, [{ name: 'Home', path: '/' }, { name: 'Updates and insights', path }]),
+      { id: 'blog-archive', data: { '@type': 'Blog', name: 'SolDirectory updates and insights', url: `${site}${path}`, blogPost: posts.map((post: any) => ({ '@type': 'BlogPosting', headline: plain(post.title?.rendered ?? ''), url: `${site}/blog/${post.slug}`, datePublished: post.date })) } },
+    ],
+    body:
+      `<nav aria-label="Breadcrumb"><a href="/">Home</a> / Updates and insights</nav>` +
+      `<h1>NDIS updates and practical insights</h1>` +
+      `<p>Independent explainers and practical guidance for people navigating disability and aged care support in Australia. We link to official sources and note when guidance was published or updated. Confirm current rules directly with the responsible agency.</p>` +
+      (articleLinks || `<p>New explainers and practical updates will appear here. In the meantime, <a href="/guides">browse our guides</a> and confirm current information with official sources.</p>`),
+  };
+}
+
+async function blogArticlePage(site: string, slug: string): Promise<Page> {
+  if (!SLUG_RE.test(slug) || slug === 'hello-world') return notFound();
+  const post = await fetchWpItem('posts', slug);
+  if (!post || post.status !== 'publish') return notFound();
+
+  const title = plain(post.title?.rendered ?? '');
+  if (!title) return notFound();
+  const excerpt = plain(post.excerpt?.rendered ?? '');
+  const description = trimTo(post.meta?.seo_description || post.yoast_head_json?.description || excerpt || `${title} | SolDirectory`, 158);
+  const path = `/blog/${post.slug}`;
+  const categories = (post._embedded?.['wp:term'] ?? []).flat()
+    .filter((term: any) => term?.taxonomy === 'category' && term.name)
+    .map((term: any) => term.name);
+  const image = post._embedded?.['wp:featuredmedia']?.[0]?.source_url;
+  const published = post.date || post.date_gmt;
+  const modified = post.modified || published;
+
+  return {
+    status: 200,
+    title: post.meta?.seo_title || post.yoast_head_json?.title || `${title} | SolDirectory`,
+    description,
+    canonical: path,
+    noindex: post.meta?.seo_noindex === true || post.meta?.seo_noindex === '1' || post.yoast_head_json?.robots?.index === 'noindex',
+    ogImage: post.meta?.seo_og_image || image,
+    ogType: 'article',
+    jsonLd: [
+      breadcrumbLd(site, [{ name: 'Home', path: '/' }, { name: 'Updates and insights', path: '/blog' }, { name: title, path }]),
+      { id: 'blog-post', data: {
+        '@type': 'BlogPosting', headline: title, description, datePublished: published, dateModified: modified,
+        author: { '@type': 'Organization', name: 'SolDirectory' },
+        publisher: { '@type': 'Organization', name: 'SolDirectory', url: `${site}/` },
+        mainEntityOfPage: `${site}${path}`, url: `${site}${path}`,
+        ...(image ? { image: [image] } : {}),
+        ...(categories.length ? { articleSection: categories } : {}),
+      } },
+    ],
+    body:
+      `<nav aria-label="Breadcrumb"><a href="/">Home</a> / <a href="/blog">Updates and insights</a> / ${esc(title)}</nav>` +
+      `<article><h1>${esc(title)}</h1>` +
+      `${published ? `<p><time datetime="${esc(published)}">Published ${esc(contentDate(published))}</time>${modified && modified !== published ? ` · Updated ${esc(contentDate(modified))}` : ''}</p>` : ''}` +
+      `${categories.length ? `<p>${categories.map((category: string) => esc(category)).join(' · ')}</p>` : ''}` +
+      `${safeWordPressBlocks(post.content?.rendered ?? '')}` +
+      `<p>NDIS rules and support arrangements can change. <a href="/guides">Browse SolDirectory guides</a> and confirm current requirements with official sources.</p></article>`,
+  };
+}
+
 async function genericWpPage(site: string, restBase: 'pages' | 'locations', slug: string): Promise<Page> {
   if (!SLUG_RE.test(slug)) return notFound();
   const item = await fetchWpItem(restBase, slug);
@@ -1143,11 +1281,19 @@ async function serviceLocationPage(site: string, serviceSlug: string, stateSlug:
     : `<h2>SolDirectory providers</h2><p>No SolDirectory providers have registered ${esc(serviceLower)} for ${esc(suburbName)} yet. Send a free request and any provider who covers this area and support can respond.</p>`;
 
   const regList = [...ndisListings.map((d: any) => ({ ...d, type: 'ndis' as const })), ...agedListings.map((d: any) => ({ ...d, type: 'aged_care' as const }))];
+  const registerBrowseLinks = [
+    ...(ndisListings.length
+      ? [`<a href="/ndis-providers/${stateSlug}/${suburbSlug}?category=${encodeURIComponent(service)}">See all NDIS register listings in ${esc(suburbName)}</a>`]
+      : []),
+    ...(agedListings.length
+      ? [`<a href="/aged-care-providers/${stateSlug}/${suburbSlug}?category=${encodeURIComponent(service)}">See all aged care register listings</a>`]
+      : []),
+  ];
   const registerHtml = registerTotal > 0
     ? `<h2>Listed on the public register</h2>` +
       `<p>${fmt(registerTotal)} organisation${registerTotal === 1 ? '' : 's'} on the NDIS and My Aged Care registers list ${esc(serviceLower)} among their supports for ${esc(suburbName)}, ${esc(code)}. A register listing shows what the register says, not who currently has capacity.</p>` +
       `<ul>${regList.slice(0, 12).map((d) => li(`/${d.type === 'ndis' ? 'ndis-providers' : 'aged-care-providers'}/${d.slug}`, registerName(d), (d.supportCategories ?? []).slice(0, 3).join(', '))).join('')}</ul>` +
-      `<p><a href="/ndis-providers/${stateSlug}/${suburbSlug}?category=${encodeURIComponent(service)}">See all NDIS register listings in ${esc(suburbName)}</a> · <a href="/aged-care-providers/${stateSlug}/${suburbSlug}?category=${encodeURIComponent(service)}">aged care register listings</a></p>`
+      (registerBrowseLinks.length ? `<p>${registerBrowseLinks.join(' · ')}</p>` : '')
     : '';
 
   // Other real services with demand in this exact suburb, and other
@@ -1316,6 +1462,20 @@ export async function registerShell(req: Request, res: Response) {
     page = languageHubPage(site);
   } else if (root === 'support-coordinators' && parts.length === 1) {
     page = supportCoordinatorsPage(site);
+  } else if (root === 'blog' && parts.length === 1) {
+    try {
+      page = await blogArchivePage(site);
+    } catch (error) {
+      if (error instanceof WordPressUnavailable) return res.status(502).send('Content service unavailable');
+      throw error;
+    }
+  } else if (root === 'blog' && parts.length === 2) {
+    try {
+      page = await blogArticlePage(site, parts[1]);
+    } catch (error) {
+      if (error instanceof WordPressUnavailable) return res.status(502).send('Content service unavailable');
+      throw error;
+    }
   } else if (root === 'directory' && parts.length === 3 && parts[1] === 'in') {
     page = await providerFilterPage(site, 'area', parts[2], pageNum);
   } else if (root === 'directory' && parts.length === 2) {

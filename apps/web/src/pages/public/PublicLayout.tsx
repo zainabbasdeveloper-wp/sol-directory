@@ -95,6 +95,9 @@ export function PublicHeader() {
             <Link to="/locations" className="public-nav-link">
               Locations
             </Link>
+            <Link to="/blog" className="public-nav-link">
+              Updates
+            </Link>
             <Link to="/independent-workers" className="public-nav-link">
               Independent Workers
             </Link>
@@ -142,6 +145,7 @@ export function PublicFooter() {
         </div>
         <div className="public-footer-col">
           <Link className="public-footer-heading" to="/guides">Guides</Link>
+          <Link to="/blog">NDIS updates & insights</Link>
           <Link to="/guides/ndis-price-guide">NDIS price guide</Link>
           <Link to="/guides/choosing-a-provider">Choosing a provider</Link>
           <Link to="/guides/plan-management-basics">Plan management basics</Link>
