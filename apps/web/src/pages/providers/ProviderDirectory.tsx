@@ -10,7 +10,7 @@ import RegisterCard from '../public/register/RegisterCard';
 import { KIND_BY_TYPE, STATES, categoryForService, registerPath, type RegisterType } from '../../lib/registerMeta';
 import './ProviderDirectory.css';
 
-const PAGE = 12;
+const PAGE = 24;
 const fmt = (n: number) => n.toLocaleString('en-AU');
 const slugify = (s: string) => s.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 

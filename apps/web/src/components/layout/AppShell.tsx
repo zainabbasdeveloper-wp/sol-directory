@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import Header from './Header';
+import { PublicFooter } from '../../pages/public/PublicLayout';
 import './AppShell.css';
 
 export default function AppShell() {
@@ -9,6 +10,7 @@ export default function AppShell() {
       <main id="main" className="app-main">
         <Outlet />
       </main>
+      <PublicFooter />
     </>
   );
 }
