@@ -232,7 +232,7 @@
 .reg-request-alt { display: flex; flex-direction: column; justify-content: center; gap: 10px; padding: clamp(22px, 3vw, 34px); background: #F3F7FB; border-left: 1px solid #DFE8F2; }
 .reg-request-alt strong { color: #0B2343; font-size: 17px; }
 .reg-request-alt span { color: #52657D; font-size: 14.5px; line-height: 1.6; }
-.reg-request-alt .btn-outline { align-self: flex-start; }
+.reg-request-alt .sd-btn { align-self: flex-start; margin-top: 4px; }
 @media (max-width: 820px) {
   .reg-request { grid-template-columns: 1fr; }
   .reg-request-alt { border-left: 0; border-top: 1px solid #DFE8F2; }

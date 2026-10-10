@@ -63,3 +63,14 @@ input, select, textarea {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* Shared buttons for newer screens: full size, rounded, same on every page */
+.sd-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 24px; border: 1.5px solid transparent; border-radius: 12px; font: inherit; font-size: 15px; font-weight: 700; line-height: 1.2; text-align: center; text-decoration: none; white-space: nowrap; cursor: pointer; transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease, color 160ms ease, transform 160ms ease; }
+.sd-btn:focus-visible { outline: 3px solid #8CB8FF; outline-offset: 2px; }
+.sd-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.sd-btn-lg { min-height: 54px; padding: 0 30px; font-size: 15.5px; }
+.sd-btn-primary { background: linear-gradient(135deg, #1769E0, #2F80ED); color: #fff; box-shadow: 0 6px 18px rgba(23, 105, 224, 0.3); }
+.sd-btn-primary:hover:not(:disabled) { background: linear-gradient(135deg, #125ac2, #2670d6); box-shadow: 0 10px 24px rgba(23, 105, 224, 0.38); transform: translateY(-1px); }
+.sd-btn-outline { background: #fff; color: #0F4FA8; border-color: #B9CFEF; }
+.sd-btn-outline:hover:not(:disabled) { background: #F2F7FF; border-color: #1769E0; color: #0B3F8F; }
+@media (prefers-reduced-motion: reduce) { .sd-btn { transition: none; } .sd-btn-primary:hover:not(:disabled) { transform: none; } }

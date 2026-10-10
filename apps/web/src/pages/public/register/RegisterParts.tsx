@@ -68,14 +68,14 @@ export function RequestProviderCta({ type, slug, name, where }: { type: 'ndis' |
           <li>Goes to this provider only</li>
           <li>Free, with no obligation</li>
         </ul>
-        <button type="button" className="btn-gradient btn-lg" onClick={() => openMatchModal({ provider: { type, slug, name } })}>
+        <button type="button" className="sd-btn sd-btn-primary sd-btn-lg" onClick={() => openMatchModal({ provider: { type, slug, name } })}>
           Request support from this provider →
         </button>
       </div>
       <div className="reg-request-alt">
         <strong>Not sure who to choose?</strong>
         <span>Get matched, free: send one request and hear from several suitable providers in {where}.</span>
-        <button type="button" className="btn-outline" onClick={() => openMatchModal()}>Get matched, free</button>
+        <button type="button" className="sd-btn sd-btn-outline sd-btn-lg" onClick={() => openMatchModal()}>Get matched, free</button>
       </div>
     </section>
   );

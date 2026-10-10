@@ -30,7 +30,7 @@ export default function MyRequests() {
           <h2 id="mr-heading">My requests</h2>
           <p>Follow each request: who received it, who has looked at it and who has taken it up.</p>
         </div>
-        <button type="button" className="btn-gradient" onClick={() => openMatchModal()}>New request</button>
+        <button type="button" className="sd-btn sd-btn-primary" onClick={() => openMatchModal()}>New request</button>
       </div>
 
       {error && <p className="mr-empty" role="alert">{error}</p>}

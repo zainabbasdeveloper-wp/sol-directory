@@ -365,7 +365,7 @@ export default function MatchingWizard() {
 
   return (
     <div className="mw-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) requestClose(); }}>
-      <div className="mw-modal" role="dialog" aria-modal="true" aria-labelledby="mw-heading">
+      <div className={`mw-modal${phase === 'success' ? ' mw-modal-success' : ''}`} role="dialog" aria-modal="true" aria-labelledby="mw-heading">
         <button type="button" className="mw-close" onClick={requestClose} aria-label="Close">✕</button>
 
         {phase !== 'success' && (
@@ -483,7 +483,8 @@ export default function MatchingWizard() {
 
           {phase === 'success' && (
             <div className="mw-success">
-              <span className="mw-success-icon"><IconCheckCircleBig /></span>
+              <div className="mw-success-band"><span className="mw-success-icon"><IconCheckCircleBig /></span></div>
+              <div className="mw-success-body">
               <h2 id="mw-heading" ref={headingRef} tabIndex={-1} className="mw-question">{sentTo ? `Thank you. Your request for ${sentTo} has been sent.` : 'Thank you. Your request has been sent.'}</h2>
               <p className="mw-supporting">{sentTo ? 'We are passing your request on and will email you a confirmation.' : 'We are processing your request and identifying relevant providers.'}</p>
               <div className="mw-next-steps mw-next-steps-center">
@@ -492,12 +493,13 @@ export default function MatchingWizard() {
               </div>
               <p className="mw-success-line">We have emailed you a confirmation.</p>
               <div className="mw-success-actions">
-                <button type="button" className="btn-gradient" onClick={reset}>Back to SolDirectory</button>
+                <button type="button" className="sd-btn sd-btn-primary sd-btn-lg" onClick={reset}>Back to SolDirectory</button>
                 {sentTo && (
-                  <button type="button" className="btn-outline" onClick={() => { reset(); setTimeout(() => openMatchModal(), 50); }}>
+                  <button type="button" className="sd-btn sd-btn-outline sd-btn-lg" onClick={() => { reset(); setTimeout(() => openMatchModal(), 50); }}>
                     Also hear from other providers
                   </button>
                 )}
+              </div>
               </div>
             </div>
           )}

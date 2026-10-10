@@ -52,7 +52,7 @@ export default function TrackRequest() {
             <div className="trk-card trk-error" role="alert">
               <h1>We couldn’t open that request</h1>
               <p>{error}</p>
-              <Link className="btn-gradient" to="/find-a-provider">Find a provider</Link>
+              <Link className="sd-btn sd-btn-primary" to="/find-a-provider">Find a provider</Link>
             </div>
           ) : !request ? (
             <div className="trk-card" aria-busy="true"><div className="trk-skel" style={{ width: '40%', height: 26 }} /><div className="trk-skel" style={{ height: 14, marginTop: 18 }} /><div className="trk-skel" style={{ height: 14, marginTop: 10, width: '80%' }} /></div>
@@ -75,8 +75,8 @@ export default function TrackRequest() {
               </section>
 
               <div className="trk-actions">
-                <Link className="btn-gradient btn-lg" to={request.searchUrl.replace(window.location.origin, '') || '/find-a-provider'}>Compare providers near you</Link>
-                <button type="button" className="btn-outline btn-lg" onClick={() => openMatchModal()}>Get matched, free</button>
+                <Link className="sd-btn sd-btn-primary sd-btn-lg" to={request.searchUrl.replace(window.location.origin, '') || '/find-a-provider'}>Compare providers near you</Link>
+                <button type="button" className="sd-btn sd-btn-outline sd-btn-lg" onClick={() => openMatchModal()}>Get matched, free</button>
               </div>
 
               <section className="trk-card trk-save">
@@ -88,13 +88,13 @@ export default function TrackRequest() {
                   ) : (
                     <>
                       <div><strong>Keep it with your account</strong><span>Follow this request from your dashboard, along with any others.</span></div>
-                      <button type="button" className="btn-outline" onClick={saveToAccount} disabled={saved === 'saving'}>{saved === 'saving' ? 'Saving…' : 'Save to my dashboard'}</button>
+                      <button type="button" className="sd-btn sd-btn-outline" onClick={saveToAccount} disabled={saved === 'saving'}>{saved === 'saving' ? 'Saving…' : 'Save to my dashboard'}</button>
                     </>
                   )
                 ) : (
                   <>
                     <div><strong>Want to follow it from a dashboard?</strong><span>Create a free account or log in, then open this link again to save it.</span></div>
-                    <Link className="btn-outline" to={`/login?returnTo=${encodeURIComponent(`/track/${id}?t=${token}`)}`}>Log in</Link>
+                    <Link className="sd-btn sd-btn-outline" to={`/login?returnTo=${encodeURIComponent(`/track/${id}?t=${token}`)}`}>Log in</Link>
                   </>
                 )}
               </section>

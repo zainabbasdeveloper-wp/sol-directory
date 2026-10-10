@@ -257,3 +257,23 @@
 
 .mw-sidebar-progress { margin: 14px 0 0; font-size: 12.5px; line-height: 1.5; opacity: 0.9; }
 .mw-sidebar-progress button { padding: 0; border: 0; background: none; color: inherit; font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }
+
+/* ---- Thank-you screen: a proper card, not text floating on white ---- */
+.mw-modal-success { width: min(620px, 100%); height: auto; max-height: 100%; flex-direction: column; background: #fff; }
+.mw-modal-success .mw-content-full { padding: 0; align-items: stretch; justify-content: flex-start; text-align: center; overflow-y: auto; }
+.mw-modal-success .mw-success { max-width: none; width: 100%; }
+.mw-success-band { display: flex; align-items: center; justify-content: center; padding: 34px 20px 30px; background: linear-gradient(135deg, #0B2D5C 0%, #1769E0 100%); }
+.mw-success-band .mw-success-icon { margin: 0; width: 76px; height: 76px; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255, 255, 255, 0.16); color: #fff; box-shadow: 0 0 0 10px rgba(255, 255, 255, 0.08); }
+.mw-success-band svg { width: 44px; height: 44px; }
+.mw-success-body { padding: clamp(22px, 4vw, 34px) clamp(20px, 5vw, 44px) clamp(24px, 4vw, 36px); }
+.mw-modal-success .mw-question { font-size: clamp(22px, 2.8vw, 28px); line-height: 1.25; margin-bottom: 10px; }
+.mw-modal-success .mw-supporting { margin-bottom: 4px; }
+.mw-modal-success .mw-next-steps { margin-top: 20px; }
+.mw-modal-success .mw-success-line { margin-top: 18px; color: #52657D; }
+.mw-modal-success .mw-success-actions { margin-top: 22px; flex-wrap: wrap; justify-content: center; gap: 12px; }
+.mw-modal-success .mw-close { background: rgba(255, 255, 255, 0.2); color: #fff; }
+.mw-modal-success .mw-close:hover { background: rgba(255, 255, 255, 0.32); }
+@media (max-width: 640px) {
+  .mw-modal-success { height: 100%; }
+  .mw-modal-success .mw-success-actions .sd-btn { flex: 1 1 100%; white-space: normal; }
+}
