@@ -11,6 +11,7 @@ import RoleDonutChart from '../../components/charts/RoleDonutChart';
 import UserGrowthChart from '../../components/charts/UserGrowthChart';
 import DailyBarChart from '../../components/charts/DailyBarChart';
 import { useOperations } from '../../hooks/useOperations';
+import AdminAnalytics, { ExportMenu } from './AdminAnalytics';
 import { timeAgo, pct } from './adminFormat';
 import './AdminDashboard.css';
 import './AdminOperations.css';
@@ -192,6 +193,7 @@ export default function AdminDashboard() {
           <select className="ad-period-select" value={period} onChange={(e) => setPeriod(e.target.value)}>
             {PERIODS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
           </select>
+          <ExportMenu period={period} periodLabel={PERIODS.find((p) => p.value === period)?.label ?? ''} />
         </div>
       </div>
 
@@ -293,6 +295,8 @@ export default function AdminDashboard() {
           </section>
         </div>
       )}
+
+      <AdminAnalytics period={period} periodLabel={PERIODS.find((p) => p.value === period)?.label ?? ''} />
 
       <div className="ad-two-col">
         {/* Provider overview */}

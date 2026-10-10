@@ -131,3 +131,50 @@ export async function sendTestAdminEmail(): Promise<{ sent: boolean; to: string 
   if (!res.ok) throw new ApiError(data.error ?? `Request failed (${res.status})`, res.status);
   return data;
 }
+
+export interface AnalyticsData {
+  period: string;
+  generatedAt: string;
+  compare: null | {
+    current: { users: number; providers: number; workers: number; enquiries: number; emailsSent: number };
+    previous: { users: number; providers: number; workers: number; enquiries: number; emailsSent: number };
+  };
+  monthly: {
+    month: string; worker: number; provider: number; coordinator: number; participant: number;
+    cumulativeUsers: number; enquiries: number; emailsSent: number;
+  }[];
+  breakdowns: {
+    enquiriesInPeriod: number;
+    byService: { label: string; count: number }[];
+    byState: { label: string; count: number }[];
+    byFunding: { label: string; count: number }[];
+    byWeekday: { label: string; count: number }[];
+  };
+  firstResponse: { medianMinutes: number | null; sample: number };
+  plans: Record<string, number>;
+  claims: Record<string, number>;
+  directory: { claimed: number; total: number };
+  waitingOverDay: number;
+}
+export function getAnalytics(period: string): Promise<AnalyticsData> {
+  return get(`/admin/dashboard/analytics?period=${period}`);
+}
+
+export type ExportType = 'enquiries' | 'users' | 'providers' | 'workers' | 'emails';
+/** Downloads one CSV. The request carries the admin's token, so it cannot be a plain link. */
+export async function downloadExport(type: ExportType, period: string): Promise<void> {
+  const res = await fetch(`${API_URL}/admin/dashboard/export?type=${type}&period=${period}`, { headers: authHeaders() });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new ApiError(data.error ?? `Export failed (${res.status})`, res.status);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `soldirectory-${type}-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}

@@ -243,7 +243,6 @@ button.blog-share-btn { background: #fff; color: #29446b; font-family: inherit; 
 .blog-share--bar .blog-share-btn--copy { width: auto; min-width: 40px; padding: 0 27px 0 25px; }
 .blog-share--bar .blog-share-btn--copy .blog-share-copy-text { display: inline; }
 button.blog-share-btn.is-copied { background: #E4F5EC; color: #177C4B; }
-button.blog-share-btn:hover:not(.is-copied) { color: #025bcc; }
 button.blog-share-btn--native { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
 @media (max-width: 600px) {
   .blog-share--bar .blog-share-btn--copy { padding: 0 14px; }
@@ -251,8 +250,9 @@ button.blog-share-btn--native { background: var(--color-primary); border-color: 
 
 .blog-byline-logo { display: block; height: 26px; width: auto; }
 
-/* Hover states that keep the text readable: light fill + #025bcc text for Email and Copy link, darker fill for Share… */
-.blog-share-btn--email:hover, button.blog-share-btn--copy:hover:not(.is-copied) { background: var(--color-primary-tint); border-color: #025bcc; color: #025bcc; }
+/* Hover: white text on a solid fill */
+button.blog-share-btn:hover:not(.is-copied) { color: #fff; }
+.blog-share-btn--email:hover, button.blog-share-btn--copy:hover:not(.is-copied) { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
 button.blog-share-btn--native:hover { background: #025bcc; border-color: #025bcc; color: #fff; }
 .blog-share--panel .blog-share-row { gap: 12px; }
 .blog-share--bar .blog-share-row { gap: 10px; }

@@ -5,6 +5,7 @@ import {
   getNotifications, markNotificationsRead,
 } from '../controllers/admin.dashboard.controller.js';
 import { getOperations, sendTestAdminEmail } from '../controllers/admin.operations.controller.js';
+import { getAnalytics, exportCsv } from '../controllers/admin.analytics.controller.js';
 import { requireAuth, requireRole } from '../middleware/auth.middleware.js';
 
 const router = Router();
@@ -19,6 +20,8 @@ router.get('/providers-by-state', requireAuth, adminOnly, getProviderByState);
 router.get('/worker-breakdowns', requireAuth, adminOnly, getWorkerBreakdowns);
 router.get('/provider-activity', requireAuth, adminOnly, getProviderActivityTable);
 router.get('/operations', requireAuth, adminOnly, getOperations);
+router.get('/analytics', requireAuth, adminOnly, getAnalytics);
+router.get('/export', requireAuth, adminOnly, exportCsv);
 router.post('/test-email', requireAuth, adminOnly, sendTestAdminEmail);
 router.get('/search', requireAuth, adminOnly, searchAdmin);
 router.get('/notifications', requireAuth, adminOnly, getNotifications);

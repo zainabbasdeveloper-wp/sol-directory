@@ -225,3 +225,7 @@
   .app-account-dropdown { min-width: 200px; }
   .app-main { padding-bottom: 56px; }
 }
+
+.app-brand { display: inline-flex; align-items: center; }
+.app-brand-logo { display: block; height: 34px; width: auto; }
+@media (max-width: 720px) { .app-brand-logo { height: 28px; } }

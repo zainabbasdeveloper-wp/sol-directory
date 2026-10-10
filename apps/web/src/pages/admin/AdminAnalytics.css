@@ -1,0 +1,64 @@
+.ax-wrap { display: flex; flex-direction: column; gap: 20px; }
+.ax-heading-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-top: 8px; }
+.ax-heading { margin: 0 0 4px; font-size: 20px; font-weight: 700; }
+.ax-dim { color: var(--color-text-muted, #5A6B84); font-weight: 400; font-size: 12.5px; }
+.ax-note { margin: 0; padding: 10px 14px; border-radius: 10px; background: var(--color-primary-tint, #F2F7FF); font-size: 13px; }
+.ax-note-warn { margin-top: 12px; background: #FFF6E0; }
+.ax-ok { color: #177C4B; }
+.ax-bad { color: #B4232F; }
+
+/* Comparison cards */
+.ax-compare { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; }
+.ax-compare-card { display: flex; flex-direction: column; gap: 4px; padding: 16px; background: #fff; border: 1px solid var(--color-border, #E8EEF7); border-radius: 12px; }
+.ax-compare-label { color: var(--color-text-muted, #5A6B84); font-size: 12.5px; font-weight: 600; }
+.ax-compare-card strong { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+.ax-delta { font-size: 12.5px; font-weight: 700; }
+.ax-up { color: #177C4B; }
+.ax-down { color: #B4232F; }
+.ax-flat { color: var(--color-text-muted, #5A6B84); }
+
+.ax-span-2 { grid-column: 1 / -1; }
+
+/* Progress cards */
+.ax-progress { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.ax-progress-card { display: flex; flex-direction: column; gap: 10px; }
+.ax-progress-card .ad-panel-title { margin-bottom: 4px; }
+.ax-big { margin: 0; font-size: 34px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+.ax-progress-card p { margin: 0; }
+.ax-stack { display: flex; height: 12px; border-radius: 100px; overflow: hidden; background: #EEF1F6; }
+.ax-stack span { display: block; height: 100%; }
+.ax-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0; padding: 0; list-style: none; font-size: 13px; }
+.ax-legend li { display: flex; align-items: center; gap: 6px; }
+.ax-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+
+/* Export menu */
+.ax-menu { position: relative; }
+.ax-menu-btn { display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 16px; border-radius: 8px; border: 1px solid var(--color-border-strong, #DDE4EF); background: #fff; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+.ax-menu-btn:hover { border-color: var(--color-primary, #1769E0); color: var(--color-primary, #1769E0); }
+.ax-menu-panel { position: absolute; z-index: 60; top: calc(100% + 8px); right: 0; width: min(380px, 92vw); padding: 10px; background: #fff; border: 1px solid var(--color-border, #E8EEF7); border-radius: 12px; box-shadow: 0 18px 44px rgba(11, 45, 92, 0.2); }
+.ax-menu-title { margin: 6px 10px 8px; font-size: 12px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--color-text-muted, #5A6B84); }
+.ax-menu-title span { text-transform: none; letter-spacing: 0; font-weight: 500; }
+.ax-menu-item { display: flex; flex-direction: column; gap: 2px; width: 100%; padding: 10px 12px; border: 0; border-radius: 8px; background: none; text-align: left; font: inherit; cursor: pointer; }
+.ax-menu-item:hover:not(:disabled) { background: var(--color-primary-tint, #F2F7FF); }
+.ax-menu-item:disabled { opacity: 0.6; cursor: wait; }
+.ax-menu-item strong { font-size: 14px; }
+.ax-menu-item span { font-size: 12px; color: var(--color-text-muted, #5A6B84); }
+.ax-menu-sep { height: 1px; margin: 6px 8px; background: var(--color-border, #E8EEF7); }
+.ax-menu-msg { margin: 8px 12px 0; font-size: 12.5px; font-weight: 600; }
+.ax-menu-note { margin: 10px 12px 4px; font-size: 11.5px; line-height: 1.5; color: var(--color-text-muted, #5A6B84); }
+
+@media (max-width: 900px) {
+  .ax-progress { grid-template-columns: 1fr; }
+}
+
+/* Print / save as PDF: the whole dashboard on paper, without navigation, buttons or the page footer */
+@media print {
+  .app-header, .public-footer, .ad-no-print, .ad-search-wrap, .ad-period-select, .skip-link, .acc-fab, [class*="accessib"] { display: none !important; }
+  body, .app-main { background: #fff !important; }
+  .app-main { padding: 0 !important; max-width: none !important; }
+  .ad-page { gap: 16px; }
+  .ad-panel, .ax-compare-card, .ad-stat-card { break-inside: avoid; box-shadow: none !important; }
+  .ad-two-col { grid-template-columns: 1fr 1fr; }
+  .ad-stat-card { animation: none !important; }
+  canvas { max-width: 100% !important; }
+}
