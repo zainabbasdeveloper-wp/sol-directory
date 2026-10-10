@@ -53,6 +53,8 @@ export interface LeadDoc extends Document {
   draftExpiresAt?: Date;
   /** The service the visitor was looking at when they opened the form (e.g. "Personal care"), taken from the page, not asked. Only used to pick who to tell about the enquiry; it never changes matching. */
   serviceContext?: string;
+  /** Set when the person asked for one specific public-register provider by name (the "request support from this provider" button). Such an enquiry goes only to that provider. */
+  preferredListing?: { type: 'ndis' | 'aged_care'; slug: string; name: string } | null;
   // --- Follow-up emails to the person who made the request (see leadFollowUp.service.ts) ---
   /** The requester clicked "stop these emails". Nothing optional is sent after this. */
   emailOptOut?: boolean;
@@ -97,6 +99,7 @@ const leadSchema = new Schema<LeadDoc>(
     status: { type: String, enum: ['draft', 'matched', 'unlocked', 'closed'], default: 'matched' },
     draftExpiresAt: { type: Date, expires: 0 }, // TTL: delete once draftExpiresAt is in the past
     serviceContext: String,
+    preferredListing: { type: new Schema({ type: String, slug: String, name: String }, { _id: false }), default: undefined },
     emailOptOut: { type: Boolean, default: false },
     viewedNoticeAt: Date,
     respondedNoticeAt: Date,

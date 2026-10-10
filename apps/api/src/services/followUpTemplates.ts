@@ -89,6 +89,23 @@ export function providerLeadReminderTemplate(input: { providerName: string; coun
 
 // --- To a register listing (a business that appears on the public register but has not joined) -------------------
 
+/** Sent to a public-register business when someone asked for it BY NAME. Still carries none of the person's details. */
+export function registerRequestedNoticeTemplate(input: { listingName: string; suburb?: string; listingUrl: string; unsubscribeUrl: string }): Email {
+  const place = input.suburb ? ` near ${escapeHtml(input.suburb)}` : '';
+  const html = renderEmailLayout({
+    preheader: 'Someone asked SolDirectory to send their request to your organisation',
+    heading: 'Someone has asked for you by name',
+    bodyHtml: `
+      <p>Hello ${escapeHtml(input.listingName)},</p>
+      <p>A person${place} has asked SolDirectory to send their support request to <strong>${escapeHtml(input.listingName)}</strong> specifically. Your organisation is listed on the public register.</p>
+      <p>We have not shared the person's details. To see requests like this, with their contact details, open your free listing and manage it.</p>`,
+    ctaLabel: 'Manage your listing',
+    ctaUrl: input.listingUrl,
+    footerHtml: footer(input.unsubscribeUrl, 'We sent this to the business email address published for your register listing.'),
+  });
+  return { subject: 'A person has asked SolDirectory to send you their request', html };
+}
+
 export function registerLeadNoticeTemplate(input: { listingName: string; category: string; suburb: string; listingUrl: string; unsubscribeUrl: string }): Email {
   const html = renderEmailLayout({
     preheader: `Someone near ${input.suburb} is looking for ${input.category.toLowerCase()}`,

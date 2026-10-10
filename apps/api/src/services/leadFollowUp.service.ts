@@ -9,7 +9,7 @@ import { categoryForNeed } from './needCategory.js';
 import { siteOrigin, unsubscribeUrl } from './emailTokens.js';
 import {
   requestViewedTemplate, requestRespondedTemplate, weeklyMatchesTemplate,
-  providerLeadReminderTemplate, registerLeadNoticeTemplate,
+  providerLeadReminderTemplate, registerLeadNoticeTemplate, registerRequestedNoticeTemplate,
 } from './followUpTemplates.js';
 
 /**
@@ -266,5 +266,39 @@ export async function notifyRegisterListings(lead: LeadDoc): Promise<{ sent: num
   } catch (err) {
     console.error('[leadFollowUp] notifyRegisterListings failed:', err);
     return { sent: 0, reason: 'error' };
+  }
+}
+
+/**
+ * The person asked for one register business by name. If that business has a verified email on file, has not opted
+ * out and has not joined, tell it so (no details about the person are included). Off unless REGISTER_LEAD_EMAILS=1,
+ * like every other message to a register business. Never throws.
+ */
+export async function notifyPreferredListing(lead: LeadDoc, listingId: unknown): Promise<{ sent: boolean; reason?: string }> {
+  if (process.env.REGISTER_LEAD_EMAILS !== '1') return { sent: false, reason: 'disabled' };
+  try {
+    const listing = await RegisterListing.findById(listingId).select('type slug name email contactVerified emailOptOut claimStatus').lean();
+    if (!listing) return { sent: false, reason: 'listing not found' };
+    if (listing.claimStatus === 'claimed') return { sent: false, reason: 'member' };
+    if (listing.emailOptOut) return { sent: false, reason: 'opted out' };
+    if (!listing.contactVerified || !listing.email) return { sent: false, reason: 'no verified email' };
+    try {
+      await RegisterLeadNotice.create({ leadId: lead._id, listingId: listing._id });
+    } catch {
+      return { sent: false, reason: 'already sent' };
+    }
+    const path = listing.type === 'aged_care' ? 'aged-care-providers' : 'ndis-providers';
+    const unsub = unsubscribeUrl('listing', String(listing._id));
+    const ok = await EmailService.sendTemplate(
+      listing.email as string,
+      registerRequestedNoticeTemplate({ listingName: listing.name, suburb: lead.suburb, listingUrl: `${siteOrigin()}/${path}/${listing.slug}`, unsubscribeUrl: unsub }),
+      { unsubscribeUrl: unsub },
+    );
+    if (ok) await RegisterLeadNotice.updateOne({ leadId: lead._id, listingId: listing._id }, { $set: { delivered: true } });
+    else await RegisterLeadNotice.deleteOne({ leadId: lead._id, listingId: listing._id });
+    return { sent: ok, reason: ok ? undefined : 'send failed' };
+  } catch (err) {
+    console.error('[leadFollowUp] notifyPreferredListing failed:', err);
+    return { sent: false, reason: 'error' };
   }
 }

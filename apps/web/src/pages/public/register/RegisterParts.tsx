@@ -48,6 +48,39 @@ export function GetMatchedCta({ title, body }: { title: string; body: string }) 
   );
 }
 
+/**
+ * "Ask this provider" — a request sent to ONE named register provider, next to the general "Get matched, free" option.
+ * The form opens in provider mode (see MatchModalContext), and the server routes the request to that provider only.
+ */
+export function RequestProviderCta({ type, slug, name, where }: { type: 'ndis' | 'aged_care'; slug: string; name: string; where: string }) {
+  const { openMatchModal } = useMatchModal();
+  return (
+    <section className="reg-request" aria-labelledby="reg-request-heading">
+      <div className="reg-request-main">
+        <span className="reg-request-eyebrow">Ask this provider directly</span>
+        <h2 id="reg-request-heading">Request support from {name}</h2>
+        <p>
+          Tell us what you need and where. We send your request to {name} only, and your phone number and email are never published.
+          It is free, and you are not obliged to go ahead.
+        </p>
+        <ul className="reg-request-points">
+          <li>Takes about two minutes</li>
+          <li>Goes to this provider only</li>
+          <li>Free, with no obligation</li>
+        </ul>
+        <button type="button" className="btn-gradient btn-lg" onClick={() => openMatchModal({ provider: { type, slug, name } })}>
+          Request support from this provider →
+        </button>
+      </div>
+      <div className="reg-request-alt">
+        <strong>Not sure who to choose?</strong>
+        <span>Get matched, free: send one request and hear from several suitable providers in {where}.</span>
+        <button type="button" className="btn-outline" onClick={() => openMatchModal()}>Get matched, free</button>
+      </div>
+    </section>
+  );
+}
+
 /** The provider-facing counterpart to GetMatchedCta — for a business reading a register page, not a participant. */
 export function ListBusinessCta({ title, body }: { title: string; body: string }) {
   return (

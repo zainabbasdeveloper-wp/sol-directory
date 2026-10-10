@@ -214,3 +214,26 @@
   .reg-glance > div:first-child { border-top: 0; }
   .reg-cta .btn-gradient, .reg-cta .btn-outline { width: 100%; text-align: center; }
 }
+
+/* Request support from one named provider */
+.reg-hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 14px; margin-top: 22px; }
+.reg-hero-secondary { min-height: 52px; padding: 0 20px; border: 1.5px solid rgba(255, 255, 255, 0.7); border-radius: 10px; background: transparent; color: #fff; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; transition: background 150ms ease, border-color 150ms ease; }
+.reg-hero-secondary:hover { background: rgba(255, 255, 255, 0.14); border-color: #fff; }
+.reg-hero-note { margin: 12px 0 0; color: rgba(255, 255, 255, 0.82); font-size: 13.5px; }
+
+.reg-request { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(240px, 1fr); gap: 0; margin: 28px 0; overflow: hidden; border: 1px solid #cfe0f8; border-radius: 16px; background: #fff; box-shadow: 0 10px 30px rgba(11, 45, 92, 0.08); }
+.reg-request-main { padding: clamp(22px, 3vw, 34px); background: linear-gradient(180deg, #f5f9ff, #fff); }
+.reg-request-eyebrow { display: block; margin-bottom: 8px; color: #0F4FA8; font-size: 12px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+.reg-request-main h2 { margin: 0 0 10px; color: #0B2343; font-size: clamp(22px, 2.4vw, 28px); line-height: 1.2; overflow-wrap: anywhere; }
+.reg-request-main p { margin: 0 0 14px; color: #40546D; font-size: 16px; line-height: 1.7; max-width: 62ch; }
+.reg-request-points { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 0 0 20px; padding: 0; list-style: none; }
+.reg-request-points li { position: relative; padding-left: 22px; color: #0B2343; font-size: 14.5px; font-weight: 600; }
+.reg-request-points li::before { content: ''; position: absolute; left: 0; top: 5px; width: 12px; height: 7px; border-left: 2.5px solid #1F9D63; border-bottom: 2.5px solid #1F9D63; transform: rotate(-45deg); }
+.reg-request-alt { display: flex; flex-direction: column; justify-content: center; gap: 10px; padding: clamp(22px, 3vw, 34px); background: #F3F7FB; border-left: 1px solid #DFE8F2; }
+.reg-request-alt strong { color: #0B2343; font-size: 17px; }
+.reg-request-alt span { color: #52657D; font-size: 14.5px; line-height: 1.6; }
+.reg-request-alt .btn-outline { align-self: flex-start; }
+@media (max-width: 820px) {
+  .reg-request { grid-template-columns: 1fr; }
+  .reg-request-alt { border-left: 0; border-top: 1px solid #DFE8F2; }
+}

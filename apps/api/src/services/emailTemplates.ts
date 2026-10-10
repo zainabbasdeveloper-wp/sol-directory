@@ -84,6 +84,8 @@ export interface LeadConfirmationDetails {
   careFor?: string;
   timeframe?: string;
   funding?: string;
+  /** The public-register provider the person asked for by name, if any. */
+  provider?: string;
 }
 
 export function leadConfirmationTemplate(input: {
@@ -100,6 +102,7 @@ export function leadConfirmationTemplate(input: {
   const place = [d.suburb, d.state].filter(Boolean).join(', ');
   const rows: [string, string | undefined][] = [
     ['Reference', input.requestNumber],
+    ['Requested provider', d.provider],
     ['Looking for', service],
     ['Where', place],
     ['Who it is for', d.careFor],
@@ -117,15 +120,21 @@ export function leadConfirmationTemplate(input: {
     preheader: `We've received your request. Your reference is ${input.requestNumber}.`,
     heading: "We've received your request",
     bodyHtml: `
-      <p style="margin:0 0 18px;">Thank you${service ? ` for asking about <strong>${escapeHtml(service)}</strong>` : ''}. Your request is with SolDirectory, and providers that match it can now see it.</p>
+      <p style="margin:0 0 18px;">${d.provider
+        ? `Thank you. Your request for <strong>${escapeHtml(d.provider)}</strong> is with SolDirectory, and we are passing it on to them.`
+        : `Thank you${service ? ` for asking about <strong>${escapeHtml(service)}</strong>` : ''}. Your request is with SolDirectory, and providers that match it can now see it.`}</p>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F4F8FD; border:1px solid #E1ECFB; border-radius:12px; margin:0 0 24px;"><tr><td style="padding:16px 20px;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${summary}</table>
       </td></tr></table>
       <p style="margin:0 0 12px; font-weight:700; color:${NAVY}; font-size:16px;">What happens next</p>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-        ${step(1, 'Providers review your request', 'Matching providers see what you asked for. They do not see your contact details unless they take it up.')}
+        ${d.provider
+          ? `${step(1, 'We pass your request on', `Your request goes to ${escapeHtml(d.provider)} only. They do not see your contact details unless they take it up.`)}
+        ${step(2, 'They get in touch if they can help', 'Response times vary by provider, service and area. We will email you when your request is looked at.')}
+        ${step(3, 'You choose', 'You are never obliged to use anyone. You can compare other providers at any time, ask about prices and availability, and pick the one that suits you.')}`
+          : `${step(1, 'Providers review your request', 'Matching providers see what you asked for. They do not see your contact details unless they take it up.')}
         ${step(2, 'A provider gets in touch', 'Most people hear back within a few business days, though this varies by service and area. We will email you when a provider looks at your request.')}
-        ${step(3, 'You choose', 'You are never obliged to use anyone. Compare providers, ask about prices and availability, and pick the one that suits you.')}
+        ${step(3, 'You choose', 'You are never obliged to use anyone. Compare providers, ask about prices and availability, and pick the one that suits you.')}`}
       </table>
       <p style="margin:6px 0 0;">You do not have to wait: you can look at providers in your area now and contact them directly.</p>`,
     ctaLabel: 'Browse providers near you',

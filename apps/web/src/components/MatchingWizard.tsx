@@ -107,6 +107,12 @@ const PLAN_OPTIONS: Option[] = [
 
 const EMAIL_RE = /.+@.+\..+/;
 
+const providerNextSteps = (name: string) => [
+  `We send your request to ${name}. Only that provider is asked.`,
+  'If they are able to help, they will get in touch with you directly.',
+  'You can compare other providers at any time and you are never obliged to use anyone.',
+];
+
 const NEXT_STEPS = [
   'We compare your request with provider service areas, funding arrangements and confirmed capacity.',
   'Relevant providers may be notified and may contact you directly.',
@@ -114,7 +120,8 @@ const NEXT_STEPS = [
 ];
 
 export default function MatchingWizard() {
-  const { isOpen, closeMatchModal } = useMatchModal();
+  const { isOpen, closeMatchModal, openMatchModal, provider } = useMatchModal();
+  const preferredProvider = provider ? { type: provider.type, slug: provider.slug } : undefined;
   const [form, setForm] = useState<MatchFormData>(EMPTY_FORM);
   const [stepIndex, setStepIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>('wizard');
@@ -122,6 +129,7 @@ export default function MatchingWizard() {
   const [error, setError] = useState('');
   const [confirmClose, setConfirmClose] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [sentTo, setSentTo] = useState('');
   const [submitError, setSubmitError] = useState('');
   const [serviceOptions, setServiceOptions] = useState<ActiveService[]>([]);
   // Backend Lead._id for this in-progress enquiry, once autosaved at
@@ -192,6 +200,7 @@ export default function MatchingWizard() {
           ...currentForm,
           service: currentForm.service.trim() || SERVICE_NOT_SURE,
           serviceContext: serviceContextFromPath(window.location.pathname),
+          preferredProvider,
         }),
       });
       if (res.ok) {
@@ -249,6 +258,7 @@ export default function MatchingWizard() {
     setPhase('wizard');
     setError('');
     setConfirmClose(false);
+    setSentTo('');
     closeMatchModal();
   }
 
@@ -324,6 +334,7 @@ export default function MatchingWizard() {
           ...form,
           service: form.service.trim() || SERVICE_NOT_SURE,
           serviceContext: serviceContextFromPath(window.location.pathname),
+          preferredProvider,
         }),
       });
       if (!res.ok) {
@@ -331,6 +342,7 @@ export default function MatchingWizard() {
         throw new ApiError(body.error ?? 'Something went wrong sending your request.', res.status);
       }
       clearPersistedDraft();
+      setSentTo(provider?.name ?? '');
       setPhase('success');
     } catch (err) {
       setSubmitError(err instanceof ApiError ? err.message : 'Something went wrong sending your request. Please try again.');
@@ -348,9 +360,12 @@ export default function MatchingWizard() {
 
         {phase !== 'success' && (
           <aside className="mw-sidebar">
-            <p className="mw-sidebar-eyebrow">Provider enquiry request</p>
+            <p className="mw-sidebar-eyebrow">{provider ? 'Request for one provider' : 'Provider enquiry request'}</p>
+            {provider && <p className="mw-sidebar-provider">{provider.name}</p>}
             <p className="mw-sidebar-copy">
-              Provide the information needed to identify providers serving your area. Submitting a request is free.
+              {provider
+                ? 'Tell us what you need and we will send your request to this provider only. It is free and there is no obligation.'
+                : 'Provide the information needed to identify providers serving your area. Submitting a request is free.'}
             </p>
             <ol className="mw-sidebar-steps">
               {steps.map((id, i) => {
@@ -418,7 +433,7 @@ export default function MatchingWizard() {
             <div className="mw-form">
               <div className="mw-scroll">
                 <h2 id="mw-heading" ref={headingRef} tabIndex={-1} className="mw-question">Check your request</h2>
-                <p className="mw-supporting">Review the information below before submitting your provider enquiry request.</p>
+                <p className="mw-supporting">{provider ? `Review the information below before we send your request to ${provider.name}.` : 'Review the information below before submitting your provider enquiry request.'}</p>
 
                 <div className="mw-review-list">
                   <ReviewRow label="Who the support is for" value={labelFor(CARE_FOR_OPTIONS, form.careFor)} onEdit={() => editField('careFor')} />
@@ -436,7 +451,7 @@ export default function MatchingWizard() {
 
                 <div className="mw-next-steps">
                   <p className="mw-next-steps-title">What happens next</p>
-                  <ol>{NEXT_STEPS.map((s) => <li key={s}>{s}</li>)}</ol>
+                  <ol>{(provider ? providerNextSteps(provider.name) : NEXT_STEPS).map((s) => <li key={s}>{s}</li>)}</ol>
                 </div>
                 {submitError && <p className="mw-error" role="alert">{submitError}</p>}
               </div>
@@ -453,15 +468,20 @@ export default function MatchingWizard() {
           {phase === 'success' && (
             <div className="mw-success">
               <span className="mw-success-icon"><IconCheckCircleBig /></span>
-              <h2 id="mw-heading" ref={headingRef} tabIndex={-1} className="mw-question">Thank you. Your request has been sent.</h2>
-              <p className="mw-supporting">We are processing your request and identifying relevant providers.</p>
+              <h2 id="mw-heading" ref={headingRef} tabIndex={-1} className="mw-question">{sentTo ? `Thank you. Your request for ${sentTo} has been sent.` : 'Thank you. Your request has been sent.'}</h2>
+              <p className="mw-supporting">{sentTo ? 'We are passing your request on and will email you a confirmation.' : 'We are processing your request and identifying relevant providers.'}</p>
               <div className="mw-next-steps mw-next-steps-center">
                 <p className="mw-next-steps-title">What happens next</p>
-                <ol>{NEXT_STEPS.map((s) => <li key={s}>{s}</li>)}</ol>
+                <ol>{(sentTo ? providerNextSteps(sentTo) : NEXT_STEPS).map((s) => <li key={s}>{s}</li>)}</ol>
               </div>
               <p className="mw-success-line">We have emailed you a confirmation.</p>
               <div className="mw-success-actions">
                 <button type="button" className="btn-gradient" onClick={reset}>Back to SolDirectory</button>
+                {sentTo && (
+                  <button type="button" className="btn-outline" onClick={() => { reset(); setTimeout(() => openMatchModal(), 50); }}>
+                    Also hear from other providers
+                  </button>
+                )}
               </div>
             </div>
           )}

@@ -7,15 +7,18 @@ import { EmailService } from '../services/email.service.js';
 import { SmsService } from '../services/sms.service.js';
 import Notification from '../models/Notification.js';
 import LeadMatch from '../models/LeadMatch.js';
-import { notifyRegisterListings } from '../services/leadFollowUp.service.js';
+import { notifyRegisterListings, notifyPreferredListing } from '../services/leadFollowUp.service.js';
+import RegisterListing from '../models/RegisterListing.js';
 import { siteOrigin } from '../services/emailTokens.js';
 
 const escapeHtml = (value: unknown) => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 /** A short email to the site owner for every new enquiry, laid out as a simple details table. */
-async function notifyAdminOfEnquiry(lead: any, requestNumber: string, matchedCount: number) {
+async function notifyAdminOfEnquiry(lead: any, requestNumber: string, matchedCount: number, requested?: { name: string; note: string }) {
   const rows: [string, unknown][] = [
     ['Reference', requestNumber],
+    ['Requested provider', requested?.name],
+    ['Provider contact', requested?.note],
     ['Name', lead.requesterName],
     ['Email', lead.requesterEmail],
     ['Phone', lead.contactPhone],
@@ -104,6 +107,16 @@ function suburbText(form: Record<string, unknown>): string {
   return [s.suburb, s.state, s.postcode].filter(Boolean).join(' ').trim();
 }
 
+/**
+ * The register business a person asked for by name ("Request support from this provider"). The browser only sends the
+ * type and slug; the name shown in emails always comes from our own record, never from the request.
+ */
+async function resolvePreferredListing(raw: unknown) {
+  const { type, slug } = (raw && typeof raw === 'object' ? raw : {}) as { type?: unknown; slug?: unknown };
+  if ((type !== 'ndis' && type !== 'aged_care') || typeof slug !== 'string' || !/^[a-z0-9-]{1,160}$/.test(slug)) return null;
+  return RegisterListing.findOne({ type, slug }).select('type slug name providerId claimStatus').lean();
+}
+
 const DRAFT_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 /**
@@ -117,7 +130,8 @@ const DRAFT_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
  */
 export async function saveMatchRequestDraft(req: Request, res: Response) {
   const { draftId, ...form } = req.body ?? {};
-  const fields = mapFormToLeadFields(form);
+  const preferred = await resolvePreferredListing((form as Record<string, unknown>).preferredProvider);
+  const fields = { ...mapFormToLeadFields(form), preferredListing: preferred ? { type: preferred.type, slug: preferred.slug, name: preferred.name } : null };
 
   if (draftId) {
     const updated = await Lead.findOneAndUpdate(
@@ -160,8 +174,10 @@ export async function submitMatchRequest(req: Request, res: Response) {
   const clientCoords = parseAuCoordinates((form as Record<string, unknown>).lat, (form as Record<string, unknown>).lng);
   const geo = clientCoords ? null : await geocodeAddress(`${[suburbText(form), location].find(Boolean)}, Australia`);
   const point = clientCoords ?? (geo ? ([geo.lng, geo.lat] as [number, number]) : null);
+  const preferred = await resolvePreferredListing((form as Record<string, unknown>).preferredProvider);
   const fields = {
     ...mapFormToLeadFields(form),
+    preferredListing: preferred ? { type: preferred.type, slug: preferred.slug, name: preferred.name } : null,
     location: point ? { type: 'Point' as const, coordinates: point } : undefined,
     status: 'matched' as const,
     draftExpiresAt: undefined, // no longer a draft — stop it from ever being TTL-deleted
@@ -177,12 +193,22 @@ export async function submitMatchRequest(req: Request, res: Response) {
   // notified, only ones scoreMatch judges as a genuine fit. Sorted
   // best-first and capped so a popular suburb/service doesn't spam
   // every eligible provider on every enquiry.
-  const providers = await Provider.find({ accountStatus: 'active', listingPaused: { $ne: true } }).lean();
-  const matchedProviders = providers
-    .map((p: any) => ({ provider: p, result: scoreMatch(lead as any, p as any) }))
-    .filter(({ result }) => isGenuineMatch(result))
-    .sort((a, b) => b.result.score - a.result.score)
-    .slice(0, MAX_NOTIFIED_PER_LEAD);
+  // A request for one named provider goes to that provider only: if it is a member, it is matched (whatever its score);
+  // if not, nobody else is told, and the register business is sent a privacy-safe notice below where it can be reached.
+  let matchedProviders: { provider: any; result: ReturnType<typeof scoreMatch> }[];
+  if (preferred) {
+    const member = preferred.providerId && preferred.claimStatus === 'claimed'
+      ? await Provider.findOne({ _id: preferred.providerId, accountStatus: 'active', listingPaused: { $ne: true } }).lean()
+      : null;
+    matchedProviders = member ? [{ provider: member, result: scoreMatch(lead as any, member as any) }] : [];
+  } else {
+    const providers = await Provider.find({ accountStatus: 'active', listingPaused: { $ne: true } }).lean();
+    matchedProviders = providers
+      .map((p: any) => ({ provider: p, result: scoreMatch(lead as any, p as any) }))
+      .filter(({ result }) => isGenuineMatch(result))
+      .sort((a, b) => b.result.score - a.result.score)
+      .slice(0, MAX_NOTIFIED_PER_LEAD);
+  }
 
   const requestNumber = String(lead._id).slice(-8).toUpperCase();
 
@@ -250,17 +276,29 @@ export async function submitMatchRequest(req: Request, res: Response) {
       careFor: lead.careFor,
       timeframe: lead.timeframe,
       funding: [lead.fundingType, lead.planManagement].filter(Boolean).join(' · ') || undefined,
+      provider: preferred?.name,
     },
     browseUrl: `${siteUrl}/find-a-provider${lead.suburb ? `?suburb=${encodeURIComponent(lead.suburb)}` : ''}`,
   }).catch(() => {});
   // Tell whoever runs the site about every new enquiry, and loudly when nobody could be matched.
-  void notifyAdminOfEnquiry(lead, requestNumber, matchedProviders.length);
-  // Businesses on the public register near the enquiry (off unless REGISTER_LEAD_EMAILS=1). Fire-and-forget like the rest.
-  notifyRegisterListings(lead).catch(() => {});
+  if (preferred) {
+    // Tell the named business (when we can reach it) and let the site owner know what happened.
+    const sent = matchedProviders.length > 0 ? { sent: true, reason: 'member' } : await notifyPreferredListing(lead, preferred._id);
+    const note = matchedProviders.length > 0
+      ? 'Member: notified through SolDirectory'
+      : sent.sent ? 'Notice emailed (no requester details shared)'
+        : `Not emailed (${sent.reason ?? 'no contact'}) — follow up by phone or the website if you wish`;
+    void notifyAdminOfEnquiry(lead, requestNumber, matchedProviders.length, { name: preferred.name, note });
+  } else {
+    void notifyAdminOfEnquiry(lead, requestNumber, matchedProviders.length);
+    // Businesses on the public register near the enquiry (off unless REGISTER_LEAD_EMAILS=1). Fire-and-forget like the rest.
+    notifyRegisterListings(lead).catch(() => {});
+  }
 
   res.status(201).json({
     id: String(lead._id),
     requestNumber,
     matchedProviderCount: matchedProviders.length,
+    requestedProvider: preferred?.name,
   });
 }

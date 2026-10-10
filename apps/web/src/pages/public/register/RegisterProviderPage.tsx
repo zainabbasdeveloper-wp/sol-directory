@@ -8,13 +8,15 @@ import { ApiError } from '../../../api/client';
 import { absoluteUrl, areaLabel, registerPath, stateByCode, type RegisterKind } from '../../../lib/registerMeta';
 import { applySeoTags, setJsonLd } from '../../../lib/seo';
 import RegisterCard from './RegisterCard';
-import { Breadcrumbs, GetMatchedCta, VerifyNote, formatCount, trimTo } from './RegisterParts';
+import { Breadcrumbs, GetMatchedCta, RequestProviderCta, VerifyNote, formatCount, trimTo } from './RegisterParts';
+import { useMatchModal } from '../../../context/MatchModalContext';
 import '../Home.css';
 import '../Directory.css';
 import './register.css';
 
 /** /ndis-providers/{slug} — one listing, written from its real register data only. */
 export default function RegisterProviderPage({ kind, slug }: { kind: RegisterKind; slug: string }) {
+  const { openMatchModal } = useMatchModal();
   const [listing, setListing] = useState<RegisterListing | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'missing' | 'error'>('loading');
 
@@ -108,6 +110,15 @@ export default function RegisterProviderPage({ kind, slug }: { kind: RegisterKin
             <h1>{listing.name}</h1>
             <span className="reg-badge">Listed on the {kind.label} register</span>
           </div>
+          <div className="reg-hero-actions">
+            <button type="button" className="btn-gradient btn-lg" onClick={() => openMatchModal({ provider: { type: kind.type, slug: listing.slug, name: listing.name } })}>
+              Request support from this provider
+            </button>
+            <button type="button" className="reg-hero-secondary" onClick={() => openMatchModal()}>
+              Or get matched, free, with several providers
+            </button>
+          </div>
+          <p className="reg-hero-note">Free to send and no obligation. We never publish your phone number or email.</p>
         </div>
       </section>
 
@@ -129,10 +140,7 @@ export default function RegisterProviderPage({ kind, slug }: { kind: RegisterKin
             <div><dt>ABN</dt><dd>{listing.abn}</dd></div>
           )}
         </dl>
-        <GetMatchedCta
-          title={`Contact providers for support in ${where}`}
-          body="Phone and email are not displayed. Send one free request and suitable providers can respond through SolDirectory."
-        />
+        <RequestProviderCta type={kind.type} slug={listing.slug} name={listing.name} where={where} />
 
         <ProviderMap
           providers={[{ id: listing.slug, name: listing.name, location: listing.location, suburb: first ? `${first.suburb}, ${first.state}` : null }]}
