@@ -61,7 +61,7 @@ export interface ContentOverview {
 export const getOverview = () => call<ContentOverview>('/overview');
 export const listUpdates = (status: string, page: number) =>
   call<{ items: ContentUpdate[]; page: number; total: number; hasMore: boolean }>(`/updates?status=${encodeURIComponent(status)}&page=${page}`);
-export const scanNow = () => call<{ discovered: number; added: number; changed: number; rechecked: number; enriched: number; blocked: boolean; problems: string[] }>('/scan', { method: 'POST' });
+export const scanNow = () => call<{ discovered: number; added: number; changed: number; rechecked: number; enriched: number; blocked: boolean; detailsBlocked: boolean; problems: string[] }>('/scan', { method: 'POST' });
 export const createBrief = (id: string) => call<ContentUpdate & { created: boolean; adopted: boolean }>(`/updates/${id}/brief`, { method: 'POST' });
 export const checkReady = (id: string) => call<{ ready: boolean; issues: string[] }>(`/updates/${id}/check`);
 export const publish = (id: string, mode: 'now' | 'schedule', at?: string) =>

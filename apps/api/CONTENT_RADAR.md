@@ -46,10 +46,17 @@ original. Ask counsel before changing that, and about linking to ndis.gov.au (th
 permission).
 
 ndis.gov.au sits behind bot protection. The crawler obeys robots.txt, identifies itself
-(`SolDirectoryBot/1.0 (+site)`), waits `OFFICIAL_SOURCES_GAP_MS` between requests, opens at most
-`OFFICIAL_SOURCES_MAX_DETAILS` pages per run and, on HTTP 403/429/503, stops and stays away for
-`OFFICIAL_SOURCES_BACKOFF_MINUTES` (default 60). It does not rotate user agents or otherwise work round a refusal.
-List pages alone are enough to fill the queue; full pages are read when the site allows.
+(`SolDirectoryBot/1.0 (+site)`), waits `OFFICIAL_SOURCES_GAP_MS` between requests and opens at most
+`OFFICIAL_SOURCES_MAX_DETAILS` article pages per run. It does not rotate user agents or otherwise work round a refusal.
+
+- If the **news lists** are refused (HTTP 403/429/503) it pauses everything for `OFFICIAL_SOURCES_BACKOFF_MINUTES` (60).
+- If only the **article pages** are refused, which is common from a data-centre address, it stops after the first
+  refusal and pauses article reading for `OFFICIAL_SOURCES_DETAIL_BACKOFF_MINUTES` (360). The lists keep being read, so
+  the queue still fills with title, date, category and summary, and briefs can still be created. Section outlines stay
+  blank until articles can be read again, when they are filled in automatically.
+
+If article pages stay refused, ask the NDIA web team (https://www.ndis.gov.au/contact/feedback-and-enquiries) to allow
+the user agent `SolDirectoryBot` from the server's IP, or to provide a feed. Do not work round the block.
 
 ## Settings (apps/api/.env)
 
@@ -67,6 +74,7 @@ BLOG_MIN_WORDS=300
 OFFICIAL_SOURCES_GAP_MS=1500
 OFFICIAL_SOURCES_MAX_DETAILS=15
 OFFICIAL_SOURCES_BACKOFF_MINUTES=60
+OFFICIAL_SOURCES_DETAIL_BACKOFF_MINUTES=360
 ```
 
 ## Cron

@@ -20,7 +20,8 @@ runJob('ndis-news-monitor', async () => {
   const parts = [`${scan.discovered} item(s) seen, ${scan.added} new, ${scan.changed} changed`];
   if (scan.enriched) parts.push(`${scan.enriched} read in full`);
   if (scan.rechecked) parts.push(`${scan.rechecked} existing re-read`);
-  if (scan.blocked) parts.push('the site refused automated requests, so the crawler backed off');
+  if (scan.blocked) parts.push('the news lists were refused, so the crawler backed off');
+  else if (scan.detailsBlocked) parts.push('article pages are being refused, so items were recorded from the news lists only');
 
   if (!dryRun && wordpressConfigured()) {
     const synced = await syncWordpressStates();

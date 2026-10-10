@@ -155,7 +155,7 @@ export default function AdminContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [scanning, setScanning] = useState(false);
-  const [scanNote, setScanNote] = useState<{ ok: boolean; text: string } | null>(null);
+  const [scanNote, setScanNote] = useState<{ ok: boolean; text: string; info?: boolean } | null>(null);
   const [tick, setTick] = useState(0);
 
   const refresh = useCallback(() => setTick((n) => n + 1), []);
@@ -180,10 +180,18 @@ export default function AdminContent() {
     try {
       const r = await scanNow();
       const base = `Checked the official sources: ${r.discovered} item(s) seen, ${r.added} new, ${r.changed} changed${r.enriched ? `, ${r.enriched} read in full` : ''}.`;
-      const note = r.blocked
-        ? `${base} The NDIS site is refusing automated requests right now, so the robot has stepped back and will try again later. Items were recorded from its news list; their full pages will be read on a later check.`
-        : r.problems.length ? `${base} Problems: ${r.problems.join(' | ')}` : base;
-      setScanNote({ ok: r.problems.length === 0 && !r.blocked, text: note });
+      let text = base;
+      let ok = true;
+      if (r.blocked) {
+        ok = false;
+        text = `${base} The NDIS site is not letting the robot read its news list right now, so it has stepped back and will try again automatically. Nothing is lost.`;
+      } else if (r.detailsBlocked) {
+        text = `${base} NDIS is not letting the robot open the full articles from this server, so items are recorded from its news list (title, date, category and summary). You can still create briefs. Section outlines stay blank, and it quietly tries the articles again every few hours.`;
+      } else if (r.problems.length) {
+        ok = false;
+        text = `${base} Problems: ${r.problems.join(' | ')}`;
+      }
+      setScanNote({ ok, text, info: r.detailsBlocked && !r.blocked });
       setPage(1);
       refresh();
     } catch (e) {
@@ -205,7 +213,7 @@ export default function AdminContent() {
         <button type="button" className="ao-btn ac-primary" disabled={scanning} onClick={scan}>{scanning ? 'Checking the sources…' : 'Check official sources now'}</button>
       </div>
 
-      {scanNote && <p className={`ao-note ${scanNote.ok ? 'ao-note-ok' : 'ao-note-bad'}`} role="status">{scanNote.text}</p>}
+      {scanNote && <p className={`ao-note ${scanNote.info ? '' : scanNote.ok ? 'ao-note-ok' : 'ao-note-bad'}`} role="status">{scanNote.text}</p>}
       {error && <p className="ao-note ao-note-bad" role="alert">{error}</p>}
 
       {overview && (
