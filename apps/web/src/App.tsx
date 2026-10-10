@@ -7,6 +7,7 @@ import AppRoutes from './routes/AppRoutes';
 import AccessibilityToolbar from './components/AccessibilityToolbar';
 import SitePreloader from './components/SitePreloader';
 import CookieConsent from './components/CookieConsent';
+import ScrollToTop from './components/ScrollToTop';
 import './styles/global.css';
 
 export default function App() {
@@ -14,6 +15,7 @@ export default function App() {
     <>
       <SitePreloader />
       <BrowserRouter>
+        <ScrollToTop />
         <AuthProvider>
           <ToastProvider>
             <MatchModalProvider>

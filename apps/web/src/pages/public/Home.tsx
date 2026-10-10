@@ -182,14 +182,23 @@ export default function Home() {
           <div className="about-photo">
             <PhotoSlot src="/images/why-sol-directory.jpg" alt="A family meeting a provider" variant="care" />
           </div>
-          {stats && stats.providersListed > 0 && (
+          {/* The headline figure is the live count of organisations on the public NDIS register, labelled as that.
+              The "accepting enquiries" count (real members) stays in the figures row below, under its own label. */}
+          {ndisRegisterTotal !== null && ndisRegisterTotal > 0 ? (
+            <div className="about-stat-badge">
+              <span className="about-stat-value">
+                <Counter value={ndisRegisterTotal} />
+              </span>
+              <span className="about-stat-label">organisations listed from the public NDIS provider register</span>
+            </div>
+          ) : stats && stats.providersListed > 0 ? (
             <div className="about-stat-badge">
               <span className="about-stat-value">
                 <Counter value={stats.providersListed} />
               </span>
               <span className="about-stat-label">providers currently listed and accepting enquiries</span>
             </div>
-          )}
+          ) : null}
         </div>
         <div data-reveal style={{ '--rv': 1 } as CSSProperties}>
           <span className="eyebrow">
