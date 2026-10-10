@@ -9,6 +9,7 @@ import { getRegisterHub, getServiceSuburbs } from '../../api/registerApi';
 import { siteConfig, phoneHref } from '../../config/siteConfig';
 import { providerCountLabel } from '../../lib/statsCounts';
 import SupportFinder from '../../components/home/SupportFinder';
+import LocationCarousel from '../../components/home/LocationCarousel';
 import { useMatchModal } from '../../context/MatchModalContext';
 import { SERVICES } from '../../data/providers';
 import { slugify } from '../../data/slugHelpers';
@@ -32,6 +33,7 @@ export default function Home() {
   // enquiries or verified — see RegisterCard for the same rule on cards.
   const [registerTotal, setRegisterTotal] = useState<number | null>(null);
   const [ndisRegisterTotal, setNdisRegisterTotal] = useState<number | null>(null);
+  const [ndisByState, setNdisByState] = useState<Record<string, number>>({});
   const [agedCareRegisterTotal, setAgedCareRegisterTotal] = useState<number | null>(null);
   // Per-category counts across both registers, combined — lets
   // SupportFinder show a real number on each support card even while
@@ -44,6 +46,7 @@ export default function Home() {
         if (!alive) return;
         setRegisterTotal((ndis?.total ?? 0) + (agedCare?.total ?? 0));
         setNdisRegisterTotal(ndis?.total ?? 0);
+        setNdisByState(ndis?.states ?? {});
         setAgedCareRegisterTotal(agedCare?.total ?? 0);
         const counts: Record<string, number> = {};
         for (const hub of [ndis, agedCare]) {
@@ -286,6 +289,8 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <LocationCarousel counts={ndisByState} />
 
       <section className="coverage-section" aria-labelledby="coverage-heading">
         <div className="coverage-inner">

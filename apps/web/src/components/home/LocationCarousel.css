@@ -1,0 +1,80 @@
+.lc { position: relative; padding: clamp(56px, 7vw, 96px) 0 clamp(44px, 5vw, 72px); overflow: hidden; background: linear-gradient(180deg, #F5F8FC 0%, #E7EFFA 50%, #F5F8FC 100%); }
+.lc-bg { position: absolute; inset: 0; pointer-events: none; background:
+  radial-gradient(60% 50% at 50% 55%, rgba(47, 128, 237, 0.18), transparent 70%),
+  radial-gradient(35% 40% at 8% 85%, rgba(31, 157, 99, 0.08), transparent 70%),
+  radial-gradient(35% 40% at 94% 15%, rgba(11, 45, 92, 0.1), transparent 70%); }
+.lc-inner { position: relative; max-width: var(--layout-content-max-width); margin: 0 auto; padding: 0 clamp(20px, 5vw, 56px); }
+.lc-head { max-width: 720px; margin: 0 auto clamp(24px, 3.5vw, 40px); text-align: center; }
+.lc-head .eyebrow { justify-content: center; }
+.lc-sub { margin: 14px auto 0; max-width: 58ch; color: #4a5f78; font-size: 17px; line-height: 1.7; }
+
+/* The stage runs the full width of the page: a tall, panoramic strip with real depth */
+.lc-stage { --card-w: min(86vw, 1120px); --card-h: clamp(300px, calc(var(--card-w) * 0.5), 560px);
+  position: relative; width: 100%; height: calc(var(--card-h) + 70px); perspective: 1700px; perspective-origin: 50% 40%; outline: none; touch-action: pan-y; user-select: none; }
+.lc-stage:focus-visible { outline: 3px solid #8CB8FF; outline-offset: -6px; }
+.lc-track { position: absolute; inset: 0 0 40px; margin: 0; padding: 0; list-style: none; transform-style: preserve-3d; }
+.lc-slide { position: absolute; top: 15px; left: 50%; width: var(--card-w); height: var(--card-h); margin-left: calc(var(--card-w) / -2);
+  transform-style: preserve-3d;
+  transform:
+    translateX(calc(var(--d) * var(--card-w) * 0.78))
+    translateZ(calc(var(--abs) * -260px))
+    rotateY(calc(var(--d) * -30deg))
+    scale(calc(1 - var(--abs) * 0.06));
+  opacity: calc(1 - var(--abs) * 0.3);
+  filter: saturate(calc(1 - var(--abs) * 0.15)) brightness(calc(1 - var(--abs) * 0.1));
+  transition: transform 1000ms cubic-bezier(0.22, 0.8, 0.2, 1), opacity 800ms ease, filter 800ms ease;
+  will-change: transform, opacity; }
+.lc-slide.is-far { opacity: 0; visibility: hidden; pointer-events: none; }
+.lc-card { position: relative; width: 100%; height: 100%; border-radius: 26px; overflow: hidden; background: #0B2D5C;
+  box-shadow: 0 40px 80px -24px rgba(11, 45, 92, 0.5), 0 16px 30px -16px rgba(11, 45, 92, 0.35); }
+.lc-slide.is-active .lc-card { box-shadow: 0 50px 100px -26px rgba(11, 45, 92, 0.6), 0 20px 36px -18px rgba(11, 45, 92, 0.4); }
+.lc-img-wrap { position: absolute; inset: 0; overflow: hidden; }
+.lc-img { position: absolute; inset: -4%; width: 108%; height: 108%; object-fit: cover; transform: translateX(calc(var(--d) * -3%)) scale(1.02); transition: transform 1400ms cubic-bezier(0.22, 0.8, 0.2, 1); }
+.lc-slide.is-active .lc-img { animation: lc-drift 16s ease-in-out infinite alternate; }
+@keyframes lc-drift { from { transform: scale(1.02) translate3d(0, 0, 0); } to { transform: scale(1.1) translate3d(-1.5%, -1%, 0); } }
+.lc-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(11, 45, 92, 0.05) 0%, rgba(11, 45, 92, 0) 35%, rgba(5, 27, 58, 0.78) 100%); }
+.lc-slide:not(.is-active) .lc-shade { background: rgba(11, 45, 92, 0.28); }
+.lc-tag { position: absolute; top: 18px; left: 18px; padding: 6px 14px; border-radius: 100px; background: rgba(255, 255, 255, 0.92); color: #0B2D5C; font-size: 12.5px; font-weight: 800; letter-spacing: 0.06em; backdrop-filter: blur(6px); }
+.lc-hit { position: absolute; inset: 0; z-index: 3; border: 0; background: transparent; cursor: pointer; }
+
+/* The name, the numbers and the button sit on the picture itself */
+.lc-overlay { position: absolute; left: 0; right: 0; bottom: 0; padding: clamp(20px, 3vw, 40px); display: flex; flex-direction: column; align-items: flex-start; gap: 6px; color: #fff; opacity: 0; transform: translateY(14px); transition: opacity 700ms ease 250ms, transform 800ms cubic-bezier(0.22, 0.8, 0.2, 1) 250ms; }
+.lc-slide.is-active .lc-overlay { opacity: 1; transform: none; }
+.lc-overlay-eyebrow { font-size: 13px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #cfe2ff; }
+.lc-overlay h3 { margin: 0; color: #fff; font-size: clamp(26px, 3.6vw, 46px); font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; text-shadow: 0 2px 18px rgba(0, 0, 0, 0.35); }
+.lc-overlay p { margin: 0; color: #e3eeff; font-size: clamp(14px, 1.3vw, 17px); }
+.lc-cta { display: inline-flex; align-items: center; gap: 8px; min-height: 48px; margin-top: 12px; padding: 0 24px; border-radius: 12px; background: #fff; color: #0B2D5C; font-size: 15px; font-weight: 700; box-shadow: 0 10px 26px rgba(0, 0, 0, 0.25); transition: transform 160ms ease, background 160ms ease, color 160ms ease; }
+.lc-cta:hover { transform: translateY(-2px); background: #1769E0; color: #fff; }
+.lc-cta:focus-visible { outline: 3px solid #8CB8FF; outline-offset: 2px; }
+
+.lc-arrow { position: absolute; z-index: 200; top: calc(15px + var(--card-h) / 2 - 26px); width: 52px; height: 52px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.7); border-radius: 50%; background: rgba(255, 255, 255, 0.86); color: #0B2D5C; box-shadow: 0 10px 26px rgba(11, 45, 92, 0.25); backdrop-filter: blur(8px); cursor: pointer; transition: transform 180ms ease, background 180ms ease, color 180ms ease; }
+.lc-arrow:hover { background: #1769E0; color: #fff; transform: scale(1.07); }
+.lc-arrow:focus-visible { outline: 3px solid #8CB8FF; outline-offset: 2px; }
+.lc-arrow-prev { left: clamp(8px, 3vw, 40px); }
+.lc-arrow-next { right: clamp(8px, 3vw, 40px); }
+
+.lc-dots { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 8px; }
+.lc-dot { min-width: 56px; height: 36px; padding: 0 14px; border: 1.5px solid #C9D8EC; border-radius: 100px; background: rgba(255, 255, 255, 0.85); color: #40546D; font: inherit; font-size: 12.5px; font-weight: 800; letter-spacing: 0.04em; cursor: pointer; transition: background 200ms ease, border-color 200ms ease, color 200ms ease, transform 200ms ease; }
+.lc-dot:hover { border-color: #1769E0; color: #1769E0; }
+.lc-dot.is-on { background: #0B2D5C; border-color: #0B2D5C; color: #fff; transform: translateY(-1px); }
+.lc-dot:focus-visible { outline: 3px solid #8CB8FF; outline-offset: 2px; }
+.lc-hint { margin: 12px 0 0; text-align: center; color: #6B7C93; font-size: 13px; }
+
+@media (max-width: 720px) {
+  .lc-stage { --card-w: 88vw; --card-h: clamp(320px, 100vw, 460px); perspective: 1200px; }
+  .lc-slide { transform: translateX(calc(var(--d) * var(--card-w) * 0.9)) translateZ(calc(var(--abs) * -160px)) rotateY(calc(var(--d) * -24deg)) scale(calc(1 - var(--abs) * 0.07)); }
+  .lc-arrow { width: 44px; height: 44px; top: auto; bottom: 0; }
+  .lc-arrow-prev { left: calc(50% - 56px); }
+  .lc-arrow-next { right: calc(50% - 56px); }
+  .lc-cta { width: 100%; justify-content: center; }
+}
+
+/* Reduced motion: no drifting and no autoplay (set in the component); cards just fade into place */
+@media (prefers-reduced-motion: reduce) {
+  .lc-slide { transition: opacity 200ms ease; }
+  .lc-slide.is-active .lc-img { animation: none; }
+  .lc-img, .lc-overlay { transition: none; }
+}
+
+/* The shared section-heading style caps its width; this heading is centred and may use the whole line */
+.lc-head .section-heading { max-width: none; margin-left: auto; margin-right: auto; }
