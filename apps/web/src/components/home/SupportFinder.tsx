@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Combobox, { type ComboItem } from '../ui/Combobox';
+import Counter from '../Counter';
 import { listActiveServices } from '../../api/serviceCatalogue';
 import { useMatchModal } from '../../context/MatchModalContext';
+import { motionAllowed } from '../../lib/motion3d';
 import { providerCountLabel, serviceCount } from '../../lib/statsCounts';
 import { categoryForService } from '../../lib/registerMeta';
 import type { PublicStats } from '../../api/resources';
@@ -162,6 +164,21 @@ export default function SupportFinder({ stats, registerCounts }: Props) {
   const [catalogue, setCatalogue] = useState<string[]>([]);
   const [notFound, setNotFound] = useState(false);
 
+  // The cards rise into place once the section is on screen. Decided once, on first render, so nothing flashes;
+  // with reduced motion (or no IntersectionObserver) the cards are simply there.
+  const [animate] = useState(() => motionAllowed() && typeof IntersectionObserver !== 'undefined');
+  const [inView, setInView] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!animate || !el) return;
+    const io = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) { setInView(true); io.disconnect(); }
+    }, { threshold: 0.08 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [animate]);
+
   useEffect(() => {
     let alive = true;
     listActiveServices().then((r) => { if (alive) setCatalogue(r.items.map((s) => s.name)); }).catch(() => {});
@@ -196,7 +213,16 @@ export default function SupportFinder({ stats, registerCounts }: Props) {
   const visible = group === 'all' ? SUPPORTS : SUPPORTS.filter((s) => s.group === group);
 
   return (
-    <section id="services" className="services-section sf">
+    <section
+      id="services"
+      ref={sectionRef}
+      className={`services-section sf${animate ? ' sf-armed' : ''}${inView ? ' sf-in' : ''}`}
+    >
+      <div className="sf-scenery" aria-hidden="true">
+        <span className="sf-orb sf-orb-a" />
+        <span className="sf-orb sf-orb-b" />
+        <span className="sf-orb sf-orb-c" />
+      </div>
       <div className="services-inner">
         <div className="section-header-row">
           <div>
@@ -259,8 +285,9 @@ export default function SupportFinder({ stats, registerCounts }: Props) {
           ))}
         </div>
 
-        <div className="sf-grid">
-          {visible.map((s) => {
+        {/* Re-keyed on the chosen group so the cards rise again each time the filter changes. */}
+        <div className="sf-grid" key={group}>
+          {visible.map((s, i) => {
             const providerCount = providerCountLabel(serviceCount(stats, s.name));
             // Falls back to the public-register count for this category
             // while there's no real Provider count yet — labelled
@@ -268,18 +295,22 @@ export default function SupportFinder({ stats, registerCounts }: Props) {
             // to accept enquiries (see registerMeta's categoryForService).
             const regCategory = categoryForService(s.name);
             const regCount = !providerCount && regCategory ? registerCounts?.[regCategory] : undefined;
-            const count = providerCount ?? (regCount ? `${regCount.toLocaleString('en-AU')} listed` : null);
             return (
-              <button key={s.name} type="button" className="sf-card" onClick={() => go(s.name)}>
-                <span className="sf-icon" aria-hidden="true">
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                    {s.icon}
-                  </svg>
-                </span>
-                <span className="sf-card-title">{displayName(s)}</span>
-                <span className="sf-card-body">{s.body}</span>
-                <span className="sf-card-foot">{count ?? 'Browse providers'} <span aria-hidden="true">→</span></span>
-              </button>
+              <div key={s.name} className="sf-tile" style={{ '--i': i } as CSSProperties}>
+                <Link to={`/find-a-provider?service=${encodeURIComponent(s.name)}`} className="sf-card" data-tilt="7">
+                  <span className="sf-icon" aria-hidden="true">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                      {s.icon}
+                    </svg>
+                  </span>
+                  <span className="sf-card-title">{displayName(s)}</span>
+                  <span className="sf-card-body">{s.body}</span>
+                  <span className="sf-card-foot">
+                    {providerCount ?? (regCount ? <><Counter value={regCount} /> listed</> : 'Browse providers')}
+                    <span className="sf-arrow" aria-hidden="true">→</span>
+                  </span>
+                </Link>
+              </div>
             );
           })}
         </div>

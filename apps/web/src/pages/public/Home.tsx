@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PublicHeader, PublicFooter } from './PublicLayout';
 import { applySeoTags, setJsonLd } from '../../lib/seo';
@@ -13,7 +13,9 @@ import LocationCarousel from '../../components/home/LocationCarousel';
 import { useMatchModal } from '../../context/MatchModalContext';
 import { SERVICES } from '../../data/providers';
 import { slugify } from '../../data/slugHelpers';
+import { startMotion } from '../../lib/motion3d';
 import './Home.css';
+import './HomeMotion.css';
 
 const SEO_SERVICES = SERVICES.filter((service) => service !== 'All services');
 
@@ -25,6 +27,9 @@ export default function Home() {
   // real data to publish an honest median. Each stat below hides itself
   // when it has nothing true to show.
   const stats = useSiteStats();
+
+  // Scroll-in and lean-to-the-pointer motion for the sections below (see lib/motion3d.ts).
+  useEffect(() => startMotion(), []);
 
   // Organisations imported from the public NDIS/My Aged Care registers —
   // real, but not SolDirectory members. Never counted into "providers
@@ -144,7 +149,7 @@ export default function Home() {
       </section>
 
       <section className="info-cards" aria-label="How Get Matched works">
-        <div className="info-card info-card-accent">
+        <div className="info-card info-card-accent" data-reveal data-tilt="6" style={{ '--rv': 0 } as CSSProperties}>
           <span className="info-step">Step 1</span>
           <h3 className="info-title">Submit your support request</h3>
           <p className="info-body info-body-light">Provide your location, preferred timeframe and funding information so relevant providers can assess your request.</p>
@@ -153,7 +158,7 @@ export default function Home() {
           </button>
         </div>
 
-        <div className="info-card">
+        <div className="info-card" data-reveal data-tilt="6" style={{ '--rv': 1 } as CSSProperties}>
           <span className="info-step">Step 2</span>
           <h3 className="info-title">Review relevant provider options</h3>
           <p className="info-body">Your request is compared with provider service areas, funding arrangements and recently confirmed availability.</p>
@@ -162,7 +167,7 @@ export default function Home() {
           </Link>
         </div>
 
-        <div className="info-card">
+        <div className="info-card" data-reveal data-tilt="6" style={{ '--rv': 2 } as CSSProperties}>
           <span className="info-step">Step 3</span>
           <h3 className="info-title">Make an informed choice</h3>
           <p className="info-body">Notified providers may contact you directly. You can compare options, verify credentials and decide whether to enter a service agreement.</p>
@@ -173,7 +178,7 @@ export default function Home() {
       </section>
 
       <section id="about" className="about-section">
-        <div className="about-photo-wrap">
+        <div className="about-photo-wrap" data-reveal data-tilt="4">
           <div className="about-photo">
             <PhotoSlot src="/images/why-sol-directory.jpg" alt="A family meeting a provider" variant="care" />
           </div>
@@ -186,7 +191,7 @@ export default function Home() {
             </div>
           )}
         </div>
-        <div>
+        <div data-reveal style={{ '--rv': 1 } as CSSProperties}>
           <span className="eyebrow">
             <span className="eyebrow-rule" />
             Why SolDirectory
@@ -229,7 +234,7 @@ export default function Home() {
             <span className="stats-headline-accent">providers accepting enquiries, plus the public NDIS and My Aged Care registers</span>{' '}
             we also draw on.
           </p>
-          <dl className="home-stats-row">
+          <dl className="home-stats-row" data-reveal>
             {figures.map((f) => (
               <div key={f.label} className="home-stat">
                 <dt className="home-stat-label">{f.label}</dt>
@@ -262,7 +267,7 @@ export default function Home() {
           <div className="checks-photo-overlay" />
         </div>
         <div className="checks-inner">
-          <div className="checks-content">
+          <div className="checks-content" data-reveal>
           <span className="eyebrow checks-eyebrow">
             <span className="eyebrow-rule" />
             How listings work
@@ -309,14 +314,14 @@ export default function Home() {
             Each page explains what to look for and helps you find providers who cover that support area.
           </p>
           <div className="coverage-grid">
-            {SEO_SERVICES.map((service) => {
+            {SEO_SERVICES.map((service, idx) => {
               const areas = serviceAreaLinks[service] ?? [];
               // Nothing to link to yet (still loading, or — rare — this
               // service genuinely has no register demand anywhere): skip
               // rather than link to a page that doesn't exist.
               if (!areas.length) return null;
               return (
-                <div key={service} className="coverage-group">
+                <div key={service} className="coverage-group" data-reveal data-tilt="4" style={{ '--rv': idx % 4 } as CSSProperties}>
                   <h3 className="coverage-service-title">
                     <Link to={`/services/${slugify(service)}/${areas[0].state.toLowerCase()}/${areas[0].slug}`}>{service}</Link>
                   </h3>
@@ -338,7 +343,7 @@ export default function Home() {
       </section>
 
       <section id="providers" className="providers-cta-section">
-        <div>
+        <div data-reveal>
           <span className="eyebrow">
             <span className="eyebrow-rule" />
             For providers
@@ -357,7 +362,7 @@ export default function Home() {
             </Link>
           </div>
         </div>
-        <div className="providers-photo-wrap">
+        <div className="providers-photo-wrap" data-reveal data-tilt="3" style={{ '--rv': 1 } as CSSProperties}>
           <div className="providers-photo">
             <PhotoSlot src="/images/providers.jpg" alt="A provider at their desk" variant="meeting" />
           </div>
