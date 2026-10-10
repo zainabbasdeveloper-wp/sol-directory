@@ -136,6 +136,7 @@ export function leadConfirmationTemplate(input: {
         ${step(2, 'A provider gets in touch', 'Most people hear back within a few business days, though this varies by service and area. We will email you when a provider looks at your request.')}
         ${step(3, 'You choose', 'You are never obliged to use anyone. Compare providers, ask about prices and availability, and pick the one that suits you.')}`}
       </table>
+      ${input.trackingUrl ? `<p style="margin:6px 0 12px;"><strong style="color:${NAVY};">Follow your request:</strong> <a href="${escapeHtml(input.trackingUrl)}" style="color:${PRIMARY}; font-weight:700;">see who has received and opened it</a>, any time.</p>` : ''}
       <p style="margin:6px 0 0;">You do not have to wait: you can look at providers in your area now and contact them directly.</p>`,
     ctaLabel: 'Browse providers near you',
     ctaUrl: input.browseUrl ?? input.trackingUrl,

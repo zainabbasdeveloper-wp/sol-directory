@@ -37,8 +37,9 @@ export async function listLeads(req: AuthedRequest, res: Response) {
   // Broader discovery is the separate, paid-only "browse nearby" list
   // (listNearbyLeads). status != draft — a wizard-in-progress enquiry
   // is private, incomplete user data, never a real lead for providers.
-  const matchedIds = (await LeadMatch.find({ providerId: provider._id, status: { $ne: 'declined' } }).select('leadId').lean())
-    .map((m) => String(m.leadId));
+  const myMatches = await LeadMatch.find({ providerId: provider._id, status: { $ne: 'declined' } }).select('leadId matchReason').lean();
+  const matchedIds = myMatches.map((m) => String(m.leadId));
+  const reasonByLead = new Map(myMatches.map((m) => [String(m.leadId), m.matchReason ?? '']));
   const visibleIds = [...new Set([...matchedIds, ...unlockedIds])];
   const leads = visibleIds.length
     ? await Lead.find({ _id: { $in: visibleIds }, status: { $ne: 'draft' } }).select(MASKED_PROJECTION).sort({ createdAt: -1 }).lean()
@@ -58,7 +59,13 @@ export async function listLeads(req: AuthedRequest, res: Response) {
     leads.map((l) => {
       const full = unlockedById.get(String(l._id));
       const shaped = full ? toUnlockedShape(full) : toMaskedShape(l);
-      return { ...shaped, viewed: viewedIds.has(String(l._id)) };
+      const reason = reasonByLead.get(String(l._id)) ?? '';
+      return {
+        ...shaped,
+        viewed: viewedIds.has(String(l._id)),
+        // How this enquiry reached the provider, so the dashboard can say so.
+        origin: /^Asked for you by name/i.test(reason) ? 'named' : /^Shared by SolDirectory/i.test(reason) ? 'shared' : 'matched',
+      };
     })
   );
 }

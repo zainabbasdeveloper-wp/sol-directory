@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
  * Stateless, tamper-proof links for unsubscribe: the token is an HMAC of "<kind>:<id>" using the server's own secret,
  * so a link can be built for any lead or listing without storing anything, and nobody can forge one for someone else.
  */
-export type UnsubscribeKind = 'lead' | 'listing';
+export type UnsubscribeKind = 'lead' | 'listing' | 'track';
 
 function secret(): string {
   const s = process.env.UNSUBSCRIBE_SECRET || process.env.JWT_SECRET;

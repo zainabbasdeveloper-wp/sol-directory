@@ -202,3 +202,6 @@ a.utility-item:hover { opacity: 1; text-decoration: underline; }
   .utility-bar-inner { padding: 8px 20px; gap: 6px 18px; font-size: 12.5px; }
   .utility-right { gap: 18px; }
 }
+
+.public-footer-linkbtn { padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; opacity: 0.85; }
+.public-footer-linkbtn:hover { opacity: 1; text-decoration: underline; }

@@ -15,7 +15,7 @@ export interface Email { subject: string; html: string }
 
 // --- To the person who made the request -------------------------------------------------------------------------
 
-export function requestViewedTemplate(input: { need?: string; suburb?: string; viewedCount: number; searchUrl: string; unsubscribeUrl: string }): Email {
+export function requestViewedTemplate(input: { need?: string; suburb?: string; viewedCount: number; searchUrl: string; unsubscribeUrl: string; trackUrl?: string }): Email {
   const many = input.viewedCount > 1;
   const html = renderEmailLayout({
     preheader: `${many ? `${input.viewedCount} providers have` : 'A provider has'} looked at your request`,
@@ -23,7 +23,8 @@ export function requestViewedTemplate(input: { need?: string; suburb?: string; v
     bodyHtml: `
       <p>Your request for <strong>${escapeHtml(where(input.need, input.suburb))}</strong> has now been opened by ${many ? `<strong>${input.viewedCount} providers</strong>` : 'a provider'}.</p>
       <p>They may contact you by phone or email, so keep an eye on both. Providers decide for themselves whether to follow up, and how quickly.</p>
-      <p>While you wait, you can look at other providers in your area and contact them directly.</p>`,
+      <p>While you wait, you can look at other providers in your area and contact them directly.</p>${input.trackUrl ? `
+      <p><a href="${escapeHtml(input.trackUrl)}"><strong>See the progress of your request</strong></a></p>` : ''}`,
     ctaLabel: 'Browse providers near you',
     ctaUrl: input.searchUrl,
     footerHtml: footer(input.unsubscribeUrl, 'You are receiving this because you sent a request through SolDirectory.'),
@@ -31,13 +32,14 @@ export function requestViewedTemplate(input: { need?: string; suburb?: string; v
   return { subject: many ? 'Providers have looked at your SolDirectory request' : 'A provider has looked at your SolDirectory request', html };
 }
 
-export function requestRespondedTemplate(input: { providerName: string; need?: string; suburb?: string; searchUrl: string; unsubscribeUrl: string }): Email {
+export function requestRespondedTemplate(input: { providerName: string; need?: string; suburb?: string; searchUrl: string; unsubscribeUrl: string; trackUrl?: string }): Email {
   const html = renderEmailLayout({
     preheader: `${input.providerName} has taken up your request`,
     heading: 'A provider has taken up your request',
     bodyHtml: `
       <p><strong>${escapeHtml(input.providerName)}</strong> has opened the contact details you gave for <strong>${escapeHtml(where(input.need, input.suburb))}</strong> and may be in touch soon.</p>
-      <p>Before agreeing to anything, check their registration, prices and service agreement, and ask about availability. You do not have to choose the first provider who calls.</p>`,
+      <p>Before agreeing to anything, check their registration, prices and service agreement, and ask about availability. You do not have to choose the first provider who calls.</p>${input.trackUrl ? `
+      <p><a href="${escapeHtml(input.trackUrl)}"><strong>See the progress of your request</strong></a></p>` : ''}`,
     ctaLabel: 'Compare other providers',
     ctaUrl: input.searchUrl,
     footerHtml: footer(input.unsubscribeUrl, 'You are receiving this because you sent a request through SolDirectory.'),

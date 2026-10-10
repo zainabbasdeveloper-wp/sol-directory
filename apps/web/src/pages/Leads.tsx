@@ -108,6 +108,8 @@ export default function Leads() {
           return (
             <div key={lead.id} className={`lead-card ${unlocked ? 'lead-card-unlocked' : ''}`}>
               <span className={`pill ${unlocked ? 'pill-ok' : 'pill-flat'}`}>{unlocked ? 'Unlocked' : 'Locked'}</span>
+              {(lead as { origin?: string }).origin === 'named' && <span className="pill pill-ok" style={{ marginLeft: 6 }}>Asked for you by name</span>}
+              {(lead as { origin?: string }).origin === 'shared' && <span className="pill pill-flat" style={{ marginLeft: 6 }}>Referred by SolDirectory</span>}
               <h3 className="lead-need">{lead.need}</h3>
               <p className="lead-meta">
                 {lead.suburb}

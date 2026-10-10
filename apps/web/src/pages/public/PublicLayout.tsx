@@ -1,3 +1,4 @@
+import { openConsentSettings } from '../../lib/consent';
 import { Link, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import MegaMenu from '../../components/MegaMenu';
@@ -163,6 +164,7 @@ export function PublicFooter() {
           <Link to="/provider-agreement">Provider agreement</Link>
           <Link to="/lead-disclaimer">Enquiry disclaimer</Link>
           <Link to="/photo-credits">Photo credits</Link>
+          <button type="button" className="public-footer-linkbtn" onClick={openConsentSettings}>Cookie settings</button>
         </div>
       </div>
       <div className="public-footer-legal">

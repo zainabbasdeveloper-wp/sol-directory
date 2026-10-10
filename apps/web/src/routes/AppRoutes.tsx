@@ -34,6 +34,8 @@ import AdminServices from '../pages/admin/AdminServices';
 import AdminConditions from '../pages/admin/AdminConditions';
 import AdminDiagnostics from '../pages/admin/AdminDiagnostics';
 import AdminOperations from '../pages/admin/AdminOperations';
+import AdminEnquiries from '../pages/admin/AdminEnquiries';
+import TrackRequest from '../pages/public/TrackRequest';
 import AdminClaims from '../pages/admin/AdminClaims';
 import AdminRegisterListings from '../pages/admin/AdminRegisterListings';
 import AdminWorkerReviews from '../pages/admin/AdminWorkerReviews';
@@ -169,6 +171,7 @@ export default function AppRoutes() {
       <Route path="/language" element={<LanguageHubPage />} />
       <Route path="/language/:slug" element={<LanguageTopicPage />} />
       <Route path="/support-coordinators" element={<SupportCoordinators />} />
+      <Route path="/track/:id" element={<TrackRequest />} />
       <Route path="/blog" element={<BlogPage />} />
       <Route path="/blog/:slug" element={<BlogPage />} />
       <Route path="/directory/:slug" element={<ProviderPublicPage />} />
@@ -258,6 +261,7 @@ export default function AppRoutes() {
         <Route path="/admin/plans" element={<RequireRole roles={['admin']}><AdminMemberPlans /></RequireRole>} />
         <Route path="/admin/services" element={<RequireRole roles={['admin']}><AdminServices /></RequireRole>} />
         <Route path="/admin/conditions" element={<RequireRole roles={['admin']}><AdminConditions /></RequireRole>} />
+        <Route path="/admin/enquiries" element={<RequireRole roles={['admin']}><AdminEnquiries /></RequireRole>} />
         <Route path="/admin/operations" element={<RequireRole roles={['admin']}><AdminOperations /></RequireRole>} />
         <Route path="/admin/diagnostics" element={<RequireRole roles={['admin']}><AdminDiagnostics /></RequireRole>} />
         <Route path="/admin/claims" element={<RequireRole roles={['admin']}><AdminClaims /></RequireRole>} />

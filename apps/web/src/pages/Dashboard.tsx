@@ -1,3 +1,4 @@
+import MyRequests from '../components/MyRequests';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { listLeads, getPlans, getOnboarding, confirmCapacityNow, setSmsPreference } from '../api/resources';
@@ -61,6 +62,7 @@ function NonProviderDashboard({ role }: { role: string }) {
           <Link to="/saved-providers" className="dashboard-card-link">Saved providers →</Link>
         </div>
       )}
+      {role !== 'admin' && role !== 'worker' && <MyRequests />}
     </div>
   );
 }

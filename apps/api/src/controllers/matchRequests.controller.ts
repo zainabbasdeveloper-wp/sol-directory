@@ -10,6 +10,8 @@ import LeadMatch from '../models/LeadMatch.js';
 import { notifyRegisterListings, notifyPreferredListing } from '../services/leadFollowUp.service.js';
 import RegisterListing from '../models/RegisterListing.js';
 import { siteOrigin } from '../services/emailTokens.js';
+import jwt from 'jsonwebtoken';
+import { trackUrl } from '../services/requestTracking.js';
 
 const escapeHtml = (value: unknown) => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -111,6 +113,17 @@ function suburbText(form: Record<string, unknown>): string {
  * The register business a person asked for by name ("Request support from this provider"). The browser only sends the
  * type and slug; the name shown in emails always comes from our own record, never from the request.
  */
+function optionalUserId(req: Request): string | undefined {
+  const header = req.headers.authorization;
+  if (!header?.startsWith('Bearer ')) return undefined;
+  try {
+    const payload = jwt.verify(header.slice(7), process.env.JWT_SECRET as string) as { id?: string };
+    return payload.id;
+  } catch {
+    return undefined;
+  }
+}
+
 async function resolvePreferredListing(raw: unknown) {
   const { type, slug } = (raw && typeof raw === 'object' ? raw : {}) as { type?: unknown; slug?: unknown };
   if ((type !== 'ndis' && type !== 'aged_care') || typeof slug !== 'string' || !/^[a-z0-9-]{1,160}$/.test(slug)) return null;
@@ -178,6 +191,7 @@ export async function submitMatchRequest(req: Request, res: Response) {
   const fields = {
     ...mapFormToLeadFields(form),
     preferredListing: preferred ? { type: preferred.type, slug: preferred.slug, name: preferred.name } : null,
+    ...(optionalUserId(req) ? { requesterUserId: optionalUserId(req) } : {}),
     location: point ? { type: 'Point' as const, coordinates: point } : undefined,
     status: 'matched' as const,
     draftExpiresAt: undefined, // no longer a draft — stop it from ever being TTL-deleted
@@ -264,11 +278,11 @@ export async function submitMatchRequest(req: Request, res: Response) {
       leadId: lead._id,
       providerId: provider._id,
       score: result.score,
-      matchReason: describeMatchReason(result),
+      matchReason: preferred ? `Asked for you by name. ${describeMatchReason(result)}` : describeMatchReason(result),
     }).catch(() => {});
   }
   const siteUrl = frontendOrigin.replace(/\/$/, '');
-  EmailService.sendLeadConfirmation(email, requestNumber, lead.need, undefined, {
+  EmailService.sendLeadConfirmation(email, requestNumber, lead.need, trackUrl(String(lead._id)), {
     details: {
       service: lead.serviceContext,
       suburb: lead.suburb,
@@ -300,5 +314,6 @@ export async function submitMatchRequest(req: Request, res: Response) {
     requestNumber,
     matchedProviderCount: matchedProviders.length,
     requestedProvider: preferred?.name,
+    trackingUrl: trackUrl(String(lead._id)),
   });
 }

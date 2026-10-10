@@ -4,6 +4,7 @@ import { listActiveServices, type ActiveService } from '../api/serviceCatalogue'
 import { ApiError } from '../api/client';
 import { searchPlaces, lookupPostcode, formatPlace, placeSearchEnabled, type PlaceSuggestion } from '../lib/places';
 import { serviceContextFromPath } from '../lib/serviceContext';
+import { hasConsent, openConsentSettings, useConsent } from '../lib/consent';
 import './MatchingWizard.css';
 
 /**
@@ -122,6 +123,12 @@ const NEXT_STEPS = [
 export default function MatchingWizard() {
   const { isOpen, closeMatchModal, openMatchModal, provider } = useMatchModal();
   const preferredProvider = provider ? { type: provider.type, slug: provider.slug } : undefined;
+  const consent = useConsent();
+  const canSaveProgress = consent?.saveProgress === true;
+  const authHeader = (): Record<string, string> => {
+    const token = localStorage.getItem('sd_token');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
   const [form, setForm] = useState<MatchFormData>(EMPTY_FORM);
   const [stepIndex, setStepIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>('wizard');
@@ -158,6 +165,7 @@ export default function MatchingWizard() {
     if (!isOpen) return;
     try {
       localStorage.removeItem(LEGACY_DRAFT_KEY);
+      if (!hasConsent('saveProgress')) return;
       const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
       if (!saved) return;
       const parsed = JSON.parse(saved);
@@ -185,11 +193,13 @@ export default function MatchingWizard() {
     if (!isOpen || phase === 'success') return;
     if (stepIndex === 0 && !Object.values(form).some((v) => v.trim() !== '')) return;
     try {
-      localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({ form, draftId, stepIndex }));
+      if (canSaveProgress) localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({ form, draftId, stepIndex }));
     } catch { /* private browsing / storage full — resuming just won't work, not fatal */ }
   }, [isOpen, form, draftId, stepIndex, phase]);
 
   async function saveDraftToServer(currentForm: MatchFormData) {
+    // Unfinished answers only leave this device if the person agreed to saved progress.
+    if (!hasConsent('saveProgress')) return;
     try {
       const API_URL = (import.meta as any).env?.VITE_API_URL ?? '/api';
       const res = await fetch(`${API_URL}/match-requests/draft`, {
@@ -328,7 +338,7 @@ export default function MatchingWizard() {
       const API_URL = (import.meta as any).env?.VITE_API_URL ?? '/api';
       const res = await fetch(`${API_URL}/match-requests`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeader() },
         body: JSON.stringify({
           draftId,
           ...form,
@@ -382,6 +392,12 @@ export default function MatchingWizard() {
                 Review and send
               </li>
             </ol>
+            {!canSaveProgress && (
+              <p className="mw-sidebar-progress">
+                Saved progress is off, so nothing is stored until you send.{' '}
+                <button type="button" onClick={openConsentSettings}>Turn it on</button>
+              </p>
+            )}
             <p className="mw-sidebar-reassurance">
               Your information is used to process your request and is shared only as described in our Privacy Policy.
             </p>

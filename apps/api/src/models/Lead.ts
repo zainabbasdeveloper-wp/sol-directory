@@ -55,6 +55,8 @@ export interface LeadDoc extends Document {
   serviceContext?: string;
   /** Set when the person asked for one specific public-register provider by name (the "request support from this provider" button). Such an enquiry goes only to that provider. */
   preferredListing?: { type: 'ndis' | 'aged_care'; slug: string; name: string } | null;
+  /** The signed-in account that made (or later saved) this request, so they can follow it from their dashboard. */
+  requesterUserId?: mongoose.Types.ObjectId | null;
   // --- Follow-up emails to the person who made the request (see leadFollowUp.service.ts) ---
   /** The requester clicked "stop these emails". Nothing optional is sent after this. */
   emailOptOut?: boolean;
@@ -99,6 +101,7 @@ const leadSchema = new Schema<LeadDoc>(
     status: { type: String, enum: ['draft', 'matched', 'unlocked', 'closed'], default: 'matched' },
     draftExpiresAt: { type: Date, expires: 0 }, // TTL: delete once draftExpiresAt is in the past
     serviceContext: String,
+    requesterUserId: { type: Schema.Types.ObjectId, ref: 'User', index: true },
     preferredListing: { type: new Schema({ type: String, slug: String, name: String }, { _id: false }), default: undefined },
     emailOptOut: { type: Boolean, default: false },
     viewedNoticeAt: Date,

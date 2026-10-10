@@ -6,6 +6,7 @@ import MatchingWizard from './components/MatchingWizard';
 import AppRoutes from './routes/AppRoutes';
 import AccessibilityToolbar from './components/AccessibilityToolbar';
 import SitePreloader from './components/SitePreloader';
+import CookieConsent from './components/CookieConsent';
 import './styles/global.css';
 
 export default function App() {
@@ -19,6 +20,7 @@ export default function App() {
               <AppRoutes />
               <MatchingWizard />
               <AccessibilityToolbar />
+              <CookieConsent />
             </MatchModalProvider>
           </ToastProvider>
         </AuthProvider>

@@ -7,6 +7,7 @@ import SuburbGeo from '../models/SuburbGeo.js';
 import { EmailService } from './email.service.js';
 import { categoryForNeed } from './needCategory.js';
 import { siteOrigin, unsubscribeUrl } from './emailTokens.js';
+import { trackUrl } from './requestTracking.js';
 import {
   requestViewedTemplate, requestRespondedTemplate, weeklyMatchesTemplate,
   providerLeadReminderTemplate, registerLeadNoticeTemplate, registerRequestedNoticeTemplate,
@@ -51,7 +52,7 @@ export async function notifySearcherViewed(leadId: unknown): Promise<boolean> {
     const viewedCount = await LeadMatch.countDocuments({ leadId: lead._id, status: { $in: ['viewed', 'contacted'] } });
     const ok = await EmailService.sendTemplate(
       lead.requesterEmail,
-      requestViewedTemplate({ need: needLabel(lead), suburb: lead.suburb, viewedCount: Math.max(1, viewedCount), searchUrl: searchUrl(lead), unsubscribeUrl: unsubscribeUrl('lead', String(lead._id)) }),
+      requestViewedTemplate({ need: needLabel(lead), suburb: lead.suburb, viewedCount: Math.max(1, viewedCount), searchUrl: searchUrl(lead), unsubscribeUrl: unsubscribeUrl('lead', String(lead._id)), trackUrl: trackUrl(String(lead._id)) }),
       { unsubscribeUrl: unsubscribeUrl('lead', String(lead._id)) },
     );
     if (!ok) await Lead.updateOne({ _id: lead._id }, { $unset: { viewedNoticeAt: 1 } }); // try again on the next view
@@ -72,7 +73,7 @@ export async function notifySearcherResponded(leadId: unknown, providerName: str
     if (!lead || !hasEmail(lead)) return false;
     const ok = await EmailService.sendTemplate(
       lead.requesterEmail,
-      requestRespondedTemplate({ providerName, need: needLabel(lead), suburb: lead.suburb, searchUrl: searchUrl(lead), unsubscribeUrl: unsubscribeUrl('lead', String(lead._id)) }),
+      requestRespondedTemplate({ providerName, need: needLabel(lead), suburb: lead.suburb, searchUrl: searchUrl(lead), unsubscribeUrl: unsubscribeUrl('lead', String(lead._id)), trackUrl: trackUrl(String(lead._id)) }),
       { unsubscribeUrl: unsubscribeUrl('lead', String(lead._id)) },
     );
     if (!ok) await Lead.updateOne({ _id: lead._id }, { $unset: { respondedNoticeAt: 1 } });
