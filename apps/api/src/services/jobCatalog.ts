@@ -55,12 +55,12 @@ export const JOB_CATALOG: JobDefinition[] = [
   },
   {
     name: 'ndis-news-monitor',
-    label: 'NDIS source update monitor',
-    description: 'Checks official NDIS news and recent policy pages, then creates private editorial briefs for new or updated sources.',
-    schedule: 'Every hour',
-    cron: '0 * * * *',
+    label: 'Official source monitor',
+    description: 'Reads official NDIS news and recently updated pages (within robots.txt), records new and changed items, and prepares private editorial briefs. It never publishes.',
+    schedule: 'Every 6 hours',
+    cron: '0 */6 * * *',
     command: 'npm run job:ndis-news-monitor -w apps/api',
-    everyHours: 1,
+    everyHours: 6,
   },
 ];
 

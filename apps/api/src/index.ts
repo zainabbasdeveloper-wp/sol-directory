@@ -36,6 +36,7 @@ import adminServicesRoutes from './routes/admin.services.routes.js';
 import adminConditionsRoutes from './routes/admin.conditions.routes.js';
 import adminDiagnosticsRoutes from './routes/admin.diagnostics.routes.js';
 import adminLeadsRoutes from './routes/admin.leads.routes.js';
+import adminContentRoutes from './routes/admin.content.routes.js';
 import adminEmailLogsRoutes from './routes/admin.emailLogs.routes.js';
 import capacityRoutes from './routes/capacity.routes.js';
 import statsRoutes from './routes/stats.routes.js';
@@ -76,6 +77,7 @@ app.use('/api/admin/conditions', adminConditionsRoutes);
 // against this file, not assumed.
 app.use('/api/admin/diagnostics', adminDiagnosticsRoutes);
 app.use('/api/admin/leads', adminLeadsRoutes);
+app.use('/api/admin/content', adminContentRoutes);
 app.use('/api/admin/email-logs', adminEmailLogsRoutes);
 app.use('/api/admin/claims', adminClaimsRoutes);
 app.use('/api/admin/register', adminRegisterRoutes);

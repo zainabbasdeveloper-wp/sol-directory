@@ -171,15 +171,11 @@ these with `LEAD_ESCALATION_DELAY_MINUTES`,
 `LEAD_ESCALATION_LEADS_PER_RUN`. It stops escalating as soon as an
 existing match has viewed or responded to the lead.
 
-The hourly `job:ndis-news-monitor` checks the official NDIS latest-news
-and recent-content pages. New source versions become private WordPress
-editorial briefs, deduplicated by source URL and detected date. Run
-`npm run job:ndis-news-monitor -w apps/api -- --dry-run` to preview
-candidates. The job never publishes automatically or copies source
-article text/images; an editor must write and verify original content.
-The NDIA's published copyright terms restrict commercial reuse, so
-seek permission or legal advice before republishing or adapting its
-protected material.
+`job:ndis-news-monitor` (every 6 hours) is the official-source monitor and blog automation: it records new and changed
+NDIS news and policy pages, queues what is worth writing about and prepares private WordPress briefs. Staff work the
+queue at `/admin/content`. It never publishes by itself, never copies NDIA text (the NDIA licenses its site CC BY-NC) and
+backs off if the site refuses automated requests. See `apps/api/CONTENT_RADAR.md`. Run
+`npm run job:ndis-news-monitor -w apps/api -- --dry-run` to preview.
 
 ## What's still a TODO, explicitly
 
