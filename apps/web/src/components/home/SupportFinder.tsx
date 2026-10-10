@@ -134,6 +134,21 @@ const SUPPORTS: Support[] = [
   },
 ];
 
+/**
+ * A real photograph for each support, so people can recognise the support at a glance. These are small copies of the
+ * licensed banner photos (credited on the Photo credits page), saved in /images/supports/.
+ */
+const PHOTOS: Record<string, string> = {
+  'Personal care': 'personal-care',
+  'Domestic assistance': 'domestic-assistance',
+  'Transport': 'transport',
+  'Therapy services': 'therapy-services',
+  'Nursing': 'nursing',
+  'Support coordination': 'support-coordination',
+  'Plan management': 'plan-management',
+  'Housing (SDA & SIL)': 'housing-sda-sil',
+};
+
 const displayName = (s: Support) => s.label ?? s.name;
 const haystack = (s: Support) => [s.name, s.label ?? '', ...s.keywords].join(' ').toLowerCase();
 
@@ -298,16 +313,35 @@ export default function SupportFinder({ stats, registerCounts }: Props) {
             return (
               <div key={s.name} className="sf-tile" style={{ '--i': i } as CSSProperties}>
                 <Link to={`/find-a-provider?service=${encodeURIComponent(s.name)}`} className="sf-card" data-tilt="7">
-                  <span className="sf-icon" aria-hidden="true">
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                      {s.icon}
-                    </svg>
+                  <span className="sf-media" aria-hidden="true">
+                    <span className="sf-photo">
+                      {PHOTOS[s.name] && (
+                        <img
+                          src={`/images/supports/${PHOTOS[s.name]}.jpg`}
+                          alt=""
+                          width={720}
+                          height={450}
+                          loading="lazy"
+                          decoding="async"
+                          draggable={false}
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
+                      )}
+                    </span>
+                    <span className="sf-chip">{GROUPS.find((g) => g.id === s.group)?.label}</span>
+                    <span className="sf-icon">
+                      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                        {s.icon}
+                      </svg>
+                    </span>
                   </span>
-                  <span className="sf-card-title">{displayName(s)}</span>
-                  <span className="sf-card-body">{s.body}</span>
-                  <span className="sf-card-foot">
-                    {providerCount ?? (regCount ? <><Counter value={regCount} /> listed</> : 'Browse providers')}
-                    <span className="sf-arrow" aria-hidden="true">→</span>
+                  <span className="sf-card-main">
+                    <span className="sf-card-title">{displayName(s)}</span>
+                    <span className="sf-card-body">{s.body}</span>
+                    <span className="sf-card-foot">
+                      <span>{providerCount ?? (regCount ? <><Counter value={regCount} /> listed</> : 'Browse providers')}</span>
+                      <span className="sf-arrow" aria-hidden="true">→</span>
+                    </span>
                   </span>
                 </Link>
               </div>
