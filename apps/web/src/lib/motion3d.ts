@@ -1,8 +1,10 @@
 /**
  * Small, dependency-free motion helpers for the public pages.
  *
- *  - `[data-reveal]`  rises into place the first time it scrolls into view (`--rv` staggers neighbours).
- *  - `[data-tilt="6"]` leans towards the mouse, up to that many degrees (mouse only, never touch).
+ *  - `[data-reveal]`   rises into place the first time it scrolls into view (`--rv` staggers neighbours).
+ *  - `[data-pointer]`  reports where the mouse is inside it as CSS variables (--mx/--my in %, --px/--py from -1 to 1)
+ *                      and carries `.is-lit` while the mouse is over it. Nothing is moved by this script: the
+ *                      stylesheet decides what the light, border glow or photograph parallax does with the numbers.
  *
  * Everything is progressive: nothing is hidden until `startMotion()` has armed the page, and the whole thing
  * stays off for people who ask their system for reduced motion. The styling lives in HomeMotion.css.
@@ -60,55 +62,52 @@ export function startMotion(): () => void {
     });
   }
 
-  // ---- tilt towards the pointer -------------------------------------------
+  // ---- where the mouse is, for lights and photograph parallax ---------------
   if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
-    let current: { el: HTMLElement; rect: DOMRect; max: number } | null = null;
+    let current: HTMLElement | null = null;
     let frame = 0;
-    let px = 0;
-    let py = 0;
+    let cx = 0;
+    let cy = 0;
 
     const release = () => {
       if (!current) return;
-      current.el.classList.remove('is-tilting');
+      current.classList.remove('is-lit');
+      // Back to the middle, so anything following the mouse eases home.
+      current.style.setProperty('--px', '0');
+      current.style.setProperty('--py', '0');
       current = null;
     };
     const paint = () => {
       frame = 0;
       if (!current) return;
-      const { el, rect, max } = current;
-      const x = Math.min(1, Math.max(0, (px - rect.left) / rect.width));
-      const y = Math.min(1, Math.max(0, (py - rect.top) / rect.height));
-      el.style.setProperty('--ry', `${((x - 0.5) * 2 * max).toFixed(2)}deg`);
-      el.style.setProperty('--rx', `${((0.5 - y) * 2 * max).toFixed(2)}deg`);
-      el.style.setProperty('--mx', `${(x * 100).toFixed(1)}%`);
-      el.style.setProperty('--my', `${(y * 100).toFixed(1)}%`);
+      const r = current.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      const x = Math.min(1, Math.max(0, (cx - r.left) / r.width));
+      const y = Math.min(1, Math.max(0, (cy - r.top) / r.height));
+      current.style.setProperty('--mx', `${(x * 100).toFixed(1)}%`);
+      current.style.setProperty('--my', `${(y * 100).toFixed(1)}%`);
+      current.style.setProperty('--px', ((x - 0.5) * 2).toFixed(3));
+      current.style.setProperty('--py', ((y - 0.5) * 2).toFixed(3));
     };
     const onMove = (e: PointerEvent) => {
       if (e.pointerType && e.pointerType !== 'mouse') return;
-      // The box is measured once on entry and kept, so the edge does not flicker while the element leans.
-      if (current) {
-        const r = current.rect;
-        if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) release();
+      const el = (e.target as Element | null)?.closest?.('[data-pointer]') as HTMLElement | null;
+      if (el !== current) {
+        release();
+        if (el) { current = el; el.classList.add('is-lit'); }
       }
-      if (!current) {
-        const el = (e.target as Element | null)?.closest?.('[data-tilt]') as HTMLElement | null;
-        if (!el) return;
-        current = { el, rect: el.getBoundingClientRect(), max: Number(el.dataset.tilt) || 6 };
-        el.classList.add('is-tilting');
-      }
-      px = e.clientX;
-      py = e.clientY;
+      if (!current) return;
+      cx = e.clientX;
+      cy = e.clientY;
       if (!frame) frame = requestAnimationFrame(paint);
     };
     const onLeaveWindow = (e: MouseEvent) => { if (!e.relatedTarget) release(); };
 
     document.addEventListener('pointermove', onMove, { passive: true });
     document.addEventListener('mouseout', onLeaveWindow);
-    window.addEventListener('scroll', release, { passive: true });
     cleanups.push(() => {
       document.removeEventListener('pointermove', onMove);
       document.removeEventListener('mouseout', onLeaveWindow);
-      window.removeEventListener('scroll', release);
       if (frame) cancelAnimationFrame(frame);
       release();
     });

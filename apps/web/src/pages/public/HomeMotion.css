@@ -1,19 +1,60 @@
 /* Home page depth and motion. Pure decoration: every rule here sits on top of the existing layout and nothing
-   is hidden unless lib/motion3d.ts has armed the page (and never for reduced-motion). */
+   is hidden unless lib/motion3d.ts has armed the page (and never for reduced-motion).
+
+   The idea: cards stay flat and still. The mouse switches on a light that follows it (a glowing edge and a soft
+   spotlight), and only photographs get depth: the picture drifts a little against the mouse inside its frame. */
 
 /* ---- reveal on scroll ---------------------------------------------------- */
 .motion-armed [data-reveal]:not(.is-in) { opacity: 0; }
-.motion-armed [data-reveal].is-in { animation: mv-rise 820ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards; animation-delay: calc(var(--rv, 0) * 90ms); }
+.motion-armed [data-reveal].is-in { animation: mv-rise 900ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards; animation-delay: calc(var(--rv, 0) * 90ms); }
 @keyframes mv-rise {
-  from { opacity: 0; translate: 0 34px; scale: 0.965; }
-  to { opacity: 1; translate: 0 0; scale: 1; }
+  from { opacity: 0; translate: 0 36px; scale: 0.97; filter: blur(6px); }
+  to { opacity: 1; translate: 0 0; scale: 1; filter: blur(0); }
 }
 
-/* ---- lean towards the pointer (mouse only; the class is added by motion3d.ts) ------ */
-html [data-tilt] { transition: transform 220ms ease-out, box-shadow 220ms ease, border-color 220ms ease; }
-html [data-tilt].is-tilting { transform: perspective(1100px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translate3d(0, -3px, 0); will-change: transform; }
+/* ---- a light that follows the mouse: glowing edge + soft spotlight ------------ */
+.info-card, .coverage-group { position: relative; transition: translate 300ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 300ms ease, border-color 300ms ease, background 300ms ease; }
+.info-card::before, .coverage-group::before {
+  content: ''; position: absolute; inset: -1px; border-radius: inherit; padding: 1.5px; pointer-events: none; opacity: 0; transition: opacity 300ms ease;
+  background: radial-gradient(240px circle at var(--mx, 50%) var(--my, 50%), #2F80ED, rgba(98, 193, 160, 0.7) 45%, transparent 70%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude;
+}
+.info-card::after, .coverage-group::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity 300ms ease;
+  background: radial-gradient(340px circle at var(--mx, 50%) var(--my, 50%), rgba(23, 105, 224, 0.1), transparent 65%);
+}
+.info-card-accent::before { background: radial-gradient(240px circle at var(--mx, 50%) var(--my, 50%), #fff, rgba(255, 255, 255, 0.35) 50%, transparent 72%); }
+.info-card-accent::after { background: radial-gradient(340px circle at var(--mx, 50%) var(--my, 50%), rgba(255, 255, 255, 0.2), transparent 65%); }
+.info-card.is-lit::before, .info-card.is-lit::after, .coverage-group.is-lit::before, .coverage-group.is-lit::after { opacity: 1; }
+.info-card.is-lit { translate: 0 -5px; box-shadow: 0 26px 52px -18px rgba(11, 45, 92, 0.28); }
+.coverage-group.is-lit { translate: 0 -4px; background: #fff; box-shadow: 0 20px 40px -18px rgba(11, 45, 92, 0.24); }
 
-/* ---- hero: the photograph breathes, the words arrive one by one -------------- */
+/* ---- photographs: depth lives here -------------------------------------------- */
+/* The frame stays put. The picture inside leans a few pixels against the mouse and slowly draws closer. */
+.about-photo img, .providers-photo img {
+  transform: translate3d(calc(var(--px, 0) * -11px), calc(var(--py, 0) * -8px), 0) scale(1);
+  transition: transform 700ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.about-photo-wrap.is-lit .about-photo img,
+.providers-photo-wrap.is-lit .providers-photo img { transform: translate3d(calc(var(--px, 0) * -11px), calc(var(--py, 0) * -8px), 0) scale(1.08); }
+/* The badge and the steps card are a nearer layer: they drift the other way, a little further. */
+.about-stat-badge, .providers-steps-card { transition: transform 700ms cubic-bezier(0.2, 0.8, 0.2, 1); transform: translate3d(calc(var(--px, 0) * 12px), calc(var(--py, 0) * 9px), 0); }
+.about-photo-wrap.is-lit .about-photo, .providers-photo-wrap.is-lit .providers-photo { box-shadow: 0 36px 72px -20px rgba(11, 45, 92, 0.32); }
+.about-photo, .providers-photo { transition: box-shadow 500ms ease; }
+
+/* Hero: the whole photograph shifts against the mouse (the dark overlay travels with it) */
+.hero-photo-bg { scale: 1.06; translate: calc(var(--px, 0) * -16px) calc(var(--py, 0) * -10px); transition: translate 900ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+/* Where the browser can link animation to scrolling, the big photographs also drift as they pass through view */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .about-photo img, .providers-photo img { scale: 1.1; animation: mv-scroll-drift linear both; animation-timeline: view(); animation-range: cover 0% cover 100%; }
+    @keyframes mv-scroll-drift { from { translate: 0 -4.5%; } to { translate: 0 4.5%; } }
+  }
+}
+
+/* ---- hero: the photograph breathes, the words arrive one by one --------------- */
 .hero-photo-bg > img { transform-origin: 70% 40%; animation: mv-kenburns 26s ease-in-out infinite alternate; }
 @keyframes mv-kenburns { from { transform: scale(1); } to { transform: scale(1.09) translate3d(-1.2%, -0.8%, 0); } }
 .hero-inner > * { animation: mv-rise 900ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
@@ -22,29 +63,18 @@ html [data-tilt].is-tilting { transform: perspective(1100px) rotateX(var(--rx, 0
 .hero-inner > :nth-child(3) { animation-delay: 300ms; }
 .hero-inner > :nth-child(4) { animation-delay: 410ms; }
 
-/* ---- floating accents -------------------------------------------------------- */
+/* ---- floating accents ------------------------------------------------------------ */
 .about-stat-badge, .providers-steps-card { animation: mv-float 7s ease-in-out infinite; }
 .providers-steps-card { animation-duration: 8.5s; animation-delay: -2s; }
 @keyframes mv-float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -9px; } }
 
-/* Step cards: a soft glow ring that follows the lean, and the step chip lifts */
-.info-card { position: relative; }
-.info-card::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity 220ms ease;
-  background: radial-gradient(320px circle at var(--mx, 50%) var(--my, 0%), rgba(23, 105, 224, 0.1), transparent 65%); }
-.info-card-accent::after { background: radial-gradient(320px circle at var(--mx, 50%) var(--my, 0%), rgba(255, 255, 255, 0.22), transparent 65%); }
-.info-card.is-tilting::after { opacity: 1; }
-.info-card .info-step { transition: transform 220ms ease; }
-.info-card.is-tilting .info-step { transform: translateY(-2px); }
-
-.coverage-group { transition: box-shadow 220ms ease, border-color 220ms ease, background 220ms ease; }
-.coverage-group.is-tilting { background: #fff; border-color: #C8D8EC; box-shadow: 0 18px 38px rgba(11, 45, 92, 0.12); }
-
-.about-photo-wrap.is-tilting .about-photo { box-shadow: 0 34px 70px rgba(11, 45, 92, 0.24); }
-.providers-photo-wrap.is-tilting .providers-photo { box-shadow: 0 34px 70px rgba(11, 45, 92, 0.26); }
+.info-card .info-step { transition: transform 300ms ease; }
+.info-card.is-lit .info-step { transform: translateY(-2px); }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero-photo-bg > img, .hero-inner > *, .about-stat-badge, .providers-steps-card { animation: none; }
-  html [data-tilt].is-tilting { transform: none; }
+  .hero-photo-bg, .hero-photo-bg > img, .hero-inner > *, .about-stat-badge, .providers-steps-card { animation: none; translate: none; scale: none; }
+  .about-photo img, .providers-photo img, .about-stat-badge, .providers-steps-card { transform: none; transition: none; }
+  .info-card.is-lit, .coverage-group.is-lit { translate: none; }
 }
 @media print {
   .motion-armed [data-reveal]:not(.is-in) { opacity: 1; }

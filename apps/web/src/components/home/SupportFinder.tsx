@@ -312,7 +312,7 @@ export default function SupportFinder({ stats, registerCounts }: Props) {
             const regCount = !providerCount && regCategory ? registerCounts?.[regCategory] : undefined;
             return (
               <div key={s.name} className="sf-tile" style={{ '--i': i } as CSSProperties}>
-                <Link to={`/find-a-provider?service=${encodeURIComponent(s.name)}`} className="sf-card" data-tilt="7">
+                <Link to={`/find-a-provider?service=${encodeURIComponent(s.name)}`} className="sf-card" data-pointer>
                   <span className="sf-media" aria-hidden="true">
                     <span className="sf-photo">
                       {PHOTOS[s.name] && (

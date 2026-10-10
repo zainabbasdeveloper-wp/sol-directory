@@ -123,7 +123,7 @@ export default function Home() {
     <>
       <PublicHeader />
 
-      <section id="top" className="hero-section">
+      <section id="top" className="hero-section" data-pointer>
         <div className="hero-photo-bg">
           <PhotoSlot src="/images/front-view-smiley-girl-woman-indoors-hero.jpg" alt="A support worker with a participant" variant="care" />
           <div className="hero-photo-overlay" />
@@ -149,7 +149,7 @@ export default function Home() {
       </section>
 
       <section className="info-cards" aria-label="How Get Matched works">
-        <div className="info-card info-card-accent" data-reveal data-tilt="6" style={{ '--rv': 0 } as CSSProperties}>
+        <div className="info-card info-card-accent" data-reveal data-pointer style={{ '--rv': 0 } as CSSProperties}>
           <span className="info-step">Step 1</span>
           <h3 className="info-title">Submit your support request</h3>
           <p className="info-body info-body-light">Provide your location, preferred timeframe and funding information so relevant providers can assess your request.</p>
@@ -158,7 +158,7 @@ export default function Home() {
           </button>
         </div>
 
-        <div className="info-card" data-reveal data-tilt="6" style={{ '--rv': 1 } as CSSProperties}>
+        <div className="info-card" data-reveal data-pointer style={{ '--rv': 1 } as CSSProperties}>
           <span className="info-step">Step 2</span>
           <h3 className="info-title">Review relevant provider options</h3>
           <p className="info-body">Your request is compared with provider service areas, funding arrangements and recently confirmed availability.</p>
@@ -167,7 +167,7 @@ export default function Home() {
           </Link>
         </div>
 
-        <div className="info-card" data-reveal data-tilt="6" style={{ '--rv': 2 } as CSSProperties}>
+        <div className="info-card" data-reveal data-pointer style={{ '--rv': 2 } as CSSProperties}>
           <span className="info-step">Step 3</span>
           <h3 className="info-title">Make an informed choice</h3>
           <p className="info-body">Notified providers may contact you directly. You can compare options, verify credentials and decide whether to enter a service agreement.</p>
@@ -178,7 +178,7 @@ export default function Home() {
       </section>
 
       <section id="about" className="about-section">
-        <div className="about-photo-wrap" data-reveal data-tilt="4">
+        <div className="about-photo-wrap" data-reveal data-pointer>
           <div className="about-photo">
             <PhotoSlot src="/images/why-sol-directory.jpg" alt="A family meeting a provider" variant="care" />
           </div>
@@ -321,7 +321,7 @@ export default function Home() {
               // rather than link to a page that doesn't exist.
               if (!areas.length) return null;
               return (
-                <div key={service} className="coverage-group" data-reveal data-tilt="4" style={{ '--rv': idx % 4 } as CSSProperties}>
+                <div key={service} className="coverage-group" data-reveal data-pointer style={{ '--rv': idx % 4 } as CSSProperties}>
                   <h3 className="coverage-service-title">
                     <Link to={`/services/${slugify(service)}/${areas[0].state.toLowerCase()}/${areas[0].slug}`}>{service}</Link>
                   </h3>
@@ -362,7 +362,7 @@ export default function Home() {
             </Link>
           </div>
         </div>
-        <div className="providers-photo-wrap" data-reveal data-tilt="3" style={{ '--rv': 1 } as CSSProperties}>
+        <div className="providers-photo-wrap" data-reveal data-pointer style={{ '--rv': 1 } as CSSProperties}>
           <div className="providers-photo">
             <PhotoSlot src="/images/providers.jpg" alt="A provider at their desk" variant="meeting" />
           </div>
