@@ -90,12 +90,13 @@ function prepareArticle(html: string): { html: string; toc: { id: string; text: 
   return { html: doc.body.innerHTML, toc };
 }
 
-function BlogCard({ post, featured = false }: { post: WPBlogPost; featured?: boolean }) {
+function BlogCard({ post, featured = false, badge }: { post: WPBlogPost; featured?: boolean; badge?: string }) {
   const category = post.categories[0]?.name || 'Practical guidance';
   return (
     <article className={`blog-card${featured ? ' blog-card-featured' : ''}`}>
       <Link className="blog-card-image-link" to={`/blog/${post.slug}`} aria-label={`Read ${post.title}`}>
         <img className="blog-card-image" src={postImage(post)} alt={post.featuredImage?.alt || ''} loading="lazy" />
+        {badge && <span className="blog-card-badge">{badge}</span>}
       </Link>
       <div className="blog-card-copy">
         <div className="blog-card-meta"><span>{category}</span><time dateTime={post.date}>{formatDate(post.date)}</time><span className="blog-card-read">{readingMinutes(post.contentHtml)} min read</span></div>
@@ -456,8 +457,7 @@ export default function BlogPage() {
           {featured && (
             <div className="blog-feature-row">
               <div className="blog-feature-main">
-                <span className="blog-kicker">Latest update</span>
-                <BlogCard post={featured} featured />
+                <BlogCard post={featured} featured badge="Latest update" />
               </div>
               {posts.length > 1 && (
                 <aside className="blog-timeline" aria-label="Recent notices">
